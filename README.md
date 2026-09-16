@@ -11,7 +11,9 @@
 
 ### 全网调度总览
 
-![TPF2 MCP system overview](https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/system-overview.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/system-overview.png" alt="TPF2 MCP system overview" width="100%" />
+</p>
 
 从一个页面查看全网铁路拓扑、车站、线路、AI 运行图建议、MCP 工作日志和 Bridge
 实时状态。地图以游戏引擎原始轨道坐标绘制，并按缩放层级呈现全网与局部站场信息。
@@ -19,20 +21,28 @@
 ### 路网、站场与实时运行
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/bridge-crossing-detail.png" alt="Bridge crossing detail" width="49%" />
-  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/station-layout-preview.png" alt="Station layout preview" width="49%" />
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/bridge-crossing-detail.png" alt="Bridge crossing detail" width="100%" />
 </p>
 
-左图展示多层线路跨越：系统依据轨道三维数据识别上下跨关系，并在俯视图中保留桥梁
-结构。右图是武汉站局部站场图，可查看站台、咽喉、道岔、站台长度和原生节点信息。
+多层线路跨越：系统依据轨道三维数据识别上下跨关系，并在俯视图中保留桥梁结构。
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/live-train-telemetry.png" alt="Live train telemetry" width="49%" />
-  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/nine-hour-mcp-operations-summary.png" alt="Nine-hour MCP operations summary" width="49%" />
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/station-layout-preview.png" alt="Station layout preview" width="100%" />
 </p>
 
-左图显示运行中列车在物理轨道上的实时位置、速度与状态；右图记录了一次连续九小时的
-MCP 运营过程，包括需求监控、编组约束校验、加车、停站时间调整和异常恢复。
+武汉站局部站场图：可查看站台、咽喉、道岔、站台长度和原生节点信息。
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/live-train-telemetry.png" alt="Live train telemetry" width="100%" />
+</p>
+
+运行中列车在物理轨道上的实时位置、速度与状态。
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/nine-hour-mcp-operations-summary.png" alt="Nine-hour MCP operations summary" width="100%" />
+</p>
+
+一次连续九小时的 MCP 运营过程：需求监控、编组约束校验、加车、停站时间调整和异常恢复。
 
 ## 能做什么
 

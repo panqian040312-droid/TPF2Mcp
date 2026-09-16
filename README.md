@@ -1,195 +1,83 @@
 # TPF2 MCP
 
-TPF2 MCP connects a Transport Fever 2 mod to an MCP client through a small, versioned file bridge. The first milestone is deliberately read-only: prove the bridge with `ping`, then expose `get_game_state`. TPF2 game scripts use the documented engine `load` and periodic `update` callbacks.
+让 AI / MCP 客户端能够观察、理解并在受控条件下辅助运营
+[Transport Fever 2](https://www.transportfever2.com/) 的本地 Mod 项目。
 
-## Architecture
+它把游戏内 Lua Mod、Python MCP Server 和本地铁路图 UI 连接起来：先读懂
+路网与运营状态，再给出有依据的建议；涉及游戏修改时，必须走可审计的受控
+任务流程。
 
-```text
-MCP client <-> Python stdio MCP server <-> bridge files <-> TPF2 Lua mod <-> TPF2 API
-```
+## 功能展示
 
-The MCP server never reads or writes bridge files from tool handlers directly; `BridgeClient` is the only bridge boundary.
+### 全网调度总览
 
-## Prerequisites
+![TPF2 MCP system overview](https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/system-overview.png)
 
-- Windows 10/11
-- Python 3.11+
-- Transport Fever 2 installed at `D:\Steam\steamapps\common\Transport Fever 2`
+从一个页面查看全网铁路拓扑、车站、线路、AI 运行图建议、MCP 工作日志和 Bridge
+实时状态。地图以游戏引擎原始轨道坐标绘制，并按缩放层级呈现全网与局部站场信息。
 
-No third-party Python dependency is required for this milestone.
+### 路网、站场与实时运行
 
-## Quick start
+<p align="center">
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/bridge-crossing-detail.png" alt="Bridge crossing detail" width="49%" />
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/station-layout-preview.png" alt="Station layout preview" width="49%" />
+</p>
 
-```powershell
-python -m pip install -e .\mcp_server
-python -m tpf2_mcp.cli status
-python -m tpf2_mcp.cli ping
-python -m tpf2_mcp.cli game-state
-python -m tpf2_mcp.server
-python -m unittest discover -s tests -v
-```
+左图展示多层线路跨越：系统依据轨道三维数据识别上下跨关系，并在俯视图中保留桥梁
+结构。右图是武汉站局部站场图，可查看站台、咽喉、道岔、站台长度和原生节点信息。
 
-The distributable Mod bundles the Python companion under `mcp_server/`. It can
-also be launched without installing the package:
+<p align="center">
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/live-train-telemetry.png" alt="Live train telemetry" width="49%" />
+  <img src="https://raw.githubusercontent.com/BlackIce417/TPF2Mcp/image-hosting/docs/images/nine-hour-mcp-operations-summary.png" alt="Nine-hour MCP operations summary" width="49%" />
+</p>
 
-```powershell
-cd <TPF2-MCP-Mod-Directory>\mcp_server
-python -m pip install -r requirements.txt
-python start_server.py
-```
+左图显示运行中列车在物理轨道上的实时位置、速度与状态；右图记录了一次连续九小时的
+MCP 运营过程，包括需求监控、编组约束校验、加车、停站时间调整和异常恢复。
 
-`start_server.py` is a stdio MCP process, so an MCP client should normally use
-that script as its configured command rather than starting a separate daemon.
-The bundled browser UI is a separate local HTTP process:
+## 能做什么
 
-```powershell
-python start_ui.py
-# Open http://127.0.0.1:8765/?view=network
-```
+- 从正在运行的存档读取线路、车站、车辆、客货运与动态运行数据。
+- 在浏览器中查看全网铁路图、站场局部图、列车位置、车站与车辆详情。
+- 分析线路运力、候车与货物积压、班次、站外等待和拓扑风险，并生成运行图建议。
+- 以受控 Task 方式创建或配置线路、购买并分配车辆、调整停站策略；默认不允许写入游戏。
 
-The package installation is intentional: tests do not depend on manually
-setting `PYTHONPATH`.
+## 项目组成
 
-The Bridge lives in `bridge/` beside the installed mod, for example
-`...\Transport Fever 2\mods\tpf2mcp_1\bridge`. Python locates Steam and the
-installed `tpf2_mcp` runtime dynamically; `TPF2_GAME_DIR`, `TPF2_MCP_MOD_DIR`,
-and `TPF2_MCP_BRIDGE_DIR` remain explicit overrides. Before starting a real
-game, run `tools/install-mod.ps1`; it discovers the Steam library, installs
-`tpf2_mod`, creates the adjacent Bridge, and writes only machine-local safety
-switches to `local_config.lua`.
+- `tpf2_mod/`：Transport Fever 2 Lua Mod 源码。
+- `mcp_server/`：Python stdio MCP Server 与 Bridge 客户端。
+- `ui/rail-map/`：本地铁路调度图前端。
+- `tools/`：安装、测试、导出、打包和验收工具。
 
-## Live capability status
+## 快速体验
 
-The bridge, native stop-vector construction, and controlled operations have
-been verified in a real open save. Writes remain disabled by default and are
-enabled only for a dedicated, explicitly installed test configuration.
+1. 在游戏中启用已安装的 `tpf2mcp` Mod，并进入一个存档。
+2. 从 Mod 根目录的 `mcp_server/` 启动 MCP Server：
 
-| Operation | Engine | Controller | Task | Live verification |
-|---|---:|---:|---:|---:|
-| CREATE_LINE_FROM_SOURCE_ROUTE | Yes | Yes | Yes | Yes |
-| CREATE_LINE | Yes | Yes | Yes | Yes |
-| BUY_VEHICLE | Yes | Yes | Yes | Yes |
-| ASSIGN_VEHICLE_TO_LINE | Yes | Yes | Yes | Yes |
-| SET_LINE_STOPS | Yes | Yes | Yes | Yes |
-| SET_LINE_STOP_POLICY | Yes | Yes | Yes | Yes |
-| SELL_VEHICLE | Yes | Yes | Yes | Yes |
-| REMOVE_VEHICLE_FROM_LINE | Unavailable | No | No | Engine rejected |
+   ```powershell
+   python start_server.py
+   ```
 
-`CREATE_LINE` and `SET_LINE_STOPS` resolve user station IDs and terminals to
-an exact-length engine-native stop vector; terminal ambiguity is rejected
-unless explicitly selected. See [Phase 18](docs/PHASE18_NATIVE_STOP_CONSTRUCTION.md)
-and [Phase 19](docs/PHASE19_LINE_OPERATIONS.md).
+3. 需要查看铁路图时，在同一目录启动 UI：
 
-Phase 20.1 live verification established irreversible vehicle sale through
-`api.cmd.make.sellVehicle`. The controller and Lua dispatcher both require the
-exact confirmation string `SELL_VEHICLE:<vehicle_id>`, and a fresh snapshot
-must show that entity absent. A separate “unassign but keep the vehicle” API
-was not found: `setLine(vehicle, -1, 0)` was safely rejected by the engine, so
-`REMOVE_VEHICLE_FROM_LINE` remains unavailable rather than being conflated
-with sale or depot return. See [Phase 20.1 documentation](docs/PHASE20_VEHICLE_LIFECYCLE.md).
+   ```powershell
+   python start_ui.py
+   ```
 
-`CREATE_AND_CONFIGURE_LINE_GOAL` is a bounded workflow for one to four
-vehicles: create, explicitly configure stops, then repeat buy and assign. A
-two-vehicle six-write Task has been live verified end to end. Phase 20.3
-adds per-stop `load_mode`, `min_waiting_time`, and `max_waiting_time` control
-through `updateLine`. Observed frequency and throughput are not direct
-settings. Automatic optimization remains plan-only. A bounded
-`get_line_demand` Bridge probe now supplies live line-assigned onboard/waiting
-passenger and freight totals, observed freight cargo types, and waiting-time
-samples. Schema version 2 also records engine-observed `lineStop0` → `lineStop1`
-journey counts, allowing read-only detection of passenger/freight allocation
-imbalance between genuinely parallel OD services. The detector only emits an
-AI timetable suggestion: it never moves demand or changes fleets, consists,
-headways, dwell policies, stops, or cargo filters. Demand history is persisted in SQLite,
-and fleet proposals enforce exact existing-consist cloning, speed-class
-consistency, and cargo capability constraints.
+4. 浏览器打开 `http://127.0.0.1:8765/?view=network`。
 
-SQLite runtime data is scoped by a derived `save_id`. The fingerprint uses
-stable player/town entity identity rather than mutable lines or vehicles.
-Demand samples, station events, timetable plans, and MCP work-log queries are
-filtered by that scope. Rows created before this migration remain preserved as
-`legacy-unscoped` and are never silently attributed to the currently loaded
-save. Branches copied from the same underlying world may intentionally share a
-fingerprint until TPF2 exposes an engine-native save UUID.
+Mod 不会自动启动外部 Python 进程；MCP Server 和 UI 需要单独启动。默认发布包
+是只读的。受控写入属于实验性能力，必须显式启用并通过 Task 审批流程执行。
 
-The local rail-map service polls the current world fingerprint every three
-seconds. On a save switch it clears the old dynamic vehicle/signal layers,
-requests a fresh physical rail network through the read-only Bridge, regenerates
-the tiled map, and publishes the new `save_id`. The browser reloads only after
-the replacement manifest is ready, so future save changes do not require a game
-restart or a rail-map server restart.
+## 文档
 
-All game mutations exposed by MCP now require `create_task` → `plan_task` →
-`approve_task_step` → `continue_task`. The former direct
-`execute_operation` MCP tool is no longer advertised and rejects calls.
-Repeated station IDs are rejected before dispatch because TPF2 lines already
-loop automatically and a repeated A-B-A stop vector caused a native hang in
-acceptance testing.
+- [功能与受控操作入口](docs/agent-mcp-tools.md)
+- [技术参考：架构、开发、安装与发布](docs/technical-reference.md)
+- [架构说明](docs/architecture.md)
+- [最终目标与验收边界](docs/FINAL_GOAL_ACCEPTANCE.md)
+- [各阶段开发文档](docs/)
 
-## Network intelligence
+## 当前状态
 
-The read-only MCP can answer topology and verified-metric questions such as:
-
-- “分析一下我的运输网络” (`analyze_network`)
-- “哪几条线路的班次最稀疏？” (`rank_lines` / `find_line_outliers`)
-- “线路 23 和哪些线路结构类似？” (`find_similar_lines`)
-- “网络有几个互相独立的区域？” (`analyze_network_reachability`)
-- “哪些车站是网络拓扑中的换乘节点？” (`rank_station_hubs`)
-
-These analyses are snapshot-bound and evidence-backed. They do not claim profitability, load, waiting volume, or demand when runtime telemetry is unavailable; see [Phase 9 documentation](docs/PHASE9_NETWORK_INTELLIGENCE.md).
-
-## Phase 10 decision support
-
-Decision support distinguishes a diagnostic (what to inspect), a planning option (what to simulate), and a scenario (an in-memory what-if hypothesis). Examples include `simulate_station_connection`, `simulate_line_failure`, `compare_network_scenarios`, and `analyze_and_plan_network`.
-
-`plan_new_line_candidates` ranks gaps between observed station groups and
-returns read-only `CREATE_LINE_GOAL` candidates. It prioritizes candidates
-whose terminal IDs are unambiguous and includes those observed selectors;
-physical track/road reachability, demand, and cost remain explicitly unknown.
-
-Scenario simulation **does not modify the game**. It only reports structural topology/fleet deltas and keeps cost, demand, load, waiting, and profit unavailable when no verified source exists. See [Phase 10 documentation](docs/PHASE10_DECISION_SUPPORT.md).
-
-## Phase 11 controlled operations
-
-Phase 11 introduced the proposal/validation/journal framework. The current
-product path remains **fail closed**: Lua write operations default to disabled,
-and direct operation execution is not exposed as an MCP tool; only Tasks can
-reach the internal operation executor.
-See [Phase 11 documentation](docs/PHASE11_CONTROLLED_OPERATIONS.md).
-
-## Phase 12 closed-loop tasks
-
-Phase 12 adds bounded goal/task orchestration over controlled operations. A
-task plans and verifies one step at a time; it is not unrestricted autonomous
-gameplay. See [Phase 12 documentation](docs/PHASE12_CLOSED_LOOP_TASKS.md).
-
-## Phase 13 operational expansion
-
-Dedicated-save verification established `BUY_VEHICLE` and
-`ASSIGN_VEHICLE_TO_LINE` as MEDIUM-risk operations. They are never AUTO_SAFE;
-the installed Lua write kill switch remains off by default. See
-[Phase 13 documentation](docs/PHASE13_OPERATIONAL_EXPANSION.md).
-
-## Phase 14 line-management control path
-
-`BUY_VEHICLE` and `ASSIGN_VEHICLE_TO_LINE` now share the controller's
-proposal, current-snapshot validation, bridge dispatch, and fresh-snapshot
-postcondition checks. `BUY_AND_ASSIGN_VEHICLE_GOAL` performs exactly one
-mutation per `continue_task`: it discovers the purchased vehicle ID from the
-verified first result before preparing its assignment step. Both operations
-remain MANUAL and the installed Lua write kill switch remains disabled by
-default. See [Phase 14 documentation](docs/PHASE14_LINE_MANAGEMENT.md).
-
-## Historical Phase 15 capability matrix
-
-| Operation | Engine | Controller | Task | Live MCP |
-|---|---:|---:|---:|---:|
-| BUY_VEHICLE | Yes | Yes | Yes | Yes |
-| ASSIGN_VEHICLE_TO_LINE | Yes | Yes | Yes | Yes |
-| REMOVE_VEHICLE_FROM_LINE | No | No | No | No |
-| SELL_VEHICLE | No | No | No | No |
-| CREATE_LINE | No | No | No | No |
-| SET_LINE_STOPS | No | No | No | No |
-
-The Phase 15 MCP-native acceptance evidence is at
-`diagnostics/phase15-live/phase14-mcp-native-buy-and-assign/summary.json`.
+项目已在真实 TPF2 存档中验证 Bridge、铁路图数据采集、运行状态读取和部分受控
+线路/车辆操作。默认原则仍是：数据读取优先，无法由游戏引擎可靠验证的能力不会
+伪装成可用功能。

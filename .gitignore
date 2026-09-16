@@ -41,6 +41,9 @@ ui/rail-map/physical-track-data.js
 # UI screenshots produced during acceptance
 ui/rail-map/*.png
 
+# Local README screenshot cache; public copies live on the image-hosting branch.
+docs/images/
+
 # Local editor/OS state and secrets
 .vscode/
 .idea/

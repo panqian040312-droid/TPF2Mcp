@@ -1,3 +1,5 @@
+> **使用前说明：本项目采用远程线程注入方式，将 `tpf2_control.dll` 注入 Transport Fever 2 游戏进程。如果你介意 DLL 注入，请勿使用本项目。**
+
 # TPF2 MCP
 
 让 AI / MCP 客户端能够观察、理解并在受控条件下辅助运营

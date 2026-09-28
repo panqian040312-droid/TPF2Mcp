@@ -413,10 +413,14 @@ def main() -> int:
     print()
     print(f"=== platform clearance ({len(sized)}/{len(platforms)} platforms have calling-line data) ===")
     print(f"    platform whose nearest points are closer than its longest calling train: {len(fouls)}")
+    print("    NOTE: this measures whether a train can stand CLEAR of the points, i.e.")
+    print("          whether it could give way by retreating. It does NOT by itself mean")
+    print("          the train fouls the points while berthed -- the head faces the")
+    print("          departure direction, so the tail is the side that overhangs.")
     print(f"{'车站':<16}{'到道岔m':>9}{'该站最长列车m':>14}   判定")
     for row in fouls[:25]:
         print(f"{str(row['station'])[:14]:<16}{row['distance_m']:>9.1f}"
-              f"{row['longest_calling_train_m']:>14.0f}   🔴 列车停不进站台区，车尾压在道岔上")
+              f"{row['longest_calling_train_m']:>14.0f}   🔴 净空不足：该列车无法完全停入站台区，也就无法后退让路")
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)

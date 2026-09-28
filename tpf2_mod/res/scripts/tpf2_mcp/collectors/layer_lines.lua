@@ -161,7 +161,16 @@ function M.collect()
                 local stations = common.sequence_values(common.field(group, "stations"))
                 local station = component_access.get(stations[station_index + 1], "STATION")
                 local terminals = common.sequence_values(common.field(station, "terminals"))
-                position = terminal_position(terminals[terminal_index + 1]) or false
+                position = terminal_position(terminals[terminal_index + 1])
+                -- 站台级定位失败时**回退到车站包围盒中心**。
+                -- 实测（2026-09-29）：站台自己的 vehicleNodeId → BASE_NODE 这条路
+                -- 只对铁路站台有效，公路/水运/航空站台拿不到节点，于是 140 条线只留下 16 条。
+                -- 而 BOUNDING_VOLUME 这条路径在 station 图层里对全部 328 个车站都成功。
+                if position == nil then
+                    position = bounds_center(group_entity)
+                    diagnostics.terminal_fallback = (diagnostics.terminal_fallback or 0) + 1
+                end
+                position = position or false
                 terminal_cache[key] = position
             end
             if position ~= false and position ~= nil and #points < STOP_LIMIT then

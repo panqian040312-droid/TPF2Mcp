@@ -208,30 +208,39 @@ function M.collect()
         end
         if from_id ~= nil then
             union_find.add(from_id)
-            -- value 本身可能是"一个目标"，也可能是"目标集合"，两种都试
-            local direct_to, direct_distance = parse_link_entry(from_id, value)
-            if direct_to ~= nil then
-                union_find.add(direct_to)
-                union_find.union(from_id, direct_to)
-                if #links < MAX_LINKS then
-                    links[#links + 1] = { a = from_id, b = direct_to, distance = direct_distance }
-                    diagnostics.links = diagnostics.links + 1
+            -- 🔴 解析顺序很关键（2026-09-29 真实产物踩过）：
+            -- 实测结构是 map[station][otherStation] = distance（诊断里的 inner_keys 证实：
+            -- "92901 → number=0"、"112895 → number=0.257"…）。
+            -- 必须**先按"目标集合"解析**，集合为空才退回"value 本身是一个目标"。
+            -- 反过来先试 direct 会中招：这种 userdata 的整数索引恰好取值（第 1 个元素），
+            -- 于是被误判成"单个目标"，整个集合被跳过 —— 结果就是 1825 条边却 0 个连通分量。
+            local inner = {}
+            pcall(function()
+                for inner_key, inner_value in pairs(value) do
+                    inner[#inner + 1] = { key = inner_key, value = inner_value }
+                    if #inner >= MAX_STATIONS then break end
                 end
-            else
+            end)
+            if #inner == 0 then
                 local count = common.array_count(value)
-                local inner = {}
-                pcall(function()
-                    for inner_key, inner_value in pairs(value) do
-                        inner[#inner + 1] = { key = inner_key, value = inner_value }
-                        if #inner >= MAX_STATIONS then break end
-                    end
-                end)
-                if #inner == 0 and count ~= nil and count > 0 then
+                if count ~= nil and count > 0 then
                     for index = 0, math.min(count, MAX_STATIONS) - 1 do
                         local item = common.field(value, index) or common.field(value, index + 1)
                         if item ~= nil then inner[#inner + 1] = { key = index, value = item } end
                     end
                 end
+            end
+            if #inner == 0 then
+                local direct_to, direct_distance = parse_link_entry(from_id, value)
+                if direct_to ~= nil then
+                    union_find.add(direct_to)
+                    union_find.union(from_id, direct_to)
+                    if #links < MAX_LINKS then
+                        links[#links + 1] = { a = from_id, b = direct_to, distance = direct_distance }
+                        diagnostics.links = diagnostics.links + 1
+                    end
+                end
+            else
                 for inner_index = 1, #inner do
                     local to_id, distance = parse_link_entry(inner[inner_index].key, inner[inner_index].value)
                     -- 映射形式：键就是目标站，值是距离
@@ -239,7 +248,8 @@ function M.collect()
                         to_id = common.entity_id(inner[inner_index].key)
                         distance = inner[inner_index].value
                     end
-                    if to_id ~= nil then
+                    -- 跳过自环（表里每个站都有一条到自己的 0 距离记录）
+                    if to_id ~= nil and to_id ~= from_id then
                         union_find.add(to_id)
                         union_find.union(from_id, to_id)
                         if #links < MAX_LINKS then

@@ -49,6 +49,25 @@ local function bounds_for(entity)
     }
 end
 
+-- 车辆位置。优先 BOUNDING_VOLUME 的包围盒中心；拿不到时退回
+-- `game.interface.getEntity(id).position`。
+--
+-- 🔴 为什么必须有这条回退（2026-09-29 实测）：**28 辆列车全部没有包围盒**，
+-- 于是地图上一辆列车都不显示，连带所有铁路线路都显示成"没有车"。
+-- 而 TRANSPORT_VEHICLE 的**聚合表视图**里有 position —— 正好补上这个缺口。
+local function position_for(entity)
+    local center = bounds_for(entity)
+    if center ~= nil then return center, "bounds" end
+    local ok, view = pcall(function()
+        return game.interface.getEntity(common.entity_id(entity))
+    end)
+    if ok and view ~= nil then
+        local position = vec(common.field(view, "position"))
+        if position ~= nil then return position, "entity" end
+    end
+    return nil, nil
+end
+
 local function number_or_nil(value)
     if type(value) == "number" then return value end
     return nil
@@ -59,6 +78,7 @@ function M.collect()
     local points = {}
     local by_carrier = {}
     local by_carrier_raw = {}
+    local by_source = {}
     local skipped = 0
     local no_bounds = 0
     local truncated = false
@@ -84,11 +104,12 @@ function M.collect()
         local raw_key = tostring(raw_carrier)
         by_carrier_raw[raw_key] = (by_carrier_raw[raw_key] or 0) + 1
 
-        local center = bounds_for(entity)
+        local center, source = position_for(entity)
         if center == nil then
             no_bounds = no_bounds + 1
             return
         end
+        by_source[source] = (by_source[source] or 0) + 1
         local name = carrier_name(raw_carrier)
         by_carrier[name] = (by_carrier[name] or 0) + 1
 
@@ -127,6 +148,7 @@ function M.collect()
         },
         by_carrier = by_carrier,
         by_carrier_raw = by_carrier_raw,
+        by_position_source = by_source,
         field_probe = probe,
         points = points,
         errors = errors,

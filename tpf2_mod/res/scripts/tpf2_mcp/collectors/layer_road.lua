@@ -26,6 +26,24 @@ local function text(value)
     return nil
 end
 
+-- 道路类型（streetType）。组件视图里**没有**这个字段（实测 field_probe 只探到
+-- type / typeIndex / node0 / node1 / tangent），它只存在于 game.interface.getEntity
+-- 的聚合表视图 —— 和 position 那批字段一样的"两套 API 字段名不同"问题。
+-- 所以这里对每条边多调一次 getEntity；成本记进 by_street_source 诊断，
+-- 万一 5262 条边太慢，再考虑只对可见 tile 取。
+local function street_type_of(edge_entity, base)
+    local direct = text(common.field(base, "streetType"))
+    if direct ~= nil then return direct, "component" end
+    local ok, view = pcall(function()
+        return game.interface.getEntity(common.entity_id(edge_entity))
+    end)
+    if ok and view ~= nil then
+        local name = text(common.field(view, "streetType"))
+        if name ~= nil then return name, "entity" end
+    end
+    return nil, "missing"
+end
+
 -- 端点节点坐标读取器（照 rail_network.lua 的 base_node()，带去重缓存）。
 -- 读不到时只记一条样例错误 —— 否则 9793 个节点会把 errors 撑爆。
 local function node_reader(errors, cache)
@@ -55,6 +73,7 @@ function M.collect()
     local edges, nodes = {}, {}
     local node_cache = {}
     local street_types = {}
+    local street_sources = {}
     local structures = {}
     local skipped = 0
     local probe = nil
@@ -90,10 +109,11 @@ function M.collect()
         nodes[id0] = nodes[id0] or { entity_id = id0, position = position0 }
         nodes[id1] = nodes[id1] or { entity_id = id1, position = position1 }
 
-        local street_type = text(common.field(base, "streetType"))
+        local street_type, street_source = street_type_of(edge_entity, base)
         if street_type ~= nil then
             street_types[street_type] = (street_types[street_type] or 0) + 1
         end
+        street_sources[street_source] = (street_sources[street_source] or 0) + 1
 
         -- 结构类型：0 地面 / 1 桥 / 2 隧道（+ 保留其余取值，避免把未知值硬塞成地面）
         local edge_type = common.field(base, "type")
@@ -140,6 +160,7 @@ function M.collect()
             street_types = #street_types,
         },
         street_types = street_types,
+        street_type_sources = street_sources,
         structures = structures,
         field_probe = probe,
         nodes = ordered,

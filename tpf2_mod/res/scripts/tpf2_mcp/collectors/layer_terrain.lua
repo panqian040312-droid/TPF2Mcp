@@ -7,43 +7,56 @@
 -- 所以**一次采样同时支撑等高线与水深两个开关**：等高线取 height 的正值，
 -- 水深取 -height（负值即水下）。
 --
--- 为什么不用 TERRAIN_TILE_HEIGHTMAP 组件：那是每个 tile 一份的顶点大数组，3136 个
--- tile 挨个读会撞上"百万级数据"的红线（见 world_probe.lua 顶部那条警告）。
--- getHeight 是引擎内部的点查询，一次只算一个点，没有这个风险。
+-- 🔴 采样网格用**世界坐标**，范围由路网节点推出 —— 不用 TERRAIN_TILE 的 position。
 --
--- 网格范围从 TERRAIN_TILE 组件的 position 推：3136 = 56 x 56，正好是地形 tile 网格，
--- 比从铁路网范围外扩、或者猜地图尺寸都可靠。（该组件的 position 在 world_probe v4
--- 里已确认可读；不能读的是 heightmap 的顶点数组，两者是不同的组件。）
+-- 2026-09-29 踩过的坑：`TERRAIN_TILE` 的 position 是**网格索引**（相邻 tile 的 x 差恰好是 1），
+-- 不是世界坐标。第一版拿它当世界坐标调 getHeight，采样点全挤在地图中心 56 m 见方的一块里，
+-- 实测高度范围只有 12.1 ~ 15.3 m —— 整张地形图是废的。
 --
--- ⚠ 分帧：一次要采 3136 x SUBDIV^2 个点，一帧做完会卡帧。所以这个采集器是**流式**的
--- —— 每个 update 采 BATCH 个点，全部采完才写出。registry 侧为此支持 streaming 层。
+-- 现在改成：遍历 BASE_NODE（道路与铁路节点）求包围盒并集，外扩一点作为采样范围。
+-- 坐标一定是世界坐标，覆盖范围是"玩家能看到的一切"（路铺到哪，地形就采到哪）。
+--
+-- ⚠ 分帧：一帧采不完，所以这个采集器是**流式**的 —— 每个 update 采 BATCH 个点，
+-- 全部采完才写出。registry 侧为此支持 streaming 层。
+--
+-- 别读 `TERRAIN_TILE_HEIGHTMAP`：那是每个 tile 一份的顶点大数组，读 3136 份会撞上
+-- "百万级数据"的红线（见 world_probe.lua 顶部警告）。
 
 local common = require "tpf2_mcp/collectors/common"
 local component_access = require "tpf2_mcp/collectors/component_access"
 
 local M = {}
 
--- 每个 terrain tile 再细分几份。1 = 只用 tile 中心（约 224 m 网格，等高线会发方格感）；
--- 2 = 每方向插一倍（约 112 m 网格，够画等高线）。
-local SUBDIV = 2
--- 每帧最多采样多少个点。getHeight 本身是 C++ 点查询很便宜，但 Lua 循环有成本；
--- 宁可多花几帧也不要掉帧。
+-- 目标采样步长（米）。170 m 与地形自身的 tile 尺度同量级，画等高线够用。
+local TARGET_STEP = 170
+-- 网格点数的下限 / 上限。上限决定最坏情况的分帧帧数（200×200 = 4 万点 / 每帧 400 = 100 帧）。
+local MIN_CELLS = 48
+local MAX_CELLS = 200
+-- 采样范围在活动范围外再扩这么多（相对比例），免得边缘等高线贴着边界断开。
+local EDGE_MARGIN = 0.08
+-- 每个 update 最多采样多少个点。getHeight 本身是 C++ 点查询很便宜（实测 0.016 ms/次），
+-- 但 Lua 循环有成本，宁可多花几帧也不要掉帧。
 local BATCH = 400
--- 高度量化：整数 = round(height * SCALE)，前端除回去。0.1 m 精度足够画等高线，
--- 又能把 JSON 里的浮点数变成短整数。
+-- 高度量化：整数 = round(height * SCALE)，前端除回去。
 local SCALE = 10
 -- 缺失哨兵。JSON 数组不能有洞（json.encode 会跳过 nil 把数组截断），所以用哨兵值。
--- -32768 / SCALE = -3276.8 m，真实地形到不了。
 local MISSING = -32768
 -- 重采周期（update 数）。地形是静态的，只有玩家动地形才会变，所以拍得很稀。
 local RESAMPLE_EVERY = 24000
--- 启动前先等世界加载完（地形网格要等存档读完才完整）。
+-- 启动前先等世界加载完（路网节点要等存档读完才完整）。
 local START_DELAY = 300
 
 local job = nil
 local diagnostics = nil
 
 -- ---------------------------------------------------------------- 基础读取
+
+local function vec(value)
+    if value == nil then return nil end
+    local x, y, z = common.field(value, "x"), common.field(value, "y"), common.field(value, "z")
+    if type(x) ~= "number" or type(y) ~= "number" then return nil end
+    return { x = x, y = y, z = type(z) == "number" and z or 0 }
+end
 
 local function get_height_function()
     local ok, fn = pcall(function() return game.interface.getHeight end)
@@ -62,44 +75,6 @@ local function sample_height(fn, x, y)
     ok, value = pcall(fn, { x, y, 0 })
     if ok and type(value) == "number" then return value end
     return nil
-end
-
-local function read_tile_position(entity)
-    local tile = component_access.get(entity, "TERRAIN_TILE")
-    if tile == nil then return nil end
-    local position = common.field(tile, "position")
-    local x, y = common.field(position, "x"), common.field(position, "y")
-    if type(x) ~= "number" or type(y) ~= "number" then
-        -- 少数实现把 position 放成 {x,y,z} 数组
-        x, y = common.field(position, 1), common.field(position, 2)
-    end
-    if type(x) ~= "number" or type(y) ~= "number" then return nil end
-    return x, y
-end
-
--- 把有序数组按倍数细分（相邻两点之间线性插值）。
-local function resample(values, subdiv)
-    if subdiv <= 1 or #values < 2 then return values end
-    local out = {}
-    for i = 1, #values - 1 do
-        out[#out + 1] = values[i]
-        local step = (values[i + 1] - values[i]) / subdiv
-        for k = 1, subdiv - 1 do
-            out[#out + 1] = values[i] + step * k
-        end
-    end
-    out[#out + 1] = values[#values]
-    return out
-end
-
-local function table_min_max(values)
-    local minimum, maximum = nil, nil
-    for i = 1, #values do
-        local value = values[i]
-        if minimum == nil or value < minimum then minimum = value end
-        if maximum == nil or value > maximum then maximum = value end
-    end
-    return minimum, maximum
 end
 
 -- 水体采样：WATER_MESH 的 pos 里应当带水面高度。只读前几个当诊断 ——
@@ -124,90 +99,117 @@ local function probe_water_surface()
     return samples
 end
 
+-- 采样范围：所有 BASE_NODE 的包围盒并集。
+-- BASE_NODE 覆盖道路与铁路的全部节点（本存档 9793 个），所以它的范围就是
+-- "玩家铺出去的世界" —— 城镇、产业、路网都落在这个范围里。
+local function activity_bounds()
+    local min_x, max_x, min_y, max_y = nil, nil, nil, nil
+    local seen, unreadable = 0, 0
+    local ok, reason = common.safe_for_each_entity("BASE_NODE", function(entity)
+        local node = component_access.get(entity, "BASE_NODE")
+        local position = vec(common.field(node, "position")) or vec(common.field(node, "pos"))
+        if position == nil then unreadable = unreadable + 1 return end
+        seen = seen + 1
+        min_x = min_x == nil and position.x or math.min(min_x, position.x)
+        max_x = max_x == nil and position.x or math.max(max_x, position.x)
+        min_y = min_y == nil and position.y or math.min(min_y, position.y)
+        max_y = max_y == nil and position.y or math.max(max_y, position.y)
+    end, {})
+    if not ok then return nil, "BASE_NODE walk failed: " .. tostring(reason) end
+    if min_x == nil then return nil, "no readable BASE_NODE position" end
+    return { min_x = min_x, max_x = max_x, min_y = min_y, max_y = max_y,
+             nodes = seen, unreadable = unreadable }
+end
+
 -- ---------------------------------------------------------------- 建网格
 
 local function start_job(update_count)
-    local xs, ys = {}, {}
-    local seen_x, seen_y = {}, {}
-    local tiles = 0
-    local unreadable = 0
+    local bounds, bounds_error = activity_bounds()
+    if bounds == nil then return nil, bounds_error end
 
-    local ok, reason = common.safe_for_each_entity("TERRAIN_TILE", function(entity)
-        local x, y = read_tile_position(entity)
-        if x == nil then
-            unreadable = unreadable + 1
-            return
-        end
-        tiles = tiles + 1
-        if not seen_x[x] then seen_x[x] = true; xs[#xs + 1] = x end
-        if not seen_y[y] then seen_y[y] = true; ys[#ys + 1] = y end
-    end, {})
-
-    if not ok then return nil, "TERRAIN_TILE walk failed: " .. tostring(reason) end
-    if #xs < 2 or #ys < 2 then
-        return nil, "terrain grid too small: " .. #xs .. " x " .. #ys .. " (unreadable tiles: " .. unreadable .. ")"
+    local span_x = bounds.max_x - bounds.min_x
+    local span_y = bounds.max_y - bounds.min_y
+    if span_x <= 0 or span_y <= 0 then
+        return nil, "degenerate activity extent: " .. span_x .. " x " .. span_y
     end
 
-    table.sort(xs)
-    table.sort(ys)
-    local tile_cols, tile_rows = #xs, #ys
-    local min_x, max_x = xs[1], xs[#xs]
-    local min_y, max_y = ys[1], ys[#ys]
-    local tile_step_x = (max_x - min_x) / math.max(tile_cols - 1, 1)
-    local tile_step_y = (max_y - min_y) / math.max(tile_rows - 1, 1)
+    local min_x = bounds.min_x - span_x * EDGE_MARGIN
+    local max_x = bounds.max_x + span_x * EDGE_MARGIN
+    local min_y = bounds.min_y - span_y * EDGE_MARGIN
+    local max_y = bounds.max_y + span_y * EDGE_MARGIN
 
-    local grid_xs = resample(xs, SUBDIV)
-    local grid_ys = resample(ys, SUBDIV)
-    local cols, rows = #grid_xs, #grid_ys
+    local cols = math.floor((max_x - min_x) / TARGET_STEP) + 1
+    local rows = math.floor((max_y - min_y) / TARGET_STEP) + 1
+    cols = math.max(MIN_CELLS, math.min(cols, MAX_CELLS))
+    rows = math.max(MIN_CELLS, math.min(rows, MAX_CELLS))
+
+    local step_x = (max_x - min_x) / (cols - 1)
+    local step_y = (max_y - min_y) / (rows - 1)
 
     local height_fn = get_height_function()
 
-    -- 自检：拿网格中心点试一次，把结果和耗时记进产物。
+    -- 自检：拿网格中心点试一次，把结果和单次耗时记进产物。
     -- 改一次 Lua 就要重启一次游戏，所以产物必须自带诊断，不能靠再探一轮。
     local probe = {
         interface_available = height_fn ~= nil,
-        tile_count = tiles,
-        unreadable_tiles = unreadable,
-        tile_cols = tile_cols,
-        tile_rows = tile_rows,
-        tile_step_x = tile_step_x,
-        tile_step_y = tile_step_y,
-        tile_span_x = max_x - min_x,
-        tile_span_y = max_y - min_y,
-        subdiv = SUBDIV,
+        extent_source = "BASE_NODE bbox",
+        extent_nodes = bounds.nodes,
+        extent_unreadable = bounds.unreadable,
+        extent_x = { min_x, max_x },
+        extent_y = { min_y, max_y },
         cols = cols,
         rows = rows,
-        grid_step_x = (max_x - min_x) / math.max(cols - 1, 1),
-        grid_step_y = (max_y - min_y) / math.max(rows - 1, 1),
+        step_x = step_x,
+        step_y = step_y,
+        total_samples = cols * rows,
+        frames_expected = math.ceil(cols * rows / BATCH),
         water_mesh_samples = probe_water_surface(),
     }
 
     if height_fn ~= nil then
-        local center_x = grid_xs[math.floor(cols / 2) + 1]
-        local center_y = grid_ys[math.floor(rows / 2) + 1]
+        local center_x = (min_x + max_x) / 2
+        local center_y = (min_y + max_y) / 2
         local clock = common.clock()
         local value = sample_height(height_fn, center_x, center_y)
         probe.sample_ms = (common.clock() - clock) * 1000
         probe.sample_point = { x = center_x, y = center_y }
         probe.sample_value = value
-        -- 再连采 64 个点估单点成本（os.clock 精度低，单次测不出来）
+        -- 连采 64 个点估单点成本（os.clock 精度低，单次测不出来）
         if value ~= nil then
             local clock2 = common.clock()
             local taken = 0
             for i = 1, 64 do
-                if sample_height(height_fn, center_x + i, center_y) ~= nil then taken = taken + 1 end
+                if sample_height(height_fn, center_x + i * step_x, center_y) ~= nil then taken = taken + 1 end
             end
-            local elapsed = common.clock() - clock2
-            probe.per_call_ms = elapsed * 1000 / 64
+            probe.per_call_ms = (common.clock() - clock2) * 1000 / 64
             probe.calls_ok = taken
         end
+        -- 边界探测：沿四个方向往外走到失效，用来核对采样范围是否合理
+        -- （如果四个方向都能走很远，说明 getHeight 在地图外也返回值，探测结果不能用）
+        local function probe_axis(axis, sign)
+            local best, distance = 0, TARGET_STEP * 4
+            for _ = 1, 60 do
+                local sampled = (axis == "x") and sample_height(height_fn, distance * sign, center_y)
+                    or sample_height(height_fn, center_x, distance * sign)
+                if sampled == nil then break end
+                best = distance
+                distance = distance * 1.12
+            end
+            return best
+        end
+        probe.extent_probe = {
+            x_positive = probe_axis("x", 1),
+            x_negative = probe_axis("x", -1),
+            y_positive = probe_axis("y", 1),
+            y_negative = probe_axis("y", -1),
+        }
     end
 
     diagnostics = probe
 
     job = {
-        xs = grid_xs,
-        ys = grid_ys,
+        xs = {},
+        ys = {},
         cols = cols,
         rows = rows,
         heights = {},
@@ -215,8 +217,9 @@ local function start_job(update_count)
         missing = 0,
         height_fn = height_fn,
         started_at_update = update_count,
-        tile_count = tiles,
     }
+    for i = 1, cols do job.xs[i] = min_x + (i - 1) * step_x end
+    for j = 1, rows do job.ys[j] = min_y + (j - 1) * step_y end
     return job
 end
 
@@ -260,7 +263,6 @@ local function finish(j, update_count)
             total = total,
             cols = j.cols,
             rows = j.rows,
-            terrain_tiles = j.tile_count,
             missing = j.missing,
             water_points = water_points,
             min_height = min_h and (min_h / SCALE) or nil,

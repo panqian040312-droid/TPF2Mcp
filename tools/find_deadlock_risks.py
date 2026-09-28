@@ -196,39 +196,56 @@ def chain_bridges(edges: dict[int, tuple[int, int]], bridges: set[int],
     return list(unique.values())
 
 
-def nearest_junction_distance(adjacency, degree, nodes, start, limit=6000.0):
+def nearest_junction_distance(adjacency, degree, nodes, start, bridges, limit=6000.0):
     """Walk the track from `start` to the nearest junction (degree > 2).
 
     This is the distance a train standing at a platform has available before it
     fouls the points. A platform that is closer to the points than its longest
     calling train is long means that every call blocks the junction.
 
+    Returns the junction, the distance, and whether EVERY edge on that walk is
+    a bridge edge. A bridge edge is a single track whose removal would split
+    the network, so a walk that is all bridges means there is no duplicate
+    track to dodge into -- that is what turns "blocks the junction" into an
+    actual standstill. Without this test the report flagged 22 platforms that
+    all sit on doubled track and never actually deadlock.
+
     Note the adjacency stores (neighbour, edge_id); the edge id is NOT a length,
     so the weight has to be recomputed from the node positions.
     """
     best = {start: 0.0}
+    parent: dict[int, tuple[int, int]] = {}
     queue = [(0.0, start)]
     while queue:
         distance, vertex = heapq.heappop(queue)
         if distance > limit:
-            return None, None
+            return None, None, None
         if vertex != start and degree.get(vertex, 0) > 2:
-            return vertex, distance
+            single_track = True
+            node = vertex
+            while node != start:
+                previous, edge_id = parent[node]
+                if edge_id not in bridges:
+                    single_track = False
+                    break
+                node = previous
+            return vertex, distance, single_track
         here = nodes.get(vertex)
         if here is None:
             continue
-        for neighbour, _edge_id in adjacency.get(vertex, []):
+        for neighbour, edge_id in adjacency.get(vertex, []):
             there = nodes.get(neighbour)
             if there is None:
                 continue
             candidate = distance + math.dist(here, there)
             if candidate < best.get(neighbour, float("inf")):
                 best[neighbour] = candidate
+                parent[neighbour] = (vertex, edge_id)
                 heapq.heappush(queue, (candidate, neighbour))
-    return None, None
+    return None, None, None
 
 
-def platform_reach(network, adjacency, nodes, snapshot, unit_length):
+def platform_reach(network, adjacency, nodes, snapshot, unit_length, bridges):
     """For each platform: distance to the nearest points, against the length of
     the longest train that actually calls there.
 
@@ -257,30 +274,90 @@ def platform_reach(network, adjacency, nodes, snapshot, unit_length):
             line_length[line_id] = length
 
     group_lines: dict[int, set] = defaultdict(set)
+    # How many other terminals a line calling at this node is allowed to use.
+    # This is the engine's own "alternative terminals" list, so it is the honest
+    # answer to "could this train just berth somewhere else here?". An empty
+    # list means the line never assigned a fallback -- which is a setting, not
+    # a physical limit. Keep the calling lines too so the report can say whether
+    # the emptiness is a choice or a dead end.
+    alt_lines: dict[int, set] = defaultdict(set)
+    calling_lines: dict[int, set] = defaultdict(set)
     for line in network.get("lines") or []:
+        line_id = line.get("entity_id")
         for stop in line.get("stops") or []:
             group_id = stop.get("station_group_id")
             if group_id is not None:
-                group_lines[group_id].add(line.get("entity_id"))
+                group_lines[group_id].add(line_id)
+            node_id = stop.get("node_id")
+            if node_id is None:
+                continue
+            calling_lines[node_id].add(line_id)
+            if stop.get("alternative_terminals"):
+                alt_lines[node_id].add(line_id)
 
     rows = []
     for station in network.get("stations") or []:
         group_id = station.get("entity_id")
         calling = [line_length[l] for l in group_lines.get(group_id, ()) if l in line_length]
         longest = max(calling) if calling else None
-        for terminal in station.get("terminals") or []:
+        terminals = station.get("terminals") or []
+        for terminal in terminals:
             node_id = terminal.get("node_id")
             if node_id not in adjacency:
                 continue
-            junction, distance = nearest_junction_distance(adjacency, degree, nodes, node_id)
+            # Count only terminals of the SAME traffic. A five-platform
+            # passenger station next door does not give a freight train
+            # anywhere to go, so counting all terminals overstates the choices.
+            cargo = bool(terminal.get("cargo"))
+            same_cargo = sum(1 for t in terminals if bool(t.get("cargo")) == cargo)
+            junction, distance, single_track = nearest_junction_distance(
+                adjacency, degree, nodes, node_id, bridges)
             rows.append({
                 "station": station.get("name"),
+                # Two stations can share a name while being separate buildings
+                # with different traffic: 降低Almaty is a 5-platform passenger
+                # station (113700) AND a 1-platform freight station (223689).
+                "station_entity_id": group_id,
                 "platform_node": node_id,
+                "platform_cargo": cargo,
+                "same_cargo_terminals": same_cargo,
                 "distance_m": round(distance, 1) if distance is not None else None,
                 "longest_calling_train_m": round(longest, 1) if longest else None,
-                "platforms_at_station": len(station.get("terminals") or []),
+                "platforms_at_station": len(terminals),
+                "alternative_terminals": len(alt_lines.get(node_id, ())),
+                "lines_calling": len(calling_lines.get(node_id, ())),
+                "single_track_berth": single_track,
                 "fouls_points": (distance is not None and longest is not None and distance < longest),
             })
+
+    # Assigning an alternative terminal only helps if one of the spares is
+    # actually FARTHER from the points than the train is long. Otherwise the
+    # train is simply longer than every siding at the station and no amount of
+    # platform juggling will let it stand clear. Compute the best spare per
+    # (station building, traffic) so the report can tell the two apart.
+    best_spare: dict[tuple[int, bool], float] = {}
+    for row in rows:
+        key = (row["station_entity_id"], row["platform_cargo"])
+        value = row["distance_m"]
+        if value is None:
+            continue
+        if value > best_spare.get(key, -1.0):
+            best_spare[key] = value
+    for row in rows:
+        key = (row["station_entity_id"], row["platform_cargo"])
+        spare = best_spare.get(key)
+        length = row["longest_calling_train_m"]
+        # With only one terminal of this traffic there is no spare to report --
+        # echoing the platform's own distance here would read like an option.
+        row["best_spare_distance_m"] = round(spare, 1) if (
+            spare is not None and row["same_cargo_terminals"] > 1) else None
+        row["fixable_by_assignment"] = bool(
+            row["same_cargo_terminals"] > 1
+            and spare is not None
+            and length is not None
+            and spare >= length
+        )
+
     rows.sort(key=lambda r: (r["distance_m"] is None, r["distance_m"] or 0))
     return rows
 
@@ -460,20 +537,66 @@ def main() -> int:
             print(f"longest rail consist on the map: {max(units)} units, "
                   f"~{max(units) * args.unit_length:.0f} m")
 
-    platforms = platform_reach(network, adjacency, nodes, snapshot, args.unit_length)
+    platforms = platform_reach(network, adjacency, nodes, snapshot, args.unit_length, bridges)
     sized = [r for r in platforms if r["longest_calling_train_m"] is not None]
     fouls = [r for r in platforms if r["fouls_points"]]
+    # A platform fouls its points when its longest calling train is longer than
+    # the clear track behind it. That only becomes a standstill when the train
+    # also has nowhere to go: no parallel track to dodge into (every edge on the
+    # walk is a bridge) and no second terminal of the same traffic.
+    on_single = [r for r in fouls if r["single_track_berth"]]
+    # Three different problems, three different fixes:
+    #   dead_end -- the station has exactly one terminal of this traffic, so no
+    #               assignment can help and no train can give way. Rebuild or
+    #               shorten the consist. 降低Almaty is this case.
+    #   settable -- the station HAS more terminals of this traffic but the line
+    #               never assigned any as a fallback. One edit in the line's
+    #               stop list fixes it. Omsk and Ranchi are this case.
+    #   has_alt  -- a fallback is already assigned and the train still does not
+    #               fit; the platforms are simply too close to the points.
+    dead_end = [r for r in on_single if r["same_cargo_terminals"] == 1]
+    fixable = [r for r in on_single
+               if r["same_cargo_terminals"] > 1 and r["fixable_by_assignment"]]
+    unassignable = [r for r in on_single
+                    if r["same_cargo_terminals"] > 1 and not r["fixable_by_assignment"]]
+    doubled = [r for r in fouls if not r["single_track_berth"]]
     print()
     print(f"=== platform clearance ({len(sized)}/{len(platforms)} platforms have calling-line data) ===")
     print(f"    platform whose nearest points are closer than its longest calling train: {len(fouls)}")
+    print(f"    ... standing on single track (no parallel track to dodge into):        {len(on_single)}")
+    print(f"    ... only ONE terminal of this traffic -- no assignment can fix it:      {len(dead_end)}")
+    print(f"    ... a spare terminal IS long enough -- fix by assigning it:            {len(fixable)}")
+    print(f"    ... spare terminals exist but ALL are too short -- still needs the train cut: {len(unassignable)}")
+    print(f"    ... on doubled track, so an opposing train can still slip past:          {len(doubled)}")
     print("    NOTE: this measures whether a train can stand CLEAR of the points, i.e.")
     print("          whether it could give way by retreating. It does NOT by itself mean")
     print("          the train fouls the points while berthed -- the head faces the")
     print("          departure direction, so the tail is the side that overhangs.")
-    print(f"{'车站':<16}{'到道岔m':>9}{'该站最长列车m':>14}   判定")
-    for row in fouls[:25]:
-        print(f"{str(row['station'])[:14]:<16}{row['distance_m']:>9.1f}"
-              f"{row['longest_calling_train_m']:>14.0f}   🔴 净空不足：该列车无法完全停入站台区，也就无法后退让路")
+    print("    NOTE: stations sharing a name are separate buildings. 降低Almaty is both")
+    print("          a 5-platform passenger station and a 1-platform freight station;")
+    print("          a freight train can only use the freight one, so '5 platforms'")
+    print("          never means '5 choices'. Only same-traffic terminals count.")
+    print("    NOTE: assigning an alternative terminal only cures a jam caused by two")
+    print("          trains fighting over one platform. It does NOT make a train")
+    print("          shorter, so it cannot fix a berth that is shorter than the train.")
+    print(f"{'车站(性质)':<22}{'站台节点':>10}{'到道岔m':>9}{'最长列车m':>11}{'同性质台':>9}{'最长备用台m':>11}  判定")
+    ordered = dead_end + fixable + unassignable + doubled
+    for row in ordered[:30]:
+        label = f"{str(row['station'])[:14]}({'货' if row['platform_cargo'] else '客'})"
+        spare = row["best_spare_distance_m"]
+        spare_text = "无" if row["same_cargo_terminals"] == 1 else (
+            f"{spare:.0f}" if spare is not None else "-")
+        if not row["single_track_berth"]:
+            verdict = "🟡 复线：停不净，但对向车可从并行股道绕过"
+        elif row["same_cargo_terminals"] == 1:
+            verdict = "🔴🔴🔴 全场只有这一个同性质站台 → 无台可换，只能改车或改线"
+        elif row["fixable_by_assignment"]:
+            verdict = "🟠 换台可救：备选里有一个够长的股道，设上备选即可"
+        else:
+            verdict = "🔴🔴 备选台全都不够长 → 换台也救不了，还是要改车或改线"
+        print(f"{label:<22}{row['platform_node']:>10}{row['distance_m']:>9.1f}"
+              f"{row['longest_calling_train_m']:>11.0f}{row['same_cargo_terminals']:>9}"
+              f"{spare_text:>11}  {verdict}")
 
     # Is any vehicle physically standing on the points right now?
     zones = fouling_zones(edges, nodes)

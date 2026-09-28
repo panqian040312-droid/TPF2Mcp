@@ -579,7 +579,20 @@ window.renderRailNetwork = function renderRailNetwork() {
     const vehicles=(liveState?.vehicles||[]).filter(vehicle=>groupIds.has(stationForVehicle(vehicle)?.entity_id)||(vehicle.raw_state===2&&groupIds.has(stopForVehicle(vehicle)?.station_group_id)));
     const platforms=groups.flatMap(physicalPlatforms);
     const platformFaces=platforms.reduce((total,platform)=>total+Math.max(1,(platform.terminal_faces||[]).length),0);
-    return {groups,routes,vehicles,platforms,platformFaces,summary:`${stationFacilityKind(groups)} ${platformFaces}站台`,servingVehicles:stationServingVehicleCount(routes)};
+    // 互通站群：同一片里的车站算一个整体，所以规模（线路数、在跑的车）也按整片合计，
+    // 而不是只数本站。这正是"算客流要综合考虑"的第一步 —— 换乘的人流会在这片里流动。
+    // 包一层 try：带 ?station=xxx 进页面时，初始化阶段就会渲染侧边栏，而站群模块
+    // 在这段代码之后才定义（const 的暂时性死区），此时应当退化成"没有站群信息"而不是报错。
+    let cluster=null;
+    try{cluster=stationClusterInfo(station);}catch(error){cluster=null;}
+    const summaryParts=[`${stationFacilityKind(groups)} ${platformFaces}站台`];
+    if(cluster&&cluster.memberCount>1){
+      summaryParts.push(`互通 ${cluster.memberCount} 站`);
+      if(cluster.lineCount!=null)summaryParts.push(`该片合计 ${cluster.lineCount} 线`);
+      if(cluster.vehicleCount!=null)summaryParts.push(`${cluster.vehicleCount} 车`);
+    }
+    return {groups,routes,vehicles,platforms,platformFaces,cluster,
+            summary:summaryParts.join(' · '),servingVehicles:stationServingVehicleCount(routes)};
   };
   const fillStationRoutes=(slot,station,routes)=>{
     const rows=routes.map(line=>{const row=templates.instantiate('station-route-row-template');templates.setText(row,'name',line.name);templates.setText(row,'dwell',dwellDescription(line,station));return row;});
@@ -1386,6 +1399,101 @@ window.renderRailNetwork = function renderRailNetwork() {
     if(!data.lines.length)addOption(lineGroup,'（没有采到线路）',{checked:false,onChange:()=>{}});
     applyFilters();
     console.log(`[map] 线路图层：${data.lines.length} 条`, '种类', data.by_carrier||{}, '职能', data.by_cargo||{});
+  })());
+
+  // 车站互通站群。数据来自 mod 侧 layer_stations.lua：它读引擎的车站辐射表
+  // （catchmentAreaSystem.getStation2stationsAndDistancesMap）再用并查集把
+  // "连成一片"的车站归成一个 cluster —— 互通是传递的，所以要的连通分量，不是两两配对。
+  //
+  // 这个结构也是"算客流要综合考虑"的基础：同一 cluster 的车站算一个整体。
+  const STATION_CLUSTERS = { data: null, byStation: new Map(), sizeOf: new Map(),
+                             group: null, colorOf: null, visible: true };
+
+  // 某车站所属的站群信息（含按站群合计的规模）。车站可能由多个 station group 组成，
+  // 命中任意一个即可。
+  const stationClusterInfo = station => {
+    const data = STATION_CLUSTERS.data;
+    if (!data) return null;
+    let entry = null;
+    for (const group of relatedStations(station)) {
+      const found = STATION_CLUSTERS.byStation.get(Number(group.entity_id));
+      if (found) { entry = found; break; }
+    }
+    if (!entry) return null;
+    const root = Number(entry.cluster);
+    const memberCount = STATION_CLUSTERS.sizeOf.get(root) || 1;
+    if (memberCount < 2) return { memberCount };
+    const members = new Set((data.stations || [])
+      .filter(item => Number(item.cluster) === root)
+      .map(item => Number(item.entity_id)));
+    // 把群里所有车站的线路并起来 —— 换乘是双向的，一条线停群里任何一个站都算这个群的服务
+    const lineIds = new Set();
+    (p.lines || []).forEach(line => {
+      if ((line.stops || []).some(stop => members.has(Number(stop.station_group_id)))) {
+        lineIds.add(line.entity_id);
+      }
+    });
+    const entityByLine = new Map((p.lines || []).map(line => [line.entity_id, line]));
+    const vehicleCount = (liveState?.vehicles || [])
+      .filter(vehicle => entityByLine.has(vehicle.line) && lineIds.has(vehicle.line)).length;
+    return { memberCount, lineCount: lineIds.size, vehicleCount };
+  };
+
+  // ---- 车站互通站群（整层加载）----
+  layerTasks.push((async()=>{
+    let manifest=null;
+    try{
+      const response=await fetch('/api/layers/stations/manifest',{cache:'no-store'});
+      if(response.ok)manifest=await response.json();
+    }catch(error){console.error(error);}
+    if(!manifest||!manifest.data_file)return;
+    let data=null;
+    try{
+      const response=await fetch(`/layers/${manifest.data_file}`,{cache:'no-store'});
+      if(response.ok)data=await response.json();
+    }catch(error){console.error(error);}
+    if(!data||!Array.isArray(data.stations)||!data.stations.length)return;
+
+    STATION_CLUSTERS.data=data;
+    STATION_CLUSTERS.byStation=new Map(data.stations.map(item=>[Number(item.entity_id),item]));
+    STATION_CLUSTERS.sizeOf=new Map((data.clusters||[]).map(item=>[Number(item.root),item.member_count]));
+
+    const group=S('g',{id:'network-station-cluster-layer','pointer-events':'none'});
+    if(stationLayer.parentNode)stationLayer.parentNode.insertBefore(group,stationLayer);
+    else mapLayer.appendChild(group);
+    STATION_CLUSTERS.group=group;
+
+    // 站群配色：黄金角分布，相邻簇的色相拉得够开，便于区分
+    const clusterColor=root=>`hsl(${((Number(root)||0)*137.508)%360} 58% 64%)`;
+    STATION_CLUSTERS.colorOf=clusterColor;
+
+    // ① 互通连线：直接画引擎给出的互通对，不自己按距离阈值连
+    (data.links||[]).forEach(link=>{
+      const a=STATION_CLUSTERS.byStation.get(Number(link.a));
+      const b=STATION_CLUSTERS.byStation.get(Number(link.b));
+      if(!a||!b)return;
+      const start=P(a.position),end=P(b.position);
+      S('line',{x1:start.x.toFixed(1),y1:start.y.toFixed(1),x2:end.x.toFixed(1),y2:end.y.toFixed(1),
+        stroke:clusterColor(a.cluster),'stroke-width':1,'stroke-dasharray':'3 3',opacity:.7,
+        'vector-effect':'non-scaling-stroke'},'',group);
+    });
+
+    // ② 只给真的连成一片的站画同色环（孤站不标，否则满图是圈）
+    data.stations.forEach(station=>{
+      if((STATION_CLUSTERS.sizeOf.get(Number(station.cluster))||1)<2)return;
+      const point=P(station.position);
+      S('circle',{cx:point.x.toFixed(1),cy:point.y.toFixed(1),r:6.5,fill:'none',
+        stroke:clusterColor(station.cluster),'stroke-width':1.2,opacity:.85,
+        'vector-effect':'non-scaling-stroke'},'',group);
+    });
+
+    addOption(netGroup,'互通站群',{
+      count:`${data.counts.clusters} 群 · ${data.counts.linked_clusters} 片相连`,
+      title:'把步行可换乘的车站连成一片（数据是游戏自己的车站辐射表）',
+      onChange:visible=>{STATION_CLUSTERS.visible=visible;group.style.display=visible?'':'none';},
+    });
+    console.log(`[map] 站群图层：${data.counts.clusters} 群，其中 ${data.counts.linked_clusters} 片多站相连`,
+      `最大一片 ${data.counts.largest_cluster} 站`, `互通 ${data.counts.links} 对`);
   })());
 
   // ---- 地形层（等高线 / 水深 / 地下站）----

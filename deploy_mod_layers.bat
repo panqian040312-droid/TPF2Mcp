@@ -1,6 +1,6 @@
 @echo off
 chcp 936 >nul
-title Deploy mod layers (terrain + lines + bridge flags)
+title Deploy mod layers (terrain + lines + station clusters)
 
 set "PROJ=E://workbody//TPF2Mcp"
 set "STAGE=C://Program Files (x86)\Steam\userdata\1070536217\1066780\local\staging_area\tpf2mcp_1"

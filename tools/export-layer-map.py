@@ -93,35 +93,44 @@ def grid_bounds(grid: dict) -> dict | None:
             "max": {"x": origin_x + step_x * (cols - 1), "y": origin_y + step_y * (rows - 1)}}
 
 
-def export_routes(name: str, payload: dict, output_directory: Path) -> dict:
-    """线路图层：整层一个数据文件，**不分块**。
+# 整层输出（不分块）的图层：几何形态决定了它们不能按 tile 切开。
+#   ROUTE          一条线的停靠点散落在很多 tile 里，切开就得跨块接续
+#   STATION_CLUSTER 站群的成员可能横跨好几个 tile，切开就断了"连成一片"这件事
+#   GRID           等高线按 tile 切会在接缝处断掉
+WHOLE_LAYER_FIELDS = {
+    "ROUTE": ("lines", "by_carrier", "by_cargo"),
+    "STATION_CLUSTER": ("clusters", "stations", "links", "by_cluster"),
+}
 
-    理由和网格层一样：一条线的停靠点会散落到很多个 tile 里，按中点切块会让同一条线
-    在多个块里各画一段，前端还得自己跨块接续。而整层也就几百个点，直接整份给前端。
-    """
-    lines = payload.get("lines") or []
+
+def export_whole_layer(name: str, payload: dict, output_directory: Path) -> dict:
+    """整层输出：一个数据文件 + 一个 manifest，不切块。"""
+    kind = payload.get("geometry_kind")
     data = {
         "schema_version": 1,
         "layer": name,
-        "geometry_kind": "ROUTE",
-        "by_carrier": payload.get("by_carrier") or {},
-        "by_cargo": payload.get("by_cargo") or {},
+        "geometry_kind": kind,
         "counts": payload.get("counts") or {},
-        "lines": lines,
     }
+    for field in WHOLE_LAYER_FIELDS.get(kind, ()):
+        if field in payload:
+            data[field] = payload[field]
+
     (output_directory / f"{name}-data.json").write_text(
         json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
 
     manifest = {
         "schema_version": 1,
         "layer": name,
-        "geometry_kind": "ROUTE",
+        "geometry_kind": kind,
         "source_status": payload.get("source_status"),
         "generated_at": int(time.time()),
         "data_file": f"{name}-data.json",
-        "by_carrier": data["by_carrier"],
-        "by_cargo": data["by_cargo"],
         "counts": data["counts"],
+        # 图层特有的摘要统计，前端做图例/按钮计数要用
+        "by_carrier": data.get("by_carrier") or {},
+        "by_cargo": data.get("by_cargo") or {},
+        "by_cluster": data.get("by_cluster") or {},
         "diagnostics": payload.get("diagnostics"),
         "tiles": [],
         "tile_size_m": None,
@@ -130,8 +139,15 @@ def export_routes(name: str, payload: dict, output_directory: Path) -> dict:
     (output_directory / f"{name}-manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
 
-    return {"lines": len(lines), "by_carrier": data["by_carrier"], "by_cargo": data["by_cargo"],
-            "counts": data["counts"]}
+    summary = {"kind": kind, "counts": data["counts"]}
+    for field in ("by_carrier", "by_cargo", "by_cluster"):
+        if data.get(field):
+            summary[field] = data[field]
+    if isinstance(data.get("clusters"), list):
+        summary["clusters"] = len(data["clusters"])
+    if isinstance(data.get("lines"), list):
+        summary["lines"] = len(data["lines"])
+    return summary
 
 
 def export_grid(name: str, payload: dict, output_directory: Path) -> dict:
@@ -286,8 +302,8 @@ def main() -> None:
         if geometry_kind == "GRID":
             summary[name] = export_grid(name, payload, args.output_directory)
             continue
-        if geometry_kind == "ROUTE":
-            summary[name] = export_routes(name, payload, args.output_directory)
+        if geometry_kind in ("ROUTE", "STATION_CLUSTER"):
+            summary[name] = export_whole_layer(name, payload, args.output_directory)
             continue
 
         layer_bounds = bounds or bounds_from_payload(payload)

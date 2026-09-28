@@ -21,6 +21,7 @@ local layer_road = require "tpf2_mcp/collectors/layer_road"
 local layer_industry = require "tpf2_mcp/collectors/layer_industry"
 local layer_vehicles = require "tpf2_mcp/collectors/layer_vehicles"
 local layer_lines = require "tpf2_mcp/collectors/layer_lines"
+local layer_stations = require "tpf2_mcp/collectors/layer_stations"
 local layer_terrain = require "tpf2_mcp/collectors/layer_terrain"
 
 local M = {}
@@ -44,6 +45,9 @@ local LAYERS = {
     -- 全方式线路（不只铁路）。delay 特意避开 vehicles 的 46+15k 序列（100-46=54 不是 15 的倍数）。
     { name = "lines",    kind = "static",  every = 4500,  delay = 100, collect = layer_lines.collect },
     { name = "industry", kind = "static",  every = 5400,  delay = 121, collect = layer_industry.collect },
+    -- 车站互通站群（catchmentAreaSystem 的辐射表 + 并查集求连通分量）。
+    -- delay=160 避开 vehicles 的 46+15k 序列（160-46=114，不是 15 的倍数）。
+    { name = "stations", kind = "static",  every = 4500,  delay = 160, collect = layer_stations.collect },
     -- 地形是**流式**层：要调一万多次 getHeight，一帧做完会卡帧，所以每个 update
     -- 只采一小批（layer_terrain 里的 BATCH），全部采完才写出。它没有 collect 方法，
     -- 用 advance(should_start, update_count)：返回 nil = 还在采，返回 table = 采完了。

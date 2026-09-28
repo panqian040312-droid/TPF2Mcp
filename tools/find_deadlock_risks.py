@@ -285,6 +285,53 @@ def platform_reach(network, adjacency, nodes, snapshot, unit_length):
     return rows
 
 
+def edge_length(edges: dict[int, tuple[int, int]], nodes: dict, edge_id: int) -> float:
+    n0, n1 = edges[edge_id]
+    a, b = nodes.get(n0), nodes.get(n1)
+    if a is None or b is None:
+        return 0.0
+    return math.dist(a, b)
+
+
+def fouling_zones(edges: dict[int, tuple[int, int]], nodes: dict, short_threshold: float = 20.0):
+    """Points and station throats appear in the track graph as runs of very
+    short edges.
+
+    A train standing on any of those edges has its body lying across the points,
+    so nothing can be routed through it -- that is what "侵入道岔" means, and it
+    is what actually caused the 2026-09-29 deadlock.
+
+    Searching for the nearest junction NODE gets this wrong, which is the mistake
+    the first version made: the train is already *inside* the throat, so the
+    distance to the far end of it says nothing. The zone has to be measured as a
+    run, not a point.
+    """
+    incident: dict[int, list[int]] = defaultdict(list)
+    for edge_id, (n0, n1) in edges.items():
+        incident[n0].append(edge_id)
+        incident[n1].append(edge_id)
+
+    short = {e for e in edges if edge_length(edges, nodes, e) < short_threshold}
+    seen: set[int] = set()
+    zones: list[list[int]] = []
+    for edge_id in short:
+        if edge_id in seen:
+            continue
+        stack, zone = [edge_id], []
+        while stack:
+            current = stack.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            zone.append(current)
+            for endpoint in edges[current]:
+                for neighbour_edge in incident[endpoint]:
+                    if neighbour_edge in short and neighbour_edge not in seen:
+                        stack.append(neighbour_edge)
+        zones.append(zone)
+    return zones
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--rail-network", type=pathlib.Path,
@@ -336,12 +383,18 @@ def main() -> int:
     # happens to be empty is a latent risk; one with two or more vehicles on it
     # is where the deadlock will actually happen.
     vehicles_by_edge: dict[int, list[str]] = defaultdict(list)
+    vehicle_speed: dict[int, float] = {}
+    vehicle_state: dict[int, object] = {}
     if args.vehicles and args.vehicles.exists():
         frame = load(args.vehicles)
         for vehicle in frame.get("vehicles") or []:
             edge_id = vehicle.get("edge_id") or vehicle.get("current_edge_id")
             if isinstance(edge_id, int):
                 vehicles_by_edge[edge_id].append(str(vehicle.get("name")))
+                speed = vehicle.get("speed_kmh")
+                if isinstance(speed, (int, float)):
+                    vehicle_speed[edge_id] = speed
+                vehicle_state[edge_id] = vehicle.get("raw_state")
         print(f"vehicles with a resolved edge: "
               f"{sum(len(v) for v in vehicles_by_edge.values())}")
 
@@ -421,6 +474,42 @@ def main() -> int:
     for row in fouls[:25]:
         print(f"{str(row['station'])[:14]:<16}{row['distance_m']:>9.1f}"
               f"{row['longest_calling_train_m']:>14.0f}   🔴 净空不足：该列车无法完全停入站台区，也就无法后退让路")
+
+    # Is any vehicle physically standing on the points right now?
+    zones = fouling_zones(edges, nodes)
+    zone_of: dict[int, int] = {}
+    for index, zone in enumerate(zones):
+        for edge_id in zone:
+            zone_of[edge_id] = index
+    zone_length = {}
+    for index, zone in enumerate(zones):
+        zone_length[index] = sum(edge_length(edges, nodes, e) for e in zone)
+    standing = [(edge_id, names) for edge_id, names in vehicles_by_edge.items() if edge_id in zone_of]
+    # Being on the points is normal while passing through; sitting on them with
+    # no speed is the deadlock signature. Without the speed test this reports
+    # every train currently traversing a station throat (7 of 7 were false).
+    stuck_on_points = [
+        (edge_id, names) for edge_id, names in standing
+        if isinstance(vehicle_speed.get(edge_id), (int, float)) and vehicle_speed[edge_id] <= 1.0
+    ]
+    print()
+    print(f"=== vehicles standing ON the points (fouling zones: {len(zones)} found) ===")
+    print(f"    on the points: {len(standing)}    of which stationary: {len(stuck_on_points)}")
+    if not stuck_on_points:
+        print("    none stationary on the points")
+    for edge_id, names in stuck_on_points:
+        index = zone_of[edge_id]
+        state = vehicle_state.get(edge_id)
+        if state == 1:
+            tag = "🔴 运行中却停住不动 = 死锁"
+        elif state == 2:
+            tag = "🟡 停站中（会走，但停站期间车体压住道岔）"
+        else:
+            tag = f"（state={state}）"
+        print(f"  {tag}")
+        print(f"      {'/'.join(names):<12} 边 {edge_id}"
+              f"（道岔区 {len(zones[index])} 条短边 / {zone_length[index]:.1f} m）"
+              f" speed={vehicle_speed[edge_id]} state={state}")
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)

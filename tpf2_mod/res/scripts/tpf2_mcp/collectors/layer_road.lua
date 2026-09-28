@@ -1,72 +1,92 @@
 -- 公路网图层采集器（只读）
 --
--- 数据源：BASE_EDGE 组件。v4 世界探针（2026-09-28）实测确认：
---   BASE_EDGE 10444 = BASE_EDGE_TRACK 5182 (track=true) + BASE_EDGE_STREET 5262 (track=false)
---   两类字段完全相同：id / node0 / node1 / node0pos / node1pos / node0tangent /
---   node1tangent / track / streetType / hasBus / hasTram
---   → 公路不需要另写一套几何读法，按 track 分流即可。
---
--- 几何取自 BASE_EDGE 自身的 node0pos / node1pos，不必再遍历 BASE_NODE 取坐标；
--- 但仍生成去重后的 nodes 表，好让前端复用铁路那套 edgePath（Hermite 切线）画法。
+-- 数据源与读法（2026-09-28 修正）：
+--   * 遍历组件用 BASE_EDGE_STREET —— 不能用"遍历 BASE_EDGE 再看 track 字段"，
+--     因为 `track` 只存在于 game.interface.getEntity 的聚合表，组件视图里读不到。
+--   * 几何读法与 collectors/rail_network.lua 完全一致：
+--       getComponent(e,"BASE_EDGE")  → node0 / node1 / tangent0 / tangent1
+--       getComponent(node,"BASE_NODE").position → 端点坐标（带缓存）
+--     注意：node0pos / node1pos 那种"端点坐标直读"只存在于聚合表，组件视图没有。
+--   * 端点坐标初值来自 BOUNDING_VOLUME；rail_network.lua 的 bounds_for() 已验证可用。
 
 local common = require "tpf2_mcp/collectors/common"
+local field_probe = require "tpf2_mcp/collectors/field_probe"
 
 local M = {}
 
 local function vec(value)
     if value == nil then return nil end
-    local position = {
-        x = common.field(value, "x"),
-        y = common.field(value, "y"),
-        z = common.field(value, "z"),
-    }
-    if position.x == nil or position.y == nil then return nil end
-    if position.z == nil then position.z = 0 end
-    return position
+    local x, y, z = common.field(value, "x"), common.field(value, "y"), common.field(value, "z")
+    if type(x) ~= "number" or type(y) ~= "number" then return nil end
+    return { x = x, y = y, z = type(z) == "number" and z or 0 }
+end
+
+local function text(value)
+    if type(value) == "string" and value ~= "" then return value end
+    return nil
+end
+
+-- 端点节点坐标读取器（照 rail_network.lua 的 base_node()，带去重缓存）
+local function node_reader(errors, cache)
+    return function(raw)
+        local id = common.entity_id(raw)
+        if id == nil then return nil, nil end
+        local cached = cache[id]
+        if cached ~= nil then
+            if cached == false then return nil, id end
+            return cached, id
+        end
+        local node = common.safe_get_component(raw, "BASE_NODE", errors)
+        local position = vec(common.field(node, "position")) or vec(common.field(node, "pos"))
+        cache[id] = position or false
+        return position, id
+    end
 end
 
 function M.collect()
     local errors = {}
-    local edges = {}
-    local nodes = {}
+    local edges, nodes = {}, {}
+    local node_cache = {}
     local street_types = {}
     local skipped = 0
+    local probe = nil
+    local read_node = node_reader(errors, node_cache)
 
-    local ok, scanned_or_error = common.safe_for_each_entity("BASE_EDGE", function(entity)
-        local base = common.safe_get_component(entity, "BASE_EDGE", errors)
+    local ok, scanned_or_error = common.safe_for_each_entity("BASE_EDGE_STREET", function(edge_entity)
+        local base = common.safe_get_component(edge_entity, "BASE_EDGE", errors)
         if base == nil then
             skipped = skipped + 1
             return
         end
-        -- 只要公路：track == true 的是铁路，跳过
-        if common.field(base, "track") == true then return end
+        if probe == nil then
+            -- 只对第一个实体做字段普查：开销可忽略，但能一次性看清真实字段名
+            probe = {
+                base = field_probe.describe(base),
+                street = field_probe.describe(common.safe_get_component(edge_entity, "BASE_EDGE_STREET", errors), 16),
+            }
+        end
 
-        local raw0 = common.field(base, "node0")
-        local raw1 = common.field(base, "node1")
-        local position0 = vec(common.field(base, "node0pos"))
-        local position1 = vec(common.field(base, "node1pos"))
-        if raw0 == nil or raw1 == nil or position0 == nil or position1 == nil then
+        local raw0, raw1 = common.field(base, "node0"), common.field(base, "node1")
+        local position0, id0 = read_node(raw0)
+        local position1, id1 = read_node(raw1)
+        if id0 == nil or id1 == nil or position0 == nil or position1 == nil then
             skipped = skipped + 1
             return
         end
-        local id0 = common.entity_id(raw0)
-        local id1 = common.entity_id(raw1)
-        if nodes[id0] == nil then nodes[id0] = { entity_id = id0, position = position0 } end
-        if nodes[id1] == nil then nodes[id1] = { entity_id = id1, position = position1 } end
+        nodes[id0] = nodes[id0] or { entity_id = id0, position = position0 }
+        nodes[id1] = nodes[id1] or { entity_id = id1, position = position1 }
 
-        local raw_street_type = common.field(base, "streetType")
-        local street_type = nil
-        if type(raw_street_type) == "string" and raw_street_type ~= "" then
-            street_type = raw_street_type
+        local street_type = text(common.field(base, "streetType"))
+        if street_type ~= nil then
             street_types[street_type] = (street_types[street_type] or 0) + 1
         end
 
         edges[#edges + 1] = {
-            entity_id = common.entity_id(entity),
+            entity_id = common.entity_id(edge_entity),
             node0 = id0,
             node1 = id1,
-            tangent0 = vec(common.field(base, "node0tangent")),
-            tangent1 = vec(common.field(base, "node1tangent")),
+            tangent0 = vec(common.field(base, "tangent0")),
+            tangent1 = vec(common.field(base, "tangent1")),
             street_type = street_type,
             has_bus = common.field(base, "hasBus") == true,
             has_tram = common.field(base, "hasTram") == true,
@@ -82,8 +102,9 @@ function M.collect()
         }
     end
 
-    local sorted_nodes = {}
-    for _, node in pairs(nodes) do sorted_nodes[#sorted_nodes + 1] = node end
+    local ordered = {}
+    for _, node in pairs(nodes) do ordered[#ordered + 1] = node end
+    table.sort(ordered, function(a, b) return a.entity_id < b.entity_id end)
 
     return {
         status = "OK",
@@ -92,13 +113,14 @@ function M.collect()
         counts = {
             total = #edges,
             edges = #edges,
-            nodes = #sorted_nodes,
+            nodes = #ordered,
             scanned = scanned_or_error,
             skipped = skipped,
             street_types = #street_types,
         },
         street_types = street_types,
-        nodes = sorted_nodes,
+        field_probe = probe,
+        nodes = ordered,
         edges = edges,
         errors = errors,
     }

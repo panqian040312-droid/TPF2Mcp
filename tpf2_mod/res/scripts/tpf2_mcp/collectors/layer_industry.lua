@@ -1,32 +1,39 @@
 -- 产业图层采集器（只读）
 --
--- 数据源：SIM_BUILDING 组件。v4 世界探针（2026-09-28）实测字段：
---   id / position / name / level / stockList / itemsConsumed / itemsProduced /
---   itemsShipped / itemsConsumedVehicleUsed / upgradeProgress / type
--- 本存档实测只有 131 个，可一次采完，无需分帧。
+-- 数据源：SIM_BUILDING 组件。
 --
--- 数量很小，所以这里连 items* 那几个表的长度也一并带上，供前端判断"有没有在出货"。
+-- 读法要点（2026-09-28 修正）：`SIM_BUILDING` 的**组件视图**里没有 position，
+-- 只有 level / stockList。所以位置必须走 BOUNDING_VOLUME 的包围盒中心
+-- （rail_network.lua 的 bounds_for() 已在 STATION/TOWN 上验证可用）。
+-- 之前直接读 building.position 导致 131 个产业全被跳过。
+--
+-- 名字同样不在组件视图里；先用 field_probe 把真实字段名探出来再说，
+-- 本版先输出位置 / 等级 / 库存关联，名字留空。
 
 local common = require "tpf2_mcp/collectors/common"
+local field_probe = require "tpf2_mcp/collectors/field_probe"
 
 local M = {}
 
 local function vec(value)
     if value == nil then return nil end
-    local position = {
-        x = common.field(value, "x"),
-        y = common.field(value, "y"),
-        z = common.field(value, "z"),
-    }
-    if position.x == nil or position.y == nil then return nil end
-    if position.z == nil then position.z = 0 end
-    return position
+    local x, y, z = common.field(value, "x"), common.field(value, "y"), common.field(value, "z")
+    if type(x) ~= "number" or type(y) ~= "number" then return nil end
+    return { x = x, y = y, z = type(z) == "number" and z or 0 }
 end
 
-local function text(value)
-    if type(value) == "string" then return value end
-    if type(value) == "number" then return tostring(value) end
-    return nil
+-- 照 rail_network.lua 的 bounds_for()
+local function bounds_for(entity, errors)
+    local volume = common.safe_get_component(entity, "BOUNDING_VOLUME", errors)
+    local bbox = common.field(volume, "bbox")
+    local minimum = vec(common.field(bbox, "min")) or vec(common.field(bbox, "bbMin"))
+    local maximum = vec(common.field(bbox, "max")) or vec(common.field(bbox, "bbMax"))
+    if not minimum or not maximum then return nil, nil end
+    return {
+        x = (minimum.x + maximum.x) / 2,
+        y = (minimum.y + maximum.y) / 2,
+        z = (minimum.z + maximum.z) / 2,
+    }, { min = minimum, max = maximum }
 end
 
 local function number_or_nil(value)
@@ -38,6 +45,8 @@ function M.collect()
     local errors = {}
     local points = {}
     local skipped = 0
+    local no_bounds = 0
+    local probe = nil
 
     local ok, scanned_or_error = common.safe_for_each_entity("SIM_BUILDING", function(entity)
         local building = common.safe_get_component(entity, "SIM_BUILDING", errors)
@@ -45,19 +54,20 @@ function M.collect()
             skipped = skipped + 1
             return
         end
-        local position = vec(common.field(building, "position"))
-        if position == nil then
-            skipped = skipped + 1
+        if probe == nil then
+            probe = { building = field_probe.describe(building) }
+        end
+        local center = bounds_for(entity, errors)
+        if center == nil then
+            no_bounds = no_bounds + 1
             return
         end
         points[#points + 1] = {
             entity_id = common.entity_id(entity),
-            position = position,
-            name = text(common.field(building, "name")),
+            position = center,
             level = number_or_nil(common.field(building, "level")),
             upgrade_progress = number_or_nil(common.field(building, "upgradeProgress")),
-            stock_list = text(common.field(building, "stockList")),
-            -- 只是数组长度，不展开内容（内容是"按货物种类"的表，等确认真实结构再说）
+            stock_list = number_or_nil(common.field(building, "stockList")),
             consumed_count = common.array_count(common.field(building, "itemsConsumed")),
             produced_count = common.array_count(common.field(building, "itemsProduced")),
             shipped_count = common.array_count(common.field(building, "itemsShipped")),
@@ -82,7 +92,9 @@ function M.collect()
             points = #points,
             scanned = scanned_or_error,
             skipped = skipped,
+            no_bounds = no_bounds,
         },
+        field_probe = probe,
         points = points,
         errors = errors,
     }

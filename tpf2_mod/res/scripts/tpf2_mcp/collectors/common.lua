@@ -34,6 +34,36 @@ function M.structure_of(edge_type)
     return "TYPE_" .. tostring(edge_type)
 end
 
+-- 运输方式。`TRANSPORT_VEHICLE.carrier` 在**组件视图里是数字**（聚合表里才是字符串
+-- "RAIL"），映射由 2026-09-28 本存档 664 辆车实测反推：
+--     carrier_raw 分布     →  0:595   1:28   2:3   3:20   4:18
+--     同存档聚合表计数     →          TRAIN=28      AIRCRAFT=20   SHIP=18
+--     ⇒  0=ROAD  1=RAIL  3=AIR  4=WATER
+-- carrier=2 的 3 辆尚未定性（不是 SHIP，数量对不上），**刻意留空** ——
+-- 硬塞进 WATER 会让这 3 辆车在地图上显示成错误的颜色。
+M.CARRIER_NAMES = { [0] = "ROAD", [1] = "RAIL", [3] = "AIR", [4] = "WATER" }
+
+-- 数字或字符串形式的 carrier 都归一成上面的名字；认不出返回 nil（不猜）。
+function M.carrier_name(value)
+    if type(value) == "number" then return M.CARRIER_NAMES[value] end
+    if type(value) == "string" then
+        local upper = string.upper(value)
+        if upper == "ROAD" or upper == "RAIL" or upper == "AIR" or upper == "WATER" then return upper end
+    end
+    return nil
+end
+
+-- 统计表里票数最多的键；并列或空表返回 nil。
+function M.majority_key(tally)
+    local best, best_count, tied = nil, 0, false
+    for key, count in pairs(tally or {}) do
+        if count > best_count then best, best_count, tied = key, count, false
+        elseif count == best_count then tied = true end
+    end
+    if tied then return nil end
+    return best
+end
+
 function M.component_type(name)
     local ok, value = pcall(function() return api.type.ComponentType[name] end)
     if not ok or value == nil then return nil, "component type unavailable: " .. tostring(name) end

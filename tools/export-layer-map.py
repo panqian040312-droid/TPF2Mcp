@@ -93,6 +93,47 @@ def grid_bounds(grid: dict) -> dict | None:
             "max": {"x": origin_x + step_x * (cols - 1), "y": origin_y + step_y * (rows - 1)}}
 
 
+def export_routes(name: str, payload: dict, output_directory: Path) -> dict:
+    """线路图层：整层一个数据文件，**不分块**。
+
+    理由和网格层一样：一条线的停靠点会散落到很多个 tile 里，按中点切块会让同一条线
+    在多个块里各画一段，前端还得自己跨块接续。而整层也就几百个点，直接整份给前端。
+    """
+    lines = payload.get("lines") or []
+    data = {
+        "schema_version": 1,
+        "layer": name,
+        "geometry_kind": "ROUTE",
+        "by_carrier": payload.get("by_carrier") or {},
+        "by_cargo": payload.get("by_cargo") or {},
+        "counts": payload.get("counts") or {},
+        "lines": lines,
+    }
+    (output_directory / f"{name}-data.json").write_text(
+        json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    manifest = {
+        "schema_version": 1,
+        "layer": name,
+        "geometry_kind": "ROUTE",
+        "source_status": payload.get("source_status"),
+        "generated_at": int(time.time()),
+        "data_file": f"{name}-data.json",
+        "by_carrier": data["by_carrier"],
+        "by_cargo": data["by_cargo"],
+        "counts": data["counts"],
+        "diagnostics": payload.get("diagnostics"),
+        "tiles": [],
+        "tile_size_m": None,
+        "detail_load_threshold_m": None,
+    }
+    (output_directory / f"{name}-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    return {"lines": len(lines), "by_carrier": data["by_carrier"], "by_cargo": data["by_cargo"],
+            "counts": data["counts"]}
+
+
 def export_grid(name: str, payload: dict, output_directory: Path) -> dict:
     """网格图层（地形高度）：整层一个数据文件，**不分块**。
 
@@ -241,9 +282,12 @@ def main() -> None:
 
         geometry_kind = payload.get("geometry_kind") or "EDGE_GRAPH"
 
-        # 网格层（地形高度）走独立路径：不分块、不参与全局 bounds 切分。
+        # 整层输出、不分块的两类：网格（地形高度）与线路（路径点序列）
         if geometry_kind == "GRID":
             summary[name] = export_grid(name, payload, args.output_directory)
+            continue
+        if geometry_kind == "ROUTE":
+            summary[name] = export_routes(name, payload, args.output_directory)
             continue
 
         layer_bounds = bounds or bounds_from_payload(payload)
@@ -302,7 +346,10 @@ def main() -> None:
                     continue
                 entry = [round(float(position["x"]), 1), round(float(position["y"]), 1)]
                 if name == "vehicles":
+                    # 必须把所属线路一起带上：前端要靠它查这条线是客运还是货运，
+                    # 少了它总览下按职能筛选会一辆车都留不下（自检发现过这个问题）。
                     entry.append(point.get("carrier"))
+                    entry.append(point.get("line"))
                 elif name == "industry":
                     entry.append(point.get("level"))
                 summary_points.append(entry)

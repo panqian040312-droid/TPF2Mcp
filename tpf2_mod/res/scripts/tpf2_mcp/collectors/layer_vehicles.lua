@@ -23,13 +23,11 @@ local M = {}
 
 local VEHICLE_LIMIT = 2000
 
--- 映射按 2026-09-28 本存档实测反推（664 辆车）：
---   carrier_raw 分布      →  0:595   1:28   2:3   3:20   4:18
---   同存档聚合表视图计数   →          TRAIN=28      AIRCRAFT=20  SHIP=18
---   对照结论             →  0=ROAD  1=RAIL  3=AIR  4=WATER
--- carrier=2 的 3 辆尚未定性（不是 SHIP，数量对不上），刻意留 UNKNOWN ——
--- 硬塞进 WATER 会让这 3 辆车在地图上显示成错误的颜色。
-local CARRIER_NAMES = { [0] = "ROAD", [1] = "RAIL", [3] = "AIR", [4] = "WATER" }
+-- carrier 的数字→名称映射放在 common（layer_lines 也要用同一份，避免两处各写一遍漂移）。
+-- 推导过程见 common.CARRIER_NAMES 处的注释。
+local function carrier_name(value)
+    return common.carrier_name(value) or ("CARRIER_" .. tostring(value))
+end
 
 local function vec(value)
     if value == nil then return nil end
@@ -54,12 +52,6 @@ end
 local function number_or_nil(value)
     if type(value) == "number" then return value end
     return nil
-end
-
-local function carrier_name(value)
-    if type(value) == "number" then return CARRIER_NAMES[value] or ("CARRIER_" .. tostring(value)) end
-    if type(value) == "string" and value ~= "" then return value end
-    return "UNKNOWN"
 end
 
 function M.collect()

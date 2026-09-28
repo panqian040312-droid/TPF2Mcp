@@ -1,18 +1,18 @@
 @echo off
 chcp 936 >nul
-title Deploy terrain layer (contours + water depth)
+title Deploy mod layers (terrain + lines + bridge flags)
 
 set "PROJ=E://workbody//TPF2Mcp"
 set "STAGE=C://Program Files (x86)\Steam\userdata\1070536217\1066780\local\staging_area\tpf2mcp_1"
 set "FAILED=0"
 
 echo ==========================================
-echo  Deploy terrain layer to staging
+echo  Deploy mod layers to staging
 echo ==========================================
 echo.
 echo  Close Transport Fever 2 first.
-echo  Also close the map UI ("TPF2 rail map") so the
-echo  new export-layer-map.py is picked up on restart.
+echo  Also close the map UI so the new export-layer-map.py
+echo  is picked up when it restarts.
 echo.
 pause
 echo.
@@ -33,8 +33,8 @@ echo ==== ALL FILES DEPLOYED, MD5 MATCHED ON BOTH SIDES ====
 echo.
 echo  Next:
 echo    1. start Transport Fever 2, load the save, run at 1x
-echo    2. wait about 40 seconds (terrain sampling is spread
-echo       over many frames on purpose, so it will not stutter)
+echo    2. wait about 40 seconds - terrain sampling and the
+echo       new line layer both finish in that time
 echo    3. tell the assistant
 goto :done
 

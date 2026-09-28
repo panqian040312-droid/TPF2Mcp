@@ -1074,12 +1074,6 @@ window.renderRailNetwork = function renderRailNetwork() {
     {name:'vehicles',label:'车辆',z:'top'},
   ];
   const carrierColor=carrier=>({ROAD:'#2b7fd4',RAIL:'#d43b2b',AIR:'#8a4fd4',WATER:'#17a2a2'}[carrier]||'#8a8a8a');
-  const createLayerContainer=spec=>{
-    const group=S('g',{id:`network-${spec.name}-layer`});
-    if(spec.z==='bottom')mapLayer.insertBefore(group,mapLayer.firstChild);
-    else mapLayer.appendChild(group);
-    return group;
-  };
   // 分块里带什么就画什么：边（EDGE_GRAPH，复用铁路的 Hermite 曲线画法）和点（POINT）
   const renderExtraTile=(spec,container,tile)=>{
     const group=S('g',{'data-tile-key':tile.key},'',container);
@@ -1090,25 +1084,140 @@ window.renderRailNetwork = function renderRailNetwork() {
     });
     (tile.points||[]).forEach(point=>{
       const q=P(point.position);
-      if(spec.name==='vehicles')S('circle',{cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:3.2,fill:carrierColor(point.carrier),stroke:'#fbfbfa','stroke-width':0.7,'pointer-events':'none'},'',group);
-      else S('rect',{x:(q.x-2.5).toFixed(1),y:(q.y-2.5).toFixed(1),width:5,height:5,fill:spec.color,'pointer-events':'none'},'',group);
+      if(spec.name==='vehicles'){
+        // data-carrier / data-line 是给筛选用的标记。**职能（客货）不在这里算** ——
+        // 它要查线路表，而线路数据可能比车辆分块晚到，所以留到 applyFilters 时现查。
+        const attrs={cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:3.2,fill:carrierColor(point.carrier),
+          stroke:'#0b1218','stroke-width':0.7,'pointer-events':'none',
+          'data-carrier':point.carrier||'UNKNOWN'};
+        if(point.line!=null)attrs['data-line']=String(point.line);
+        S('circle',attrs,'',group);
+      }else{
+        S('rect',{x:(q.x-2.5).toFixed(1),y:(q.y-2.5).toFixed(1),width:5,height:5,fill:spec.color,'pointer-events':'none'},'',group);
+      }
     });
     return {group};
   };
-  const layerPanel=document.querySelector('#layer-panel');
-  // prepend=true 时插到列表最前（地形是底图，放最上面一行更符合阅读顺序）
-  const addLayerToggle=(label,layer,count,prepend)=>{
-    if(!layerPanel)return;
-    const wrap=document.createElement('label');
-    const box=document.createElement('input');box.type='checkbox';box.checked=layer.isVisible();
-    box.addEventListener('change',()=>layer.setVisible(box.checked));
-    const text=document.createElement('span');text.textContent=count==null?label:`${label} · ${count}`;
-    wrap.appendChild(box);wrap.appendChild(text);
-    if(prepend&&layerPanel.firstChild)layerPanel.insertBefore(wrap,layerPanel.firstChild);
-    else layerPanel.appendChild(wrap);
+  // ===== 图层面板与三维筛选 ==============================================
+  // 三个互相独立、可叠加的分类维度：
+  //   种类 carrier —— 列车 / 汽车 / 船舶 / 航空器
+  //   职能 cargo   —— 客运 / 货运 / 客货混运（判据：这条线停靠的站台有没有货运站台）
+  //   线路 line    —— 具体某一条线
+  // 车辆点只带 carrier 与所属 line，**职能是查线路表得来的**，所以线路数据比车辆分块
+  // 晚到也不影响 —— 筛选时现查（lineMetaOf）。
+  //
+  // 筛选语义：每个维度一个集合 + 一个 restricted 开关。
+  //   restricted=false → 不限制，全部通过（初始状态）
+  //   用户动过任何一个勾选 → restricted=true，集合里放"勾选中的值"
+  // 这样"全选"只要把 restricted 复位即可 —— 否则 140 条线得一条条勾回来。
+  const CARRIER_ORDER=['RAIL','ROAD','WATER','AIR','UNKNOWN'];
+  const CARGO_ORDER=['PASSENGER','FREIGHT','MIXED','UNKNOWN'];
+  const CARRIER_LABEL={RAIL:'列车',ROAD:'汽车',WATER:'船舶',AIR:'航空器',UNKNOWN:'未分类'};
+  const CARGO_LABEL={PASSENGER:'客运',FREIGHT:'货运',MIXED:'客货混运',UNKNOWN:'未分类'};
+  const FILTER={carrier:{restricted:false,set:new Set()},
+                cargo:{restricted:false,set:new Set()},
+                lines:{restricted:false,set:new Set()}};
+  const lineMeta=new Map();       // line_id → {carrier,cargo,name}
+  const filterBoxes={carrier:new Map(),cargo:new Map(),lines:new Map()};
+
+  const lineMetaOf=id=>id==null?null:(lineMeta.get(Number(id))||null);
+
+  // 车辆与线路共用这一套判定：先看种类，再看职能（车辆职能查线路表），最后看具体线路。
+  const applyFilters=()=>{
+    const passCarrier=v=>{const f=FILTER.carrier;return !f.restricted||f.set.has(v);};
+    const passCargo=v=>{const f=FILTER.cargo;return !f.restricted||f.set.has(v);};
+    const passLine=v=>{const f=FILTER.lines;return !f.restricted||(v!=null&&f.set.has(Number(v)));};
+    document.querySelectorAll('#network-vehicles-layer [data-carrier]').forEach(node=>{
+      const meta=lineMetaOf(node.dataset.line);
+      const ok=passCarrier(node.dataset.carrier||'UNKNOWN')
+        &&passCargo(meta?meta.cargo:'UNKNOWN')&&passLine(node.dataset.line);
+      node.style.display=ok?'':'none';
+    });
+    document.querySelectorAll('#network-lines-layer [data-carrier]').forEach(node=>{
+      const ok=passCarrier(node.dataset.carrier||'UNKNOWN')
+        &&passCargo(node.dataset.cargo||'UNKNOWN')&&passLine(node.dataset.line);
+      node.style.display=ok?'':'none';
+    });
   };
-  (async()=>{
-    addLayerToggle('铁路',railLayer,p.tiles.length);
+  const syncFilterBoxes=()=>{
+    filterBoxes.carrier.forEach((box,v)=>{box.checked=FILTER.carrier.set.has(v);});
+    filterBoxes.cargo.forEach((box,v)=>{box.checked=FILTER.cargo.set.has(v);});
+    filterBoxes.lines.forEach((box,v)=>{box.checked=FILTER.lines.set.has(v);});
+  };
+  // 用户第一次动勾选时，先把"当前实际是全选"这件事补进集合，
+  // 否则其余没被显式勾过的项会被当成"没选"而一起消失。
+  const toggleFilter=(dim,value,checked,allValues)=>{
+    const f=FILTER[dim];
+    if(!f.restricted){f.restricted=true;allValues.forEach(v=>f.set.add(v));}
+    if(checked)f.set.add(value);else f.set.delete(value);
+    applyFilters();
+  };
+  const onlyFilter=(dim,values)=>{
+    const f=FILTER[dim];f.restricted=true;f.set.clear();values.forEach(v=>f.set.add(v));
+    syncFilterBoxes();applyFilters();
+  };
+  const clearFilters=()=>{
+    ['carrier','cargo','lines'].forEach(dim=>{FILTER[dim].restricted=false;FILTER[dim].set.clear();});
+    syncFilterBoxes();applyFilters();
+  };
+
+  // ---- 面板骨架 ----
+  const layerPanel=document.querySelector('#layer-panel');
+  const addGroup=title=>{
+    const box=document.createElement('div');box.className='layer-group';
+    const head=document.createElement('div');head.className='layer-group-title';head.textContent=title;
+    box.appendChild(head);
+    if(layerPanel)layerPanel.appendChild(box);
+    return box;
+  };
+  const addOption=(group,label,options={})=>{
+    const{checked=true,onChange,count,title,scroll}=options;
+    const wrap=document.createElement('label');
+    if(title)wrap.title=title;
+    const box=document.createElement('input');box.type='checkbox';box.checked=checked;
+    box.addEventListener('change',()=>{if(onChange)onChange(box.checked);});
+    const text=document.createElement('span');
+    text.textContent=count==null?label:`${label} · ${count}`;
+    wrap.appendChild(box);wrap.appendChild(text);
+    if(group)group.appendChild(wrap);
+    if(scroll&&group){group.classList.add('is-scroll');}
+    return box;
+  };
+
+  const baseGroup=addGroup('底图');
+  const netGroup=addGroup('路网与线路');
+  const kindGroup=addGroup('交通工具 · 种类');
+  const cargoGroup=addGroup('交通工具 · 职能');
+  const lineGroup=addGroup('线路（可逐条勾选）');
+  const facilityGroup=addGroup('设施');
+
+  const actionBar=document.createElement('div');actionBar.className='layer-actions';
+  const addAction=(label,title,fn)=>{
+    const button=document.createElement('button');
+    button.type='button';button.textContent=label;if(title)button.title=title;
+    button.addEventListener('click',fn);
+    actionBar.appendChild(button);
+  };
+  addAction('只看客运','只保留客运与客货混运',()=>onlyFilter('cargo',['PASSENGER','MIXED']));
+  addAction('只看货运','只保留货运与客货混运',()=>onlyFilter('cargo',['FREIGHT','MIXED']));
+  addAction('只看列车','只保留铁路',()=>onlyFilter('carrier',['RAIL']));
+  addAction('还原','取消所有筛选',clearFilters);
+  if(layerPanel)layerPanel.appendChild(actionBar);
+
+  // ---- 路网（铁路 / 公路 / 线路）----
+  addOption(netGroup,'铁路',{onChange:v=>railLayer.setVisible(v),count:p.tiles.length});
+  let linesVisible=true;
+
+  const createLayerContainer=spec=>{
+    const group=S('g',{id:`network-${spec.name}-layer`});
+    if(spec.z==='bottom')mapLayer.insertBefore(group,mapLayer.firstChild);
+    else mapLayer.appendChild(group);
+    return group;
+  };
+
+  // ---- 分块图层（公路 / 产业 / 车辆）----
+  const layerTasks=[];
+  layerTasks.push((async()=>{
     for(const spec of LAYER_SPECS){
       let manifest=null;
       try{
@@ -1133,8 +1242,15 @@ window.renderRailNetwork = function renderRailNetwork() {
         if(overview.geometry_kind==='POINT'){
           (overview.points||[]).forEach(entry=>{
             const q=P({x:entry[0],y:entry[1]});
-            if(spec.name==='vehicles')S('circle',{cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:2,fill:carrierColor(entry[2]),'pointer-events':'none'},'',overviewGroup);
-            else S('rect',{x:(q.x-1.5).toFixed(1),y:(q.y-1.5).toFixed(1),width:3,height:3,fill:spec.color,'pointer-events':'none'},'',overviewGroup);
+            if(spec.name==='vehicles'){
+              // 概览里的车辆同样带标记，筛选才能作用于它们
+              const attrs={cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:2,fill:carrierColor(entry[2]),'pointer-events':'none',
+                'data-carrier':entry[2]||'UNKNOWN'};
+              if(entry[3]!=null)attrs['data-line']=String(entry[3]);
+              S('circle',attrs,'',overviewGroup);
+            }else{
+              S('rect',{x:(q.x-1.5).toFixed(1),y:(q.y-1.5).toFixed(1),width:3,height:3,fill:spec.color,'pointer-events':'none'},'',overviewGroup);
+            }
           });
           return;
         }
@@ -1146,18 +1262,134 @@ window.renderRailNetwork = function renderRailNetwork() {
         tileUrl:key=>`/api/layers/${spec.name}/tile/${key}`,
         thresholdM:manifest.detail_load_threshold_m||600,
         tileSizeM:manifest.tile_size_m||2000,
-        render:tile=>renderExtraTile(spec,container,tile),
+        render:tile=>{const entry=renderExtraTile(spec,container,tile);applyFilters();return entry;},
         destroy:entry=>{if(entry.group)entry.group.remove();},
-        showSummary,hideSummary,
+        showSummary:()=>{showSummary();applyFilters();},hideSummary,
       });
       extraLayers.push({spec,layer});
       layer.update();
-      addLayerToggle(spec.label,layer,(manifest.counts&&manifest.counts.total)||manifest.tiles.length);
-    }
-  })();
+      // 加载诊断：打开浏览器控制台就能看到每层采到多少，不必去翻 bridge 文件
+      console.log(`[map] 图层 ${spec.name}：${(manifest.counts&&manifest.counts.total)||manifest.tiles.length}`, manifest.by_carrier||manifest.by_cargo||'');
 
-  // 地形层加载：走独立路径（整图、不分块）。三个开关都插到面板最前，因为它是底图。
-  (async()=>{
+      if(spec.name==='road'){
+        addOption(netGroup,'公路',{onChange:v=>layer.setVisible(v),count:manifest.counts&&manifest.counts.total});
+      }else if(spec.name==='industry'){
+        addOption(facilityGroup,'产业',{onChange:v=>layer.setVisible(v),count:manifest.counts&&manifest.counts.total});
+      }else if(spec.name==='vehicles'){
+        // 车辆的数量按种类拆开显示，让用户知道每类有多少
+        const byCarrier=(manifest.counts&&manifest.counts.total)||0;
+        const split=manifest.by_carrier||{};
+        const kindBoxes=[];
+        CARRIER_ORDER.forEach(carrier=>{
+          const count=split[carrier];
+          if(count==null)return;
+          const box=addOption(kindGroup,CARRIER_LABEL[carrier]||carrier,{
+            checked:true,
+            count,
+            title:`只控制交通工具（车辆与线路）的种类显示，不影响路网图层`,
+            onChange:checked=>toggleFilter('carrier',carrier,checked,CARRIER_ORDER),
+          });
+          filterBoxes.carrier.set(carrier,box);
+          kindBoxes.push(box);
+        });
+        // 上面所有种类框一起控制车辆图层本身：全不勾 = 车都不显示（集合为空且 restricted）
+        addOption(kindGroup,'全部种类',{
+          checked:true,count:byCarrier,
+          title:'一键：本组全选 / 全不选',
+          onChange:checked=>{if(checked)clearFilters();else onlyFilter('carrier',[]);},
+        });
+        CARGO_ORDER.forEach(cargo=>{
+          const box=addOption(cargoGroup,CARGO_LABEL[cargo]||cargo,{
+            checked:true,
+            title:cargo==='UNKNOWN'?'所属线路未采到数据的车辆':'按线路职能筛选',
+            onChange:checked=>toggleFilter('cargo',cargo,checked,CARGO_ORDER),
+          });
+          filterBoxes.cargo.set(cargo,box);
+        });
+      }
+    }
+    applyFilters();
+  })());
+
+  // ---- 线路图层（整层加载，不分块）----
+  layerTasks.push((async()=>{
+    let manifest=null;
+    try{
+      const response=await fetch('/api/layers/lines/manifest',{cache:'no-store'});
+      if(response.ok)manifest=await response.json();
+    }catch(error){console.error(error);}
+    if(!manifest||!manifest.data_file)return;
+    let data=null;
+    try{
+      const response=await fetch(`/layers/${manifest.data_file}`,{cache:'no-store'});
+      if(response.ok)data=await response.json();
+    }catch(error){console.error(error);}
+    if(!data||!Array.isArray(data.lines)||!data.lines.length)return;
+
+    const group=S('g',{id:'network-lines-layer','pointer-events':'none'});
+    // 线路画在车辆之下（车辆是点，被线压住会看不清）
+    const vehiclesGroup=document.getElementById('network-vehicles-layer');
+    if(vehiclesGroup)mapLayer.insertBefore(group,vehiclesGroup);
+    else mapLayer.appendChild(group);
+
+    const lineGroupNode=S('g',{id:'network-lines-content'},'',group);
+    data.lines.forEach(line=>{
+      if(!Array.isArray(line.points)||line.points.length<2)return;
+      lineMeta.set(Number(line.entity_id),line);
+      const d=line.points.map((point,index)=>{
+        const q=P(point);
+        return `${index?'L':'M'}${q.x.toFixed(1)},${q.y.toFixed(1)}`;
+      }).join('');
+      const attrs={d,fill:'none',stroke:carrierColor(line.carrier),'stroke-width':1.6,
+        'vector-effect':'non-scaling-stroke',opacity:.8,'pointer-events':'none',
+        'data-carrier':line.carrier||'UNKNOWN','data-cargo':line.cargo||'UNKNOWN',
+        'data-line':String(line.entity_id)};
+      // 线型表示职能：客运实线、货运虚线、客货混运点线 —— 与种类（颜色）分开编码，
+      // 这样两个维度能同时读出来，不必切换。
+      if(line.cargo==='FREIGHT')attrs['stroke-dasharray']='7 4';
+      else if(line.cargo==='MIXED')attrs['stroke-dasharray']='2 3';
+      const path=S('path',attrs,'',lineGroupNode);
+      path.setAttribute('data-line-name',line.name||'');
+    });
+
+    addOption(netGroup,'线路',{
+      onChange:visible=>{linesVisible=visible;group.style.display=visible?'':'none';},
+      count:data.lines.length,
+    });
+
+    // 线路逐条勾选：按种类分组，列表可滚动。140 条全列也不会把面板撑爆。
+    const linesByCarrier=new Map();
+    data.lines.forEach(line=>{
+      const key=line.carrier||'UNKNOWN';
+      if(!linesByCarrier.has(key))linesByCarrier.set(key,[]);
+      linesByCarrier.get(key).push(line);
+    });
+    const allLineIds=data.lines.map(line=>Number(line.entity_id));
+    CARRIER_ORDER.forEach(carrier=>{
+      const groupLines=linesByCarrier.get(carrier);
+      if(!groupLines)return;
+      const sub=document.createElement('div');sub.className='layer-subgroup';
+      const subHead=document.createElement('div');subHead.className='layer-subgroup-title';
+      subHead.textContent=`${CARRIER_LABEL[carrier]||carrier} · ${groupLines.length}`;
+      sub.appendChild(subHead);
+      groupLines.forEach(line=>{
+        const box=addOption(sub,line.name||`线路${line.entity_id}`,{
+          checked:true,
+          title:`种类：${CARRIER_LABEL[line.carrier]||line.carrier}　职能：${CARGO_LABEL[line.cargo]||line.cargo}　车 ${line.vehicle_count||0} 辆`,
+          onChange:checked=>toggleFilter('lines',Number(line.entity_id),checked,allLineIds),
+        });
+        filterBoxes.lines.set(Number(line.entity_id),box);
+      });
+      lineGroup.appendChild(sub);
+    });
+    lineGroup.classList.add('is-scroll');
+    if(!data.lines.length)addOption(lineGroup,'（没有采到线路）',{checked:false,onChange:()=>{}});
+    applyFilters();
+    console.log(`[map] 线路图层：${data.lines.length} 条`, '种类', data.by_carrier||{}, '职能', data.by_cargo||{});
+  })());
+
+  // ---- 地形层（等高线 / 水深 / 地下站）----
+  layerTasks.push((async()=>{
     let manifest=null;
     try{
       const response=await fetch('/api/layers/terrain/manifest',{cache:'no-store'});
@@ -1175,13 +1407,42 @@ window.renderRailNetwork = function renderRailNetwork() {
     TERRAIN.contourCache=null;
     renderTerrain();
     const counts=manifest.counts||{};
-    const gridLabel=(counts.cols&&counts.rows)?`${counts.cols}×${counts.rows}`:null;
-    const waterLabel=counts.water_points!=null?`${counts.water_points} 格`:null;
-    const proxy=spec=>({isVisible:()=>spec.get(),setVisible:value=>{spec.set(value);spec.render();}});
-    // 倒序 prepend，最终自上而下是：等高线 → 水深 → 地下站 → 铁路 → 公路 → …
-    addLayerToggle('地下站',proxy({get:()=>TERRAIN.visibleUnderground,set:v=>TERRAIN.visibleUnderground=v,render:renderUnderground}),
-      TERRAIN.undergroundCount??null,true);
-    addLayerToggle('水深',proxy({get:()=>TERRAIN.visibleWater,set:v=>TERRAIN.visibleWater=v,render:renderWater}),waterLabel,true);
-    addLayerToggle('等高线',proxy({get:()=>TERRAIN.visibleContours,set:v=>TERRAIN.visibleContours=v,render:renderContours}),gridLabel,true);
-  })();
+    addOption(baseGroup,'等高线',{
+      count:(counts.cols&&counts.rows)?`${counts.cols}×${counts.rows}`:null,
+      title:`等高距 ${TERRAIN.contourInterval} m`,
+      onChange:value=>{TERRAIN.visibleContours=value;renderContours();},
+    });
+    addOption(baseGroup,'水深',{
+      count:counts.water_points!=null?`${counts.water_points} 格`:null,
+      title:'地表高度为负的区域，按深度分三档上色',
+      onChange:value=>{TERRAIN.visibleWater=value;renderWater();},
+    });
+    addOption(baseGroup,'地下站',{
+      count:TERRAIN.undergroundCount??null,
+      title:'站台高程低于同点地表 3 m 以上',
+      onChange:value=>{TERRAIN.visibleUnderground=value;renderUnderground();},
+    });
+    console.log(`[map] 地形图层：${TERRAIN.grid.cols}×${TERRAIN.grid.rows} 网格`,
+      `等高线 ${((TERRAIN.contourCache||{}).groups||[]).length} 条`,
+      `水深 ${counts.water_points??'?'} 格`, `地下站 ${TERRAIN.undergroundCount??'?'}`);
+  })());
+
+  // 筛选自检：URL 上加 ?selftest=1 打开，结果打控制台。
+  // 无头浏览器没法点按钮，靠这个复现"单独 / 叠加筛选"的行为并核对数量。
+  // 挂在三个加载任务之后而不是靠 setTimeout —— 无头模式下虚拟时间不推进定时器。
+  if(new URLSearchParams(window.location.search).get('selftest')==='1'){
+    Promise.all(layerTasks).then(()=>{
+      const count=selector=>[...document.querySelectorAll(selector)]
+        .filter(node=>node.style.display!=='none').length;
+      const snapshot=label=>console.log(
+        `[selftest] ${label}｜车辆 ${count('#network-vehicles-layer [data-carrier]')}　线路 ${count('#network-lines-layer [data-carrier]')}`);
+      snapshot('初始（不限制）');
+      onlyFilter('cargo',['PASSENGER']);snapshot('只看客运');
+      onlyFilter('cargo',['FREIGHT']);snapshot('只看货运');
+      clearFilters();onlyFilter('carrier',['RAIL']);snapshot('只看列车');
+      onlyFilter('cargo',['FREIGHT']);snapshot('列车 + 货运（叠加）');
+      clearFilters();snapshot('还原');
+      console.log('[selftest] 完成');
+    });
+  }
 };

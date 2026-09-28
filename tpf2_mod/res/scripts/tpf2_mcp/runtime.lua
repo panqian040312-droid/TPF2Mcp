@@ -2,6 +2,7 @@ local config = require "tpf2_mcp/config"
 local json = require "tpf2_mcp/json"
 local state = require "tpf2_mcp/state"
 local operations = require "tpf2_mcp/operations/dispatcher"
+local layer_registry = require "tpf2_mcp/collectors/layer_registry"
 
 local M = {}
 local last_request_id = nil
@@ -80,32 +81,32 @@ local function run_probe()
     end)
     probe_call(result, "io_open", function() return io and type(io.open) == "function" end)
     probe_call(result, "absolute_path", function()
-        local candidate = path("probe-absolute.tmp")
+        local candidate = path("probe-absolute.json")
         if not candidate:match("^[A-Za-z]:/") then return false, "bridge path is not an absolute drive path" end
-        return raw_write("probe-absolute.tmp", "absolute")
+        return raw_write("probe-absolute.json", "absolute")
     end)
     result.path_resolved = config.path_resolution == "MODULE_SOURCE"
         and type(config.mod_dir) == "string" and config.mod_dir ~= ""
         and type(config.bridge_dir) == "string" and config.bridge_dir ~= ""
-    probe_call(result, "io_write", function() return raw_write("probe-write.tmp", "tpf2-mcp probe\n") end)
+    probe_call(result, "io_write", function() return raw_write("probe-write.json", "tpf2-mcp probe\n") end)
     probe_call(result, "io_read", function()
-        local content, err = read_file("probe-write.tmp")
+        local content, err = read_file("probe-write.json")
         if content ~= "tpf2-mcp probe\n" then return false, err end
         return true
     end)
     probe_call(result, "os_rename", function()
         if not os or type(os.rename) ~= "function" then return false, "os.rename unavailable" end
-        local written, err = raw_write("probe-rename-source.tmp", "rename")
+        local written, err = raw_write("probe-rename-source.json", "rename")
         if not written then return false, err end
-        local renamed, rename_err = os.rename(path("probe-rename-source.tmp"), path("probe-rename-target.tmp"))
+        local renamed, rename_err = os.rename(path("probe-rename-source.json"), path("probe-rename-target.json"))
         if not renamed then return false, rename_err end
         return true
     end)
     probe_call(result, "os_remove", function()
         if not os or type(os.remove) ~= "function" then return false, "os.remove unavailable" end
-        local written, err = raw_write("probe-remove.tmp", "remove")
+        local written, err = raw_write("probe-remove.json", "remove")
         if not written then return false, err end
-        local removed, remove_err = os.remove(path("probe-remove.tmp"))
+        local removed, remove_err = os.remove(path("probe-remove.json"))
         if not removed then return false, remove_err end
         return true
     end)
@@ -191,6 +192,7 @@ local function handle(command)
         write_json("line-creation-probe.json", state.line_creation_probe())
         write_json("api-type-inventory.json", state.api_type_inventory())
         write_json("api-command-inventory.json", state.api_command_inventory())
+        write_json("world-probe.json", state.world_probe())
         write_json("station-geometry.json", state.station_geometry())
         return true, snapshot
     end
@@ -279,6 +281,9 @@ function M.load(value) operations.load_state(value) end
 function M.tick()
     update_count = update_count + 1
     operations.tick()
+    -- 图层自驱推送。位置很关键：必须在下面 poll_interval 的 early-return **之前**，
+    -- 否则调度会被 bridge 轮询间隔（默认 5 个 update）绑死，动态层就没法更快。
+    layer_registry.tick(update_count)
     local poll_interval = tonumber(config.bridge_poll_interval_updates) or 5
     if poll_interval < 1 then poll_interval = 5 end
     if update_count % poll_interval ~= 0 then return end

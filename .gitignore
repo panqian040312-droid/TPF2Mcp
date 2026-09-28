@@ -38,6 +38,13 @@ ui/rail-map/station-previews/
 ui/rail-map/physical-track-data.json
 ui/rail-map/physical-track-data.js
 
+# Generated multi-layer map exports (road / industry / vehicles / ...)
+ui/rail-map/layers/
+
+# Local scratch and pre-change backups; never published or committed
+_tmpdb/
+_backup/
+
 # UI screenshots produced during acceptance
 ui/rail-map/*.png
 

@@ -7,9 +7,9 @@
 --       getComponent(e,"BASE_EDGE")  → node0 / node1 / tangent0 / tangent1
 --       getComponent(node,"BASE_NODE").position → 端点坐标（带缓存）
 --     注意：node0pos / node1pos 那种"端点坐标直读"只存在于聚合表，组件视图没有。
---   * 端点坐标初值来自 BOUNDING_VOLUME；rail_network.lua 的 bounds_for() 已验证可用。
 
 local common = require "tpf2_mcp/collectors/common"
+local component_access = require "tpf2_mcp/collectors/component_access"
 local field_probe = require "tpf2_mcp/collectors/field_probe"
 
 local M = {}
@@ -26,8 +26,10 @@ local function text(value)
     return nil
 end
 
--- 端点节点坐标读取器（照 rail_network.lua 的 base_node()，带去重缓存）
+-- 端点节点坐标读取器（照 rail_network.lua 的 base_node()，带去重缓存）。
+-- 读不到时只记一条样例错误 —— 否则 9793 个节点会把 errors 撑爆。
 local function node_reader(errors, cache)
+    local reported = false
     return function(raw)
         local id = common.entity_id(raw)
         if id == nil then return nil, nil end
@@ -36,7 +38,12 @@ local function node_reader(errors, cache)
             if cached == false then return nil, id end
             return cached, id
         end
-        local node = common.safe_get_component(raw, "BASE_NODE", errors)
+        local node = component_access.get(raw, "BASE_NODE")
+        if node == nil and not reported then
+            reported = true
+            errors[#errors + 1] = { component = "BASE_NODE",
+                                    note = "unavailable; further occurrences only counted in skipped" }
+        end
         local position = vec(common.field(node, "position")) or vec(common.field(node, "pos"))
         cache[id] = position or false
         return position, id
@@ -50,19 +57,25 @@ function M.collect()
     local street_types = {}
     local skipped = 0
     local probe = nil
+    local base_missing = false
     local read_node = node_reader(errors, node_cache)
 
     local ok, scanned_or_error = common.safe_for_each_entity("BASE_EDGE_STREET", function(edge_entity)
-        local base = common.safe_get_component(edge_entity, "BASE_EDGE", errors)
+        local base = component_access.get(edge_entity, "BASE_EDGE")
         if base == nil then
             skipped = skipped + 1
+            if not base_missing then
+                base_missing = true
+                errors[#errors + 1] = { component = "BASE_EDGE",
+                                        note = "unavailable on street edge; further occurrences only counted in skipped" }
+            end
             return
         end
         if probe == nil then
             -- 只对第一个实体做字段普查：开销可忽略，但能一次性看清真实字段名
             probe = {
                 base = field_probe.describe(base),
-                street = field_probe.describe(common.safe_get_component(edge_entity, "BASE_EDGE_STREET", errors), 16),
+                street = field_probe.describe(component_access.get(edge_entity, "BASE_EDGE_STREET"), 16),
             }
         end
 

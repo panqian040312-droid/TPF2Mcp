@@ -86,8 +86,12 @@ def tile_bounds(key: str, minimum: dict, tile_size: float) -> dict:
     }
 
 
-def split_edge_graph(payload: dict, minimum: dict, tile_size: float) -> tuple[dict, dict]:
-    """边图层：按边的中点决定归属 tile，再把该边用到的节点带进同一个 tile。"""
+def split_edge_graph(payload: dict, minimum: dict, tile_size: float) -> tuple[dict, dict, int]:
+    """边图层：按边的中点决定归属 tile，再把该边用到的节点带进同一个 tile。
+
+    返回 (tiles, tile_edges, dropped)。dropped 是"端点缺失或坐标不全"被丢掉的边数 ——
+    静默丢边会让地图缺线而没人知道，所以一定要报出来。
+    """
     node_by_id = {}
     for node in payload.get("nodes") or []:
         entity_id = node.get("entity_id")
@@ -95,14 +99,17 @@ def split_edge_graph(payload: dict, minimum: dict, tile_size: float) -> tuple[di
             continue
         node_by_id[str(entity_id)] = node
 
+    dropped = 0
     tile_edges: dict[str, list] = defaultdict(list)
     for edge in payload.get("edges") or []:
         start = node_by_id.get(str(edge.get("node0")))
         end = node_by_id.get(str(edge.get("node1")))
         if start is None or end is None:
+            dropped += 1
             continue
         a, b = start.get("position") or {}, end.get("position") or {}
         if not all(isinstance(value, (int, float)) for value in (a.get("x"), a.get("y"), b.get("x"), b.get("y"))):
+            dropped += 1
             continue
         key = tile_of((float(a["x"]) + float(b["x"])) / 2.0, (float(a["y"]) + float(b["y"])) / 2.0,
                       minimum, tile_size)
@@ -118,15 +125,17 @@ def split_edge_graph(payload: dict, minimum: dict, tile_size: float) -> tuple[di
                     used[str(node["entity_id"])] = node
         tiles[key] = {"key": key, "nodes": list(used.values()), "edges": edges,
                       "counts": {"edges": len(edges), "nodes": len(used)}}
-    return tiles, tile_edges
+    return tiles, tile_edges, dropped
 
 
-def split_points(payload: dict, minimum: dict, tile_size: float) -> tuple[dict, dict]:
-    """点图层：按点自身坐标决定归属 tile。"""
+def split_points(payload: dict, minimum: dict, tile_size: float) -> tuple[dict, dict, int]:
+    """点图层：按点自身坐标决定归属 tile。返回 (tiles, tile_points, dropped)。"""
+    dropped = 0
     tile_points: dict[str, list] = defaultdict(list)
     for point in payload.get("points") or []:
         position = point.get("position") or {}
         if not isinstance(position.get("x"), (int, float)) or not isinstance(position.get("y"), (int, float)):
+            dropped += 1
             continue
         key = tile_of(float(position["x"]), float(position["y"]), minimum, tile_size)
         tile_points[key].append(point)
@@ -134,7 +143,7 @@ def split_points(payload: dict, minimum: dict, tile_size: float) -> tuple[dict, 
     tiles: dict[str, dict] = {}
     for key, points in tile_points.items():
         tiles[key] = {"key": key, "points": points, "counts": {"points": len(points)}}
-    return tiles, tile_points
+    return tiles, tile_points, dropped
 
 
 def main() -> None:
@@ -178,9 +187,9 @@ def main() -> None:
 
         geometry_kind = payload.get("geometry_kind") or "EDGE_GRAPH"
         if geometry_kind == "POINT":
-            tiles, grouped = split_points(payload, minimum, args.tile_size)
+            tiles, grouped, dropped = split_points(payload, minimum, args.tile_size)
         else:
-            tiles, grouped = split_edge_graph(payload, minimum, args.tile_size)
+            tiles, grouped, dropped = split_edge_graph(payload, minimum, args.tile_size)
 
         tile_directory = args.output_directory / f"{name}-tiles"
         tile_directory.mkdir(parents=True, exist_ok=True)
@@ -214,6 +223,7 @@ def main() -> None:
         (args.output_directory / f"{name}-manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
         summary[name] = {"tiles": len(index), "counts": manifest["counts"],
+                         "dropped": dropped,
                          "bounds_from": "rail-manifest" if bounds else "self"}
 
     print(json.dumps(summary, ensure_ascii=False))

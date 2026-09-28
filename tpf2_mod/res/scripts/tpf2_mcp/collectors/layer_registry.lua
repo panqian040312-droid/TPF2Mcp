@@ -23,20 +23,29 @@ local layer_vehicles = require "tpf2_mcp/collectors/layer_vehicles"
 
 local M = {}
 
+-- 触发条件：counter > delay 且 (counter - delay - 1) % every == 0
+--   → vehicles 落在 counter ≡ 1 (mod 15)，即 46 / 61 / 76 / 91 / …
+--
 -- every : 每多少个 update 采一次（首次采集算第 1 次）
 -- delay : 启动后先跳过多少个 update 再开始。两个作用：
 --         ① 等存档世界加载完（太早采会拿到空数据）
---         ② 让各层首次采集错峰，避免同一帧里连采几层把帧率压下去
+--         ② 让各层首次采集错峰
 -- kind  : static = 内容基本不变（修路才会变）；dynamic = 持续变化
+--
+-- ⚠️ 相位是刻意错开的，不要随手改数字：road 与 industry 的 delay 之所以各加 1
+--   （75→76、120→121），是因为原值会让首次采集正好落在 vehicles 的 76 / 121 上
+--   —— 同一帧里采两层会叠加卡顿（公路一次要遍历 5262 条边 + 9793 个节点）。
+--   tick() 里还有一道"同一帧最多采一层"的兜底。
 local LAYERS = {
     { name = "vehicles", kind = "dynamic", every = 15,   delay = 45,  collect = layer_vehicles.collect },
-    { name = "road",     kind = "static",  every = 4500, delay = 75,  collect = layer_road.collect },
-    { name = "industry", kind = "static",  every = 5400, delay = 120, collect = layer_industry.collect },
+    { name = "road",     kind = "static",  every = 4500, delay = 76,  collect = layer_road.collect },
+    { name = "industry", kind = "static",  every = 5400, delay = 121, collect = layer_industry.collect },
 }
 
 local counters = {}
 local status = {}
 local enabled = true
+local last_publish_update = nil
 
 local function publish(layer, update_count)
     local collect_ok, payload = pcall(layer.collect)
@@ -72,14 +81,20 @@ function M.tick(update_count)
         local counter = (counters[layer.name] or 0) + 1
         counters[layer.name] = counter
         local since_delay = counter - layer.delay
-        -- since_delay == 1 是首次；之后每 every 一次
         if since_delay > 0 and (since_delay - 1) % layer.every == 0 then
-            publish(layer, update_count)
+            if last_publish_update == update_count then
+                -- 同一帧已经采过一层了：把计数退回去，下一帧再判（相位不变，
+                -- 因为下一帧 counter 会回到同一个值再次满足条件）
+                counters[layer.name] = counter - 1
+            else
+                last_publish_update = update_count
+                publish(layer, update_count)
+            end
         end
     end
 end
 
--- 手动触发（调试用；由 runtime 的显式命令调用，不参与自驱节奏）
+-- 手动触发（供将来加显式命令用；不参与自驱节奏）
 function M.force(layer_name, update_count)
     for index = 1, #LAYERS do
         local layer = LAYERS[index]
@@ -90,6 +105,8 @@ function M.force(layer_name, update_count)
     return false
 end
 
+-- 各层最近一次采集结果。由 runtime.lua 的 heartbeat() 带出去，
+-- 这样心跳文件里就能看到图层状态，不用额外开命令通道。
 function M.status()
     return status
 end

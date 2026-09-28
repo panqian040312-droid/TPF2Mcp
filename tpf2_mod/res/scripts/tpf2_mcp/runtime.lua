@@ -141,6 +141,9 @@ local function heartbeat()
         snapshot_seq = sequence,
         last_update = now(),
         probe = probe,
+        -- 图层自驱采集的最近结果（collectors/layer_registry.lua）。心跳里带上，
+        -- 诊断时直接看 heartbeat.json 就知道各层采到没有、采了多少，不必另开命令通道。
+        layers = layer_registry.status(),
     }
 end
 

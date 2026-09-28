@@ -17,6 +17,7 @@
 -- 后再考虑合并，避免同时改两处。
 
 local common = require "tpf2_mcp/collectors/common"
+local component_access = require "tpf2_mcp/collectors/component_access"
 local field_probe = require "tpf2_mcp/collectors/field_probe"
 
 local M = {}
@@ -32,17 +33,17 @@ local function vec(value)
     return { x = x, y = y, z = type(z) == "number" and z or 0 }
 end
 
-local function bounds_for(entity, errors)
-    local volume = common.safe_get_component(entity, "BOUNDING_VOLUME", errors)
+local function bounds_for(entity)
+    local volume = component_access.get(entity, "BOUNDING_VOLUME")
     local bbox = common.field(volume, "bbox")
     local minimum = vec(common.field(bbox, "min")) or vec(common.field(bbox, "bbMin"))
     local maximum = vec(common.field(bbox, "max")) or vec(common.field(bbox, "bbMax"))
-    if not minimum or not maximum then return nil, nil end
+    if not minimum or not maximum then return nil end
     return {
         x = (minimum.x + maximum.x) / 2,
         y = (minimum.y + maximum.y) / 2,
         z = (minimum.z + maximum.z) / 2,
-    }, { min = minimum, max = maximum }
+    }
 end
 
 local function number_or_nil(value)
@@ -65,26 +66,28 @@ function M.collect()
     local no_bounds = 0
     local truncated = false
     local probe = nil
+    local vehicle_missing = false
 
     local ok, scanned_or_error = common.safe_for_each_entity("TRANSPORT_VEHICLE", function(entity)
         if #points >= VEHICLE_LIMIT then truncated = true return end
-        local vehicle = common.safe_get_component(entity, "TRANSPORT_VEHICLE", errors)
+        local vehicle = component_access.get(entity, "TRANSPORT_VEHICLE")
         if vehicle == nil then
             skipped = skipped + 1
+            if not vehicle_missing then
+                vehicle_missing = true
+                errors[#errors + 1] = { component = "TRANSPORT_VEHICLE",
+                                        note = "unavailable; further occurrences only counted in skipped" }
+            end
             return
         end
         if probe == nil then
             probe = { vehicle = field_probe.describe(vehicle) }
         end
         local raw_carrier = common.field(vehicle, "carrier")
-        if type(raw_carrier) == "number" then
-            by_carrier_raw[tostring(raw_carrier)] = (by_carrier_raw[tostring(raw_carrier)] or 0) + 1
-        else
-            local key = tostring(raw_carrier)
-            by_carrier_raw[key] = (by_carrier_raw[key] or 0) + 1
-        end
+        local raw_key = tostring(raw_carrier)
+        by_carrier_raw[raw_key] = (by_carrier_raw[raw_key] or 0) + 1
 
-        local center = bounds_for(entity, errors)
+        local center = bounds_for(entity)
         if center == nil then
             no_bounds = no_bounds + 1
             return

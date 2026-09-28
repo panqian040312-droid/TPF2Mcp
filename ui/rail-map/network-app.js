@@ -39,12 +39,33 @@ window.renderRailNetwork = function renderRailNetwork() {
     parent.appendChild(node);
     return node;
   };
-  const bounds = p.bounds, width = Math.max(1, bounds.max.x-bounds.min.x), height = Math.max(1, bounds.max.y-bounds.min.y);
-  const baseScale = Math.min(1080/width, 620/height);
-  const originX = 600-(bounds.min.x+bounds.max.x)*baseScale/2;
-  const originY = 360+(bounds.min.y+bounds.max.y)*baseScale/2;
-  const P = point => ({x:originX+point.x*baseScale,y:originY-point.y*baseScale});
-  const T = value => ({x:value.x*baseScale,y:-value.y*baseScale});
+  // 地图朝向：把世界坐标整体旋转 mapHeading 度（视觉逆时针），用于对齐游戏内视角。
+  // 0° = 原始朝向（世界 +x 向右）；90° = 逆时针转 90°（原来在屏幕左侧的轨道会转到屏幕下方）。
+  const headingParam = new URLSearchParams(location.search).get('heading');
+  const headingStored = (() => { try { return localStorage.getItem('railMapHeading'); } catch (error) { return null; } })();
+  let mapHeading = Number(headingParam != null ? headingParam : (headingStored != null ? headingStored : 90));
+  if (!Number.isFinite(mapHeading)) mapHeading = 90;
+  let baseScale = 1, originX = 0, originY = 0;
+  let rot = (x, y) => ({ x: x, y: y });
+  let rotInv = (x, y) => ({ x: x, y: y });
+  let P = point => ({ x: 0, y: 0 });
+  let T = value => ({ x: 0, y: 0 });
+  const rebuildProjection = () => {
+    const hRad = mapHeading * Math.PI / 180, hCos = Math.cos(hRad), hSin = Math.sin(hRad);
+    rot = (x, y) => ({ x: x * hCos - y * hSin, y: x * hSin + y * hCos });
+    rotInv = (x, y) => ({ x: x * hCos + y * hSin, y: -x * hSin + y * hCos });
+    const b = p.bounds;
+    const corners = [[b.min.x, b.min.y], [b.max.x, b.min.y], [b.min.x, b.max.y], [b.max.x, b.max.y]].map(([x, y]) => rot(x, y));
+    const minX = Math.min(...corners.map(v => v.x)), maxX = Math.max(...corners.map(v => v.x));
+    const minY = Math.min(...corners.map(v => v.y)), maxY = Math.max(...corners.map(v => v.y));
+    const width = Math.max(1, maxX - minX), height = Math.max(1, maxY - minY);
+    baseScale = Math.min(1080 / width, 620 / height);
+    originX = 600 - (minX + maxX) * baseScale / 2;
+    originY = 360 + (minY + maxY) * baseScale / 2;
+    P = point => { const r = rot(point.x, point.y); return { x: originX + r.x * baseScale, y: originY - r.y * baseScale }; };
+    T = value => { const r = rot(value.x, value.y); return { x: r.x * baseScale, y: -r.y * baseScale }; };
+  };
+  rebuildProjection();
   const edgePath = (edge,nodeById) => {
     const a=nodeById.get(edge.node0), b=nodeById.get(edge.node1), pa=P(a), pb=P(b);
     const fallback={x:b.x-a.x,y:b.y-a.y};
@@ -75,7 +96,7 @@ window.renderRailNetwork = function renderRailNetwork() {
   let signalsVisible=true;
   const lineById=new Map(p.lines.map(line=>[line.entity_id,line]));
   const stationById=new Map(p.stations.map(station=>[station.entity_id,station]));
-  let liveState=null,operationsContext={lines:[]},aiAdvice={suggestions:[]},aiAdviceVisibleCount=10,aiAdviceGeneration=null,mcpWorkLog={entries:[]},allMcpWorkLog={entries:[]},workLogModal=null,workLogFilter='ALL',workLogSearch='',workLogRequestPending=false,workLogLoadError=null,workLogReturnFocus=null,selectedStation=null,selectedVehicleId=null,vehicleDetail=null,vehicleDetailPending=false,vehicleDetailLoadedAt=0;
+  let liveState=null,operationsContext={lines:[]},aiAdvice={suggestions:[]},aiAdviceVisibleCount=10,aiAdviceGeneration=null,mcpWorkLog={entries:[]},allMcpWorkLog={entries:[]},workLogModal=null,workLogFilter='ALL',workLogSearch='',workLogRequestPending=false,workLogLoadError=null,workLogReturnFocus=null,selectedStation=null,selectedVehicleId=null,vehicleDetail=null,vehicleDetailPending=false,vehicleDetailLoadedAt=0,overviewKey=null;
   const operationLineById=new Map();
   let stationLogRows=[],stationLogRequestPending=false;
   let lastVehicleSampleAt=null;
@@ -169,15 +190,15 @@ window.renderRailNetwork = function renderRailNetwork() {
   const moveTooltip=event=>{const rect=boardWrap.getBoundingClientRect();tooltip.style.left=`${event.clientX-rect.left+12}px`;tooltip.style.top=`${event.clientY-rect.top+12}px`;};
   const scaleBarPixels=92;
   let zoom=1,panX=0,panY=0,dragging=false,dragPointerId=null,lastX=0,lastY=0,dragStartX=0,dragStartY=0,suppressClick=false;
-  let desiredTileKeys=new Set();
-  const loadedTiles=new Map(),pendingTiles=new Map();
+  // 分块状态不再是单例：铁路与新增图层（公路/产业/车辆）各有一份，
+  // 由下面的 createTileLayer 统一管理。
   let bridgeRenderFrame=null;
   const renderVisibleBridges=()=>{
     bridgeRenderFrame=null;
     bridgeLayer.replaceChildren();
     const crossings=[],fallbackEdges=[],fallbackNodes=new Map();
     const visibleEdgePaths=new Map(),visibleEdges=new Map(),visibleNodes=new Map(),visibleEdgeIdsByNode=new Map();
-    loadedTiles.forEach(entry=>{
+    railLayer.loaded.forEach(entry=>{
       entry.paths.forEach((path,edgeId)=>visibleEdgePaths.set(Number(edgeId),path));
       entry.tileNodes.forEach((position,nodeId)=>visibleNodes.set(Number(nodeId),position));
       entry.tile.edges.forEach(edge=>{
@@ -215,7 +236,7 @@ window.renderRailNetwork = function renderRailNetwork() {
   const syncPixiViewport=()=>{if(!pixiWorld)return;const rect=boardWrap.getBoundingClientRect(),scale=pixiDomScale(),offsetX=(rect.width-1200*scale)/2,offsetY=(rect.height-720*scale)/2;pixiWorld.scale.set(scale*zoom);pixiWorld.position.set(offsetX+scale*(600+panX-600*zoom),offsetY+scale*(360+panY-360*zoom));};
   const makePixiTile=(tile,nodeById)=>{if(!pixiWorld)return null;const container=new PIXI.Container(),track=new PIXI.Graphics();track.lineStyle(1,0x83a9bd,1,.5,true);tile.edges.forEach(edge=>drawPixiEdge(track,edge,nodeById));container.addChild(track);pixiWorld.addChild(container);return{container};};
   window.RAIL_NETWORK_TILES={};
-  const updateTileStatus=()=>{const value=document.querySelector('#loaded-tile-count');if(value)value.textContent=`${loadedTiles.size} / ${p.tiles.length}`;};
+  const updateTileStatus=()=>{const value=document.querySelector('#loaded-tile-count');if(value)value.textContent=`${railLayer.loaded.size} / ${p.tiles.length}`;};
   const representedMeters=()=>scaleBarPixels/baseScale/zoom;
   const updateMapDetailVisibility=()=>{
     const detail=representedMeters()<p.detail_load_threshold_m;
@@ -226,7 +247,8 @@ window.renderRailNetwork = function renderRailNetwork() {
   const screenPoint=point=>{const q=P(point);return{x:600+(q.x-600)*zoom+panX,y:360+(q.y-360)*zoom+panY};};
   const worldPoint=(x,y)=>{
     const baseX=(x-panX-600)/zoom+600,baseY=(y-panY-360)/zoom+360;
-    return{x:(baseX-originX)/baseScale,y:(originY-baseY)/baseScale};
+    const r=rotInv((baseX-originX)/baseScale,(originY-baseY)/baseScale);
+    return{x:r.x,y:r.y};
   };
   logicalStations.forEach(station=>{
     const group=S('g',{'data-station-id':station.entity_id,cursor:'pointer'},'',stationLayer);
@@ -260,40 +282,87 @@ window.renderRailNetwork = function renderRailNetwork() {
   S('line',{x1:barX+scaleBarPixels,y1:barY-5,x2:barX+scaleBarPixels,y2:barY+5,stroke:'#dce7ef','stroke-width':2});
   const scaleText=S('text',{x:barX+scaleBarPixels/2,y:barY-9,fill:'#dce7ef','font-size':10,'font-family':'Consolas','text-anchor':'middle'});
   const formatDistance=value=>value>=1000?`${(value/1000).toFixed(value>=10000?0:1)} km`:`${value.toFixed(value<10?1:0)} m`;
-  const renderTile=(key,tile,resource)=>{
-    if(!desiredTileKeys.has(key)){resource.remove();return;}
-    const group=S('g',{'data-tile-key':key},'',detailLayer);
-    const tileNodes=new Map(tile.nodes.map(node=>[node.entity_id,node.position]));
-    const paths=new Map(tile.edges.map(edge=>[edge.entity_id,edgePath(edge,tileNodes)]));
-    if(!pixiApp)tile.edges.forEach(edge=>S('path',{d:paths.get(edge.entity_id),fill:'none',stroke:'#83a9bd','stroke-width':1,'vector-effect':'non-scaling-stroke','pointer-events':'none'},'',group));
-    const entry={group,resource,tile,tileNodes,paths,pixi:makePixiTile(tile,tileNodes)};loadedTiles.set(key,entry);
-    updateTileStatus();
-    scheduleBridgeRender();
-  };
-  window.addEventListener('rail-network-tile',event=>{
-    const key=event.detail,tile=window.RAIL_NETWORK_TILES[key],script=pendingTiles.get(key);
-    if(tile&&script)renderTile(key,tile,script);
-    delete window.RAIL_NETWORK_TILES[key];pendingTiles.delete(key);
-  });
-  const unloadTile=key=>{const loaded=loadedTiles.get(key);if(loaded){loaded.group.remove();loaded.resource.remove();if(loaded.pixi){loaded.pixi.container.parent?.removeChild(loaded.pixi.container);loaded.pixi.container.destroy({children:true});}loadedTiles.delete(key);updateTileStatus();scheduleBridgeRender();}const pending=pendingTiles.get(key);if(pending){pending.remove();pendingTiles.delete(key);}delete window.RAIL_NETWORK_TILES[key];};
-  const loadTile=key=>{
-    if(loadedTiles.has(key)||pendingTiles.has(key))return;
-    if(location.protocol==='http:'||location.protocol==='https:'){
-      const controller=new AbortController(),resource={remove:()=>controller.abort()};pendingTiles.set(key,resource);
-      fetch(`/api/rail/tile/${key}`,{signal:controller.signal,cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`tile ${key}: ${response.status}`);return response.json();}).then(tile=>{pendingTiles.delete(key);renderTile(key,tile,resource);}).catch(error=>{pendingTiles.delete(key);if(error.name!=='AbortError')console.error(error);});
-      return;
+  // ===== 分块图层 ======================================================
+  // 铁路和后来加的图层（公路 / 产业 / 车辆）共用这一套：按视口加载分块、移出视口就卸载。
+  // 原先这段是铁路专用的单例（一个 desiredTileKeys、一个 loadedTiles、一个
+  // RAIL_NETWORK_TILES，URL 还写死 /api/rail/tile/），加第二个图层就得整段复制一份、
+  // 以后两处还要各自维护。现在每层的差异都收在 spec 里，加载与卸载的逻辑只有一份。
+  const extraLayers=[];
+  const createTileLayer=spec=>{
+    const loaded=new Map(),pending=new Map();
+    let desired=new Set(),visible=spec.visible!==false;
+    const renderTile=(key,tile,resource)=>{
+      if(!desired.has(key)){resource.remove();return;}
+      const entry=spec.render(tile,key);
+      entry.resource=resource;loaded.set(key,entry);
+      if(spec.onChanged)spec.onChanged();
+    };
+    const unloadTile=key=>{
+      const entry=loaded.get(key);
+      if(entry){if(spec.destroy)spec.destroy(entry);else if(entry.group)entry.group.remove();entry.resource.remove();loaded.delete(key);if(spec.onChanged)spec.onChanged();}
+      const waiting=pending.get(key);
+      if(waiting){waiting.remove();pending.delete(key);}
+    };
+    const loadTile=key=>{
+      if(loaded.has(key)||pending.has(key))return;
+      if(location.protocol==='http:'||location.protocol==='https:'){
+        const controller=new AbortController(),resource={remove:()=>controller.abort()};pending.set(key,resource);
+        fetch(spec.tileUrl(key),{signal:controller.signal,cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`${spec.name} tile ${key}: ${response.status}`);return response.json();}).then(tile=>{pending.delete(key);renderTile(key,tile,resource);}).catch(error=>{pending.delete(key);if(error.name!=='AbortError')console.error(error);});
+        return;
+      }
+      if(!spec.scriptBase)return;
+      const script=document.createElement('script');script.async=true;script.src=`${spec.scriptBase}/tile-${key}.js?v=${spec.version||''}`;
+      script.onerror=()=>{pending.delete(key);script.remove();};pending.set(key,script);document.body.appendChild(script);
+    };
+    // file:// 打开时分块以 <script> 载入并自行派发事件（HTTP 下走 fetch，不经这里）
+    if(spec.scriptBase&&spec.globalName&&!spec.scriptBound){
+      spec.scriptBound=true;window[spec.globalName]=window[spec.globalName]||{};
+      window.addEventListener(spec.scriptEvent,event=>{
+        const key=event.detail,tile=window[spec.globalName][key],waiting=pending.get(key);
+        if(tile&&waiting)renderTile(key,tile,waiting);
+        delete window[spec.globalName][key];pending.delete(key);
+      });
     }
-    const script=document.createElement('script');script.async=true;script.src=`rail-network-tiles/tile-${key}.js?v=${p.generated_at}`;
-    script.onerror=()=>{pendingTiles.delete(key);script.remove();};pendingTiles.set(key,script);document.body.appendChild(script);
+    const layer={
+      name:spec.name,loaded,
+      isVisible:()=>visible,
+      update(){
+        if(!visible||!spec.manifest)return;
+        // 看得比阈值更远（总览）时不加载分块，改由图层自己的概览骨架顶上 ——
+        // 铁路的 physical_overview_segments 就是这个角色；没有它，用户在总览下
+        // 只会看到空白，容易以为图层没生效。
+        if(representedMeters()>=spec.thresholdM){desired=new Set();[...loaded.keys(),...pending.keys()].forEach(unloadTile);if(spec.showSummary)spec.showSummary();return;}
+        if(spec.hideSummary)spec.hideSummary();
+        const topLeft=worldPoint(0,0),bottomRight=worldPoint(1200,720),margin=spec.tileSizeM*.15;
+        const view={minX:Math.min(topLeft.x,bottomRight.x)-margin,maxX:Math.max(topLeft.x,bottomRight.x)+margin,minY:Math.min(topLeft.y,bottomRight.y)-margin,maxY:Math.max(topLeft.y,bottomRight.y)+margin};
+        desired=new Set(spec.manifest.tiles.filter(tile=>tile.max.x>=view.minX&&tile.min.x<=view.maxX&&tile.max.y>=view.minY&&tile.min.y<=view.maxY).map(tile=>tile.key));
+        [...loaded.keys(),...pending.keys()].filter(key=>!desired.has(key)).forEach(unloadTile);
+        desired.forEach(loadTile);
+      },
+      setVisible(value){
+        visible=!!value;
+        if(!visible){desired=new Set();[...loaded.keys(),...pending.keys()].forEach(unloadTile);if(spec.hideSummary)spec.hideSummary();}
+        else layer.update();
+      },
+    };
+    return layer;
   };
-  const updateTiles=()=>{
-    if(representedMeters()>=p.detail_load_threshold_m){desiredTileKeys=new Set();[...loadedTiles.keys(),...pendingTiles.keys()].forEach(unloadTile);return;}
-    const topLeft=worldPoint(0,0),bottomRight=worldPoint(1200,720),margin=p.tile_size_m*.15;
-    const view={minX:Math.min(topLeft.x,bottomRight.x)-margin,maxX:Math.max(topLeft.x,bottomRight.x)+margin,minY:Math.min(topLeft.y,bottomRight.y)-margin,maxY:Math.max(topLeft.y,bottomRight.y)+margin};
-    desiredTileKeys=new Set(p.tiles.filter(tile=>tile.max.x>=view.minX&&tile.min.x<=view.maxX&&tile.max.y>=view.minY&&tile.min.y<=view.maxY).map(tile=>tile.key));
-    [...loadedTiles.keys(),...pendingTiles.keys()].filter(key=>!desiredTileKeys.has(key)).forEach(unloadTile);
-    desiredTileKeys.forEach(loadTile);
-  };
+  const railLayer=createTileLayer({
+    name:'rail',manifest:p,
+    tileUrl:key=>`/api/rail/tile/${key}`,
+    scriptBase:'rail-network-tiles',version:p.generated_at,
+    globalName:'RAIL_NETWORK_TILES',scriptEvent:'rail-network-tile',
+    thresholdM:p.detail_load_threshold_m,tileSizeM:p.tile_size_m,
+    onChanged:()=>{updateTileStatus();scheduleBridgeRender();},
+    render:(tile,key)=>{
+      const group=S('g',{'data-tile-key':key},'',detailLayer);
+      const tileNodes=new Map(tile.nodes.map(node=>[node.entity_id,node.position]));
+      const paths=new Map(tile.edges.map(edge=>[edge.entity_id,edgePath(edge,tileNodes)]));
+      if(!pixiApp)tile.edges.forEach(edge=>S('path',{d:paths.get(edge.entity_id),fill:'none',stroke:'#83a9bd','stroke-width':1,'vector-effect':'non-scaling-stroke','pointer-events':'none'},'',group));
+      return {group,tile,tileNodes,paths,pixi:makePixiTile(tile,tileNodes)};
+    },
+    destroy:entry=>{if(entry.pixi){entry.pixi.container.parent?.removeChild(entry.pixi.container);entry.pixi.container.destroy({children:true});}entry.group.remove();},
+  });
   const updateStations=()=>{
     stationViews.forEach(view=>{const q=screenPoint(view.station.center);view.screen=q;view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);view.name.setAttribute('x',6);view.name.setAttribute('y',-5);view.name.setAttribute('visibility','hidden');view.hit.setAttribute('pointer-events','fill');const selected=selectedStation?.entity_id===view.station.entity_id;view.dot.setAttribute('fill',selected?'#56dcff':'#08141e');view.dot.setAttribute('r',selected?'4.5':'3.2');});
     const occupied=[];
@@ -500,20 +569,48 @@ window.renderRailNetwork = function renderRailNetwork() {
     if(!rows.length)rows.push(templates.message('NONE','当前没有线路办理停靠',true));
     slot.replaceChildren(...rows);
   };
-  const fillStationLiveVehicles=(slot,vehicles)=>{
-    const rows=vehicles.map(vehicle=>{
-      const row=templates.instantiate('station-live-vehicle-row-template');
-      row.dataset.vehicleId=vehicle.entity_id;
-      templates.setText(row,'name',vehicle.name||`列车${vehicle.entity_id}`);
-      templates.setText(row,'motion',`${Math.round(vehicle.speed_kmh??0)} km/h · ${vehicleStatus(vehicle)}`);
-      row.addEventListener('click',()=>{selectedStation=null;selectedVehicleId=Number(row.dataset.vehicleId);vehicleDetail=null;vehicleDetailLoadedAt=0;renderVehicleSidebar();loadVehicleDetail();updateStations();});
-      return row;
+  // 列表原地复用：同一个 key 复用同一 DOM 节点，只改文字。
+  // 原实现每次轮询都 replaceChildren 整块列表，导致页面每 0.5 秒闪一次。
+  const reconcileRows=(slot,items,{keyOf,build,apply})=>{
+    [...slot.children].forEach(node=>{if(!node.dataset.rowKey)node.remove();});
+    const existing=new Map();
+    [...slot.children].forEach(node=>{if(node.dataset.rowKey)existing.set(node.dataset.rowKey,node);});
+    const keep=new Set();
+    items.forEach(item=>{
+      const key=String(keyOf(item));
+      keep.add(key);
+      let row=existing.get(key);
+      if(!row){row=build(item);row.dataset.rowKey=key;slot.appendChild(row);}
+      apply(row,item);
     });
-    if(!rows.length)rows.push(templates.message('CLEAR','当前站界内无列车'));
-    slot.replaceChildren(...rows);
+    existing.forEach((node,key)=>{if(!keep.has(key))node.remove();});
+  };
+  const fillStationLiveVehicles=(slot,vehicles)=>{
+    if(!vehicles.length){
+      if(slot.dataset.mode!=='empty'){slot.dataset.mode='empty';slot.replaceChildren(templates.message('CLEAR','当前站界内无列车'));}
+      return;
+    }
+    slot.dataset.mode='list';
+    reconcileRows(slot,vehicles,{
+      keyOf:vehicle=>vehicle.entity_id,
+      build:vehicle=>{
+        const row=templates.instantiate('station-live-vehicle-row-template');
+        row.dataset.vehicleId=vehicle.entity_id;
+        row.addEventListener('click',()=>{selectedStation=null;selectedVehicleId=Number(row.dataset.vehicleId);vehicleDetail=null;vehicleDetailLoadedAt=0;renderVehicleSidebar();loadVehicleDetail();updateStations();});
+        return row;
+      },
+      apply:(row,vehicle)=>{
+        templates.setText(row,'name',vehicle.name||`列车${vehicle.entity_id}`);
+        templates.setText(row,'motion',`${Math.round(vehicle.speed_kmh??0)} km/h · ${vehicleStatus(vehicle)}`);
+      }
+    });
   };
   const stationLogKey=item=>[item.observed_at,item.line_id,item.vehicle_id??item.vehicle_name,item.event_type].join(':');
   const fillStationLogs=slot=>{
+    // 内容没变就不重建：车站日志每 2 秒刷新一次，整块重建会让日志区闪烁。
+    const logsKey=stationLogRows.map(stationLogKey).join('|');
+    if(slot.dataset.logsKey===logsKey)return;
+    slot.dataset.logsKey=logsKey;
     const previousTop=slot.scrollTop;
     const anchor=[...slot.children].find(row=>row.offsetTop+row.offsetHeight>previousTop);
     const anchorKey=anchor?.dataset.logKey,anchorOffset=anchor?anchor.offsetTop-previousTop:0;
@@ -593,10 +690,42 @@ window.renderRailNetwork = function renderRailNetwork() {
     document.querySelector('#sidebar').replaceChildren(sidebar);
     document.querySelector('#station-name').textContent=name;
   };
+  // 车辆侧栏的原地刷新：与车站侧栏一样只改文字，不重建 DOM。
+  // 原实现每 0.5 秒 replaceChildren 整个 #sidebar，是页面频闪的主因。
+  const refreshVehicleLiveSidebar=()=>{
+    const sidebar=document.querySelector('#sidebar > .vehicle-sidebar');
+    if(!sidebar){renderVehicleSidebar();return;}
+    const live=(liveState?.vehicles||[]).find(item=>item.entity_id===selectedVehicleId)||{},detail=vehicleDetail||{},vehicle=detail.vehicle||{},load=detail.load||{},next=detail.next_stop||{};
+    const name=live.name||vehicle.name||`列车${selectedVehicleId}`,speed=live.speed_kmh??detail.motion?.speed_kmh;
+    templates.setText(sidebar,'vehicle-name',name);
+    templates.setText(sidebar,'vehicle-id',selectedVehicleId);
+    templates.setText(sidebar,'line-name',lineById.get(live.line_id??vehicle.line_id)?.name||vehicle.line_name||'UNKNOWN');
+    templates.setText(sidebar,'speed',speed==null?'UNKNOWN':`${Math.round(speed)} km/h`);
+    templates.setText(sidebar,'status',vehicleStatus({...live,line_id:live.line_id??vehicle.line_id}));
+    templates.setText(sidebar,'next-station',next.station_name||stopForVehicle(live)?.station_group_name||'UNKNOWN');
+    templates.setText(sidebar,'total-load',vehicleDetailPending&&!vehicleDetail?'读取中…':load.total==null?'UNKNOWN':`${load.total} / ${load.capacity??'—'}`);
+    templates.setText(sidebar,'passengers',load.passengers??'—');
+    templates.setText(sidebar,'cargo',load.cargo??'—');
+    templates.setText(sidebar,'block',live.block_id||detail.motion?.block_id||'UNKNOWN');
+    templates.setText(sidebar,'position-source',live.position_source||'UNKNOWN');
+    templates.setText(sidebar,'position-stale',live.position_stale?'是':'否');
+    document.querySelector('#station-name').textContent=name;
+    // 结构部分（货种明细、装载不可用提示）只在内容真的变了时才重建。
+    const cargoKey=`${(load.cargo_by_type||[]).map(item=>`${item.cargo_id}:${item.amount}`).join('|')}#${detail.availability?.load===false?'x':'ok'}`;
+    if(sidebar.dataset.cargoKey!==cargoKey){
+      sidebar.dataset.cargoKey=cargoKey;
+      const cargoSlot=templates.slot(sidebar,'cargo-types');
+      cargoSlot.replaceChildren();
+      (load.cargo_by_type||[]).forEach(item=>{const row=templates.instantiate('cargo-row-template');templates.setText(row,'cargo-name',item.cargo_name||`货物 ${item.cargo_id}`);templates.setText(row,'amount',item.amount);cargoSlot.appendChild(row);});
+      const statusSlot=templates.slot(sidebar,'load-status');
+      statusSlot.replaceChildren();
+      if(detail.availability?.load===false)statusSlot.appendChild(templates.message('UNKNOWN','当前装载数据暂不可用',true));
+    }
+  };
   const loadVehicleDetail=()=>{
     if(selectedVehicleId==null||vehicleDetailPending||Date.now()-vehicleDetailLoadedAt<5000||!(location.protocol==='http:'||location.protocol==='https:'))return;
-    const requestedId=selectedVehicleId;vehicleDetailPending=true;renderVehicleSidebar();
-    fetch(`/api/vehicle-detail/${requestedId}`,{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`vehicle-detail: ${response.status}`);return response.json();}).then(value=>{if(selectedVehicleId!==requestedId)return;vehicleDetail=value;vehicleDetailLoadedAt=Date.now();renderVehicleSidebar();}).catch(error=>{console.error(error);if(selectedVehicleId===requestedId){vehicleDetail={availability:{load:false}};renderVehicleSidebar();}}).finally(()=>{vehicleDetailPending=false;});
+    const requestedId=selectedVehicleId;vehicleDetailPending=true;refreshVehicleLiveSidebar();
+    fetch(`/api/vehicle-detail/${requestedId}`,{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`vehicle-detail: ${response.status}`);return response.json();}).then(value=>{if(selectedVehicleId!==requestedId)return;vehicleDetail=value;vehicleDetailLoadedAt=Date.now();refreshVehicleLiveSidebar();}).catch(error=>{console.error(error);if(selectedVehicleId===requestedId){vehicleDetail={availability:{load:false}};refreshVehicleLiveSidebar();}}).finally(()=>{vehicleDetailPending=false;});
   };
   const loadStationLogs=()=>{
     if(!selectedStation||stationLogRequestPending||!(location.protocol==='http:'||location.protocol==='https:'))return;
@@ -661,7 +790,7 @@ window.renderRailNetwork = function renderRailNetwork() {
      });
     }
     updateLivePositions();
-    if(selectedStation&&hasVehicles)refreshStationLiveSidebar();else if(selectedVehicleId!=null&&hasVehicles){renderVehicleSidebar();loadVehicleDetail();}
+    if(selectedStation&&hasVehicles)refreshStationLiveSidebar();else if(selectedVehicleId!=null&&hasVehicles){refreshVehicleLiveSidebar();loadVehicleDetail();}
   };
   const updateViewport=()=>{
     mapLayer.setAttribute('transform',`translate(${panX} ${panY}) translate(600 360) scale(${zoom}) translate(-600 -360)`);
@@ -671,7 +800,8 @@ window.renderRailNetwork = function renderRailNetwork() {
     updateMapDetailVisibility();
     updateStations();
     updateLivePositions();
-    updateTiles();
+    railLayer.update();
+    extraLayers.forEach(entry=>entry.layer.update());
     syncPixiViewport();
   };
   let panFrame=0;
@@ -680,6 +810,21 @@ window.renderRailNetwork = function renderRailNetwork() {
   document.querySelector('#zoom-in').onclick=()=>setZoom(zoom*1.6,600,360);
   document.querySelector('#zoom-out').onclick=()=>setZoom(zoom/1.6,600,360);
   document.querySelector('#zoom-reset').onclick=()=>{zoom=1;panX=0;panY=0;updateViewport();};
+  // 朝向切换：左键 +15°、Shift+左键 +90°（粗调）、右键 −15°。记住选择并重新加载，让整张图按新朝向重绘。
+  const headingButton=document.querySelector('#map-heading');
+  if(headingButton){
+    const normalized=((Math.round(mapHeading)%360)+360)%360;
+    const applyHeading=next=>{
+      const value=((Math.round(next)%360)+360)%360;
+      try{localStorage.setItem('railMapHeading',String(value));}catch(error){}
+      const url=new URL(location.href);
+      if(value===90)url.searchParams.delete('heading');else url.searchParams.set('heading',String(value));
+      location.href=url.toString();
+    };
+    headingButton.textContent=`朝向 ${normalized}°`;
+    headingButton.onclick=event=>applyHeading(normalized+(event.shiftKey?90:15));
+    headingButton.oncontextmenu=event=>{event.preventDefault();applyHeading(normalized-15);};
+  }
   svg.addEventListener('wheel',event=>{event.preventDefault();const rect=svg.getBoundingClientRect(),focusX=(event.clientX-rect.left)*1200/rect.width,focusY=(event.clientY-rect.top)*720/rect.height;setZoom(zoom*(event.deltaY<0?1.35:1/1.35),focusX,focusY);},{passive:false});
   svg.addEventListener('dragstart',event=>event.preventDefault());
   svg.addEventListener('selectstart',event=>event.preventDefault());
@@ -729,7 +874,12 @@ window.renderRailNetwork = function renderRailNetwork() {
     const pollAdvice=()=>Promise.all([
       fetch('/api/ai-suggestions',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`ai-suggestions: ${response.status}`);return response.json();}),
       fetch('/api/mcp-work-log?limit=30',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`mcp-work-log: ${response.status}`);return response.json();})
-    ]).then(([advice,work])=>{if(aiAdviceGeneration!==advice.generated_at){aiAdviceVisibleCount=10;aiAdviceGeneration=advice.generated_at;}aiAdvice=advice;mcpWorkLog=work;if(!selectedStation&&selectedVehicleId==null)renderOverviewSidebar();}).catch(error=>console.error(error));
+    ]).then(([advice,work])=>{if(aiAdviceGeneration!==advice.generated_at){aiAdviceVisibleCount=10;aiAdviceGeneration=advice.generated_at;}aiAdvice=advice;mcpWorkLog=work;
+      // 概览侧栏只显示线路表、运行图建议与调整记录，三者变化都很慢：
+      // 内容没变就不重建，避免每 10 秒整块 replaceChildren 造成的闪屏。
+      const key=`${advice.generated_at||''}|${aiAdviceVisibleCount}|${(work.entries||[]).length}|${(advice.suggestions||[]).length}`;
+      if(!selectedStation&&selectedVehicleId==null&&key!==overviewKey){overviewKey=key;renderOverviewSidebar();}
+    }).catch(error=>console.error(error));
     pollAdvice();setInterval(pollAdvice,10000);
     pollLive();pollControl();setInterval(pollLive,500);setInterval(pollControl,30000);setInterval(loadStationLogs,2000);
   }
@@ -737,4 +887,91 @@ window.renderRailNetwork = function renderRailNetwork() {
   const requestedStation=p.stations.find(station=>station.entity_id===requestedStationId);
   if(requestedStation){selectedStation=requestedStation;const q=P(requestedStation.center);zoom=Math.min(256,Math.max(zoom,scaleBarPixels/baseScale/25));panX=-(q.x-600)*zoom;panY=-(q.y-360)*zoom;renderStationSidebar();loadStationLogs();}
   updateViewport();
+
+  // ===== 新增图层 ======================================================
+  // 数据链：mod 自驱写 bridge/layer-<name>.json → export-layer-map.py 切块 →
+  // /api/layers/<name>/manifest 与 /api/layers/<name>/tile/<key>。
+  // 切块时用的是铁路 manifest 里那份全局 bounds，所以各层叠加不会错位；
+  // 分块的加载 / 卸载复用上面的 createTileLayer，与铁路同一套逻辑。
+  const LAYER_SPECS=[
+    {name:'road',label:'公路',color:'#8d9aa8',width:1.1,z:'bottom'},
+    {name:'industry',label:'产业',color:'#e8890c',z:'top'},
+    {name:'vehicles',label:'车辆',z:'top'},
+  ];
+  const carrierColor=carrier=>({ROAD:'#2b7fd4',RAIL:'#d43b2b',AIR:'#8a4fd4',WATER:'#17a2a2'}[carrier]||'#8a8a8a');
+  const createLayerContainer=spec=>{
+    const group=S('g',{id:`network-${spec.name}-layer`});
+    if(spec.z==='bottom')mapLayer.insertBefore(group,mapLayer.firstChild);
+    else mapLayer.appendChild(group);
+    return group;
+  };
+  // 分块里带什么就画什么：边（EDGE_GRAPH，复用铁路的 Hermite 曲线画法）和点（POINT）
+  const renderExtraTile=(spec,container,tile)=>{
+    const group=S('g',{'data-tile-key':tile.key},'',container);
+    const nodeById=new Map((tile.nodes||[]).map(node=>[node.entity_id,node.position]));
+    (tile.edges||[]).forEach(edge=>S('path',{d:edgePath(edge,nodeById),fill:'none',stroke:spec.color,'stroke-width':spec.width||1,'vector-effect':'non-scaling-stroke','pointer-events':'none'},'',group));
+    (tile.points||[]).forEach(point=>{
+      const q=P(point.position);
+      if(spec.name==='vehicles')S('circle',{cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:3.2,fill:carrierColor(point.carrier),stroke:'#fbfbfa','stroke-width':0.7,'pointer-events':'none'},'',group);
+      else S('rect',{x:(q.x-2.5).toFixed(1),y:(q.y-2.5).toFixed(1),width:5,height:5,fill:spec.color,'pointer-events':'none'},'',group);
+    });
+    return {group};
+  };
+  const layerPanel=document.querySelector('#layer-panel');
+  const addLayerToggle=(label,layer,count)=>{
+    if(!layerPanel)return;
+    const wrap=document.createElement('label');
+    const box=document.createElement('input');box.type='checkbox';box.checked=layer.isVisible();
+    box.addEventListener('change',()=>layer.setVisible(box.checked));
+    const text=document.createElement('span');text.textContent=count==null?label:`${label} · ${count}`;
+    wrap.appendChild(box);wrap.appendChild(text);layerPanel.appendChild(wrap);
+  };
+  (async()=>{
+    addLayerToggle('铁路',railLayer,p.tiles.length);
+    for(const spec of LAYER_SPECS){
+      let manifest=null;
+      try{
+        const response=await fetch(`/api/layers/${spec.name}/manifest`,{cache:'no-store'});
+        if(response.ok)manifest=await response.json();
+      }catch(error){console.error(error);}
+      if(!manifest||!Array.isArray(manifest.tiles)||!manifest.tiles.length)continue;
+      const container=createLayerContainer(spec);
+      // 概览骨架（总览时显示，放大后被分块取代）—— 与铁路的 physical_overview_segments
+      // 同一角色。是静态文件，直接读 /layers/<name>-overview.json，不必再开接口。
+      let overview=null;
+      try{
+        const response=await fetch(`/layers/${spec.name}-overview.json`,{cache:'no-store'});
+        if(response.ok)overview=await response.json();
+      }catch(error){console.error(error);}
+      const overviewGroup=S('g',{id:`network-${spec.name}-overview`},'',container);
+      let overviewDrawn=false;
+      const hideSummary=()=>{overviewGroup.replaceChildren();overviewDrawn=false;};
+      const showSummary=()=>{
+        if(overviewDrawn||!overview)return;
+        overviewDrawn=true;
+        if(overview.geometry_kind==='POINT'){
+          (overview.points||[]).forEach(entry=>{
+            const q=P({x:entry[0],y:entry[1]});
+            if(spec.name==='vehicles')S('circle',{cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:2,fill:carrierColor(entry[2]),'pointer-events':'none'},'',overviewGroup);
+            else S('rect',{x:(q.x-1.5).toFixed(1),y:(q.y-1.5).toFixed(1),width:3,height:3,fill:spec.color,'pointer-events':'none'},'',overviewGroup);
+          });
+          return;
+        }
+        const d=(overview.lines||[]).map(line=>{const a=P({x:line[0],y:line[1]}),b=P({x:line[2],y:line[3]});return `M${a.x.toFixed(1)},${a.y.toFixed(1)}L${b.x.toFixed(1)},${b.y.toFixed(1)}`;}).join('');
+        S('path',{d,fill:'none',stroke:spec.color,'stroke-width':.7,'vector-effect':'non-scaling-stroke',opacity:.85,'pointer-events':'none'},'',overviewGroup);
+      };
+      const layer=createTileLayer({
+        name:spec.name,manifest,
+        tileUrl:key=>`/api/layers/${spec.name}/tile/${key}`,
+        thresholdM:manifest.detail_load_threshold_m||600,
+        tileSizeM:manifest.tile_size_m||2000,
+        render:tile=>renderExtraTile(spec,container,tile),
+        destroy:entry=>{if(entry.group)entry.group.remove();},
+        showSummary,hideSummary,
+      });
+      extraLayers.push({spec,layer});
+      layer.update();
+      addLayerToggle(spec.label,layer,(manifest.counts&&manifest.counts.total)||manifest.tiles.length);
+    }
+  })();
 };

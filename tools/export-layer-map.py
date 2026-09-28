@@ -222,8 +222,43 @@ def main() -> None:
                 manifest[extra] = payload[extra]
         (args.output_directory / f"{name}-manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
+        # 概览层：最小缩放（总览）时显示的全局骨架，不分块。
+        # 铁路的对应物是 manifest 里的 physical_overview_segments —— 没有它，用户在
+        # 总览下只会看到空白，因为分块要放大到 detail_load_threshold_m 以下才加载。
+        # 这里不追求几何精度（不采样曲线、只连端点），因为总览时线本来就重叠在一起；
+        # 目的是让用户一眼看出"哪里有路/哪里有设施"。
+        if geometry_kind == "POINT":
+            summary_points = []
+            for point in payload.get("points") or []:
+                position = point.get("position") or {}
+                if not isinstance(position.get("x"), (int, float)) or not isinstance(position.get("y"), (int, float)):
+                    continue
+                entry = [round(float(position["x"]), 1), round(float(position["y"]), 1)]
+                if name == "vehicles":
+                    entry.append(point.get("carrier"))
+                elif name == "industry":
+                    entry.append(point.get("level"))
+                summary_points.append(entry)
+            overview = {"layer": name, "geometry_kind": "POINT", "points": summary_points}
+        else:
+            summary_lines = []
+            for tile in tiles.values():
+                tile_nodes = {str(node["entity_id"]): node["position"] for node in tile["nodes"]}
+                for edge in tile["edges"]:
+                    start = tile_nodes.get(str(edge.get("node0")))
+                    end = tile_nodes.get(str(edge.get("node1")))
+                    if start is None or end is None:
+                        continue
+                    summary_lines.append([round(float(start["x"]), 1), round(float(start["y"]), 1),
+                                          round(float(end["x"]), 1), round(float(end["y"]), 1)])
+            overview = {"layer": name, "geometry_kind": "EDGE", "lines": summary_lines}
+        (args.output_directory / f"{name}-overview.json").write_text(
+            json.dumps(overview, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
         summary[name] = {"tiles": len(index), "counts": manifest["counts"],
                          "dropped": dropped,
+                         "overview": len(overview.get("lines") or overview.get("points") or []),
                          "bounds_from": "rail-manifest" if bounds else "self"}
 
     print(json.dumps(summary, ensure_ascii=False))

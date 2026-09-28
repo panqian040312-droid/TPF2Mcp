@@ -165,6 +165,43 @@ nav button.active {
     z-index: 2
 }
 
+/* 图层开关：内容由 network-app.js 异步填，填之前靠 :empty 藏起来，避免出现空框 */
+.layer-panel {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 10px;
+    background: #09131ee6;
+    border: 1px solid #31495e;
+    border-radius: 3px;
+    box-shadow: 0 3px 12px #0008;
+    z-index: 2
+}
+
+.layer-panel:empty {
+    display: none
+}
+
+.layer-panel label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #7ee6ff;
+    font: 12px Consolas;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap
+}
+
+.layer-panel input {
+    margin: 0;
+    accent-color: #3fa9d6;
+    cursor: pointer
+}
+
 .map-controls button {
     width: 30px;
     height: 28px;

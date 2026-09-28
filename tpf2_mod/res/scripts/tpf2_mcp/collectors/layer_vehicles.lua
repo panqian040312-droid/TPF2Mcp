@@ -7,9 +7,8 @@
 -- 的包围盒中心（rail_network.lua 的 bounds_for()）。
 --
 -- carrier 在组件视图里是**数字**，而 game.interface.getEntity 的聚合表里是字符串。
--- 数字到名称的映射按实测对照（VEHICLE_DEPOT carrier=0 对应"汽车车场"= ROAD；
--- TRANSPORT_VEHICLE carrier=1 的聚合表视图是 RAIL）。映射若不对，从产物里的
--- by_carrier_raw 能直接看出真实取值分布。
+-- 数字到名称的映射由 2026-09-28 本存档实测反推（见 CARRIER_NAMES 处的推导），
+-- 不是照抄某处的枚举表 —— 猜错的代价是地图上出现颜色错误的车辆。
 --
 -- 与既有 telemetry 的关系：collectors/operational_telemetry.lua 的 vehicles_live
 -- section 也在取车辆位置，但它是**命令驱动**的（外部 Python 服务每 1.5 秒发一条
@@ -24,7 +23,13 @@ local M = {}
 
 local VEHICLE_LIMIT = 2000
 
-local CARRIER_NAMES = { [0] = "ROAD", [1] = "RAIL", [2] = "WATER", [3] = "AIR" }
+-- 映射按 2026-09-28 本存档实测反推（664 辆车）：
+--   carrier_raw 分布      →  0:595   1:28   2:3   3:20   4:18
+--   同存档聚合表视图计数   →          TRAIN=28      AIRCRAFT=20  SHIP=18
+--   对照结论             →  0=ROAD  1=RAIL  3=AIR  4=WATER
+-- carrier=2 的 3 辆尚未定性（不是 SHIP，数量对不上），刻意留 UNKNOWN ——
+-- 硬塞进 WATER 会让这 3 辆车在地图上显示成错误的颜色。
+local CARRIER_NAMES = { [0] = "ROAD", [1] = "RAIL", [3] = "AIR", [4] = "WATER" }
 
 local function vec(value)
     if value == nil then return nil end

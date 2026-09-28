@@ -20,6 +20,7 @@ local bridge_io = require "tpf2_mcp/collectors/bridge_io"
 local layer_road = require "tpf2_mcp/collectors/layer_road"
 local layer_industry = require "tpf2_mcp/collectors/layer_industry"
 local layer_vehicles = require "tpf2_mcp/collectors/layer_vehicles"
+local layer_terrain = require "tpf2_mcp/collectors/layer_terrain"
 
 local M = {}
 
@@ -37,9 +38,14 @@ local M = {}
 --   —— 同一帧里采两层会叠加卡顿（公路一次要遍历 5262 条边 + 9793 个节点）。
 --   tick() 里还有一道"同一帧最多采一层"的兜底。
 local LAYERS = {
-    { name = "vehicles", kind = "dynamic", every = 15,   delay = 45,  collect = layer_vehicles.collect },
-    { name = "road",     kind = "static",  every = 4500, delay = 76,  collect = layer_road.collect },
-    { name = "industry", kind = "static",  every = 5400, delay = 121, collect = layer_industry.collect },
+    { name = "vehicles", kind = "dynamic", every = 15,    delay = 45,  collect = layer_vehicles.collect },
+    { name = "road",     kind = "static",  every = 4500,  delay = 76,  collect = layer_road.collect },
+    { name = "industry", kind = "static",  every = 5400,  delay = 121, collect = layer_industry.collect },
+    -- 地形是**流式**层：要调一万多次 getHeight，一帧做完会卡帧，所以每个 update
+    -- 只采一小批（layer_terrain 里的 BATCH），全部采完才写出。它没有 collect 方法，
+    -- 用 advance(should_start, update_count)：返回 nil = 还在采，返回 table = 采完了。
+    -- delay 给得大，因为地形网格要等存档世界完全加载才完整。
+    { name = "terrain",  kind = "static",  every = 24000, delay = 300, advance = layer_terrain.advance },
 }
 
 local counters = {}
@@ -47,15 +53,7 @@ local status = {}
 local enabled = true
 local last_publish_update = nil
 
-local function publish(layer, update_count)
-    local collect_ok, payload = pcall(layer.collect)
-    if not collect_ok then
-        payload = { status = "ERROR", error = tostring(payload) }
-    end
-    if type(payload) ~= "table" then
-        payload = { status = "ERROR", error = "collector returned " .. type(payload) }
-    end
-
+local function publish_payload(layer, payload, update_count)
     payload.layer = layer.name
     payload.kind = layer.kind
     payload.schema_version = 1
@@ -72,6 +70,17 @@ local function publish(layer, update_count)
     return written and true or false
 end
 
+local function publish(layer, update_count)
+    local collect_ok, payload = pcall(layer.collect)
+    if not collect_ok then
+        payload = { status = "ERROR", error = tostring(payload) }
+    end
+    if type(payload) ~= "table" then
+        payload = { status = "ERROR", error = "collector returned " .. type(payload) }
+    end
+    return publish_payload(layer, payload, update_count)
+end
+
 -- 每 tick 调用一次（由 runtime.lua 传入全局 update_count）
 function M.tick(update_count)
     if not enabled then return end
@@ -81,7 +90,19 @@ function M.tick(update_count)
         local counter = (counters[layer.name] or 0) + 1
         counters[layer.name] = counter
         local since_delay = counter - layer.delay
-        if since_delay > 0 and (since_delay - 1) % layer.every == 0 then
+        local due = since_delay > 0 and (since_delay - 1) % layer.every == 0
+
+        if layer.advance ~= nil then
+            -- 流式层：每帧推进一小批。它自己管"采完没有"，采完那一帧才交出产物。
+            -- 不受下面"同一帧最多采一层"的限制 —— 单帧工作量由它自己的预算控制。
+            local step_ok, payload = pcall(layer.advance, due, update_count)
+            if not step_ok then
+                payload = { status = "ERROR", error = tostring(payload) }
+            end
+            if type(payload) == "table" then
+                publish_payload(layer, payload, update_count)
+            end
+        elseif due then
             if last_publish_update == update_count then
                 -- 同一帧已经采过一层了：把计数退回去，下一帧再判（相位不变，
                 -- 因为下一帧 counter 会回到同一个值再次满足条件）

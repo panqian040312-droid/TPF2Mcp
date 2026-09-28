@@ -12,6 +12,28 @@ function M.entity_id(entity)
     return tonumber(tostring(entity)) or tostring(entity)
 end
 
+-- 边结构类型：0 = 地面、1 = 桥、2 = 隧道。
+--
+-- 判据来自游戏自己的代码（res/scripts/selectortooltip.lua:70-88）：
+--     local bridgeType = 1
+--     local tunnelType = 2
+--     local edgeType = baseEdge.type
+--     if edgeType == bridgeType then ... api.res.bridgeTypeRep.get(typeIndex).name
+--     elseif edgeType == tunnelType then ... api.res.tunnelTypeRep.get(typeIndex).name
+-- 玩家把鼠标悬在桥上/隧道上时看到的名字，就是这么来的。
+--
+-- 公路与铁路共用 BASE_EDGE 这张表（BASE_EDGE_STREET / BASE_EDGE_TRACK 的字段完全相同），
+-- 所以同一个字段对两者都有效：公路的桥、隧道、下穿也能分开。
+--
+-- 未知取值不硬塞成 GROUND —— 宁可显示成 TYPE_7 让人看见，也不要悄悄画错。
+function M.structure_of(edge_type)
+    if type(edge_type) ~= "number" then return "UNKNOWN" end
+    if edge_type == 0 then return "GROUND" end
+    if edge_type == 1 then return "BRIDGE" end
+    if edge_type == 2 then return "TUNNEL" end
+    return "TYPE_" .. tostring(edge_type)
+end
+
 function M.component_type(name)
     local ok, value = pcall(function() return api.type.ComponentType[name] end)
     if not ok or value == nil then return nil, "component type unavailable: " .. tostring(name) end

@@ -55,6 +55,7 @@ function M.collect()
     local edges, nodes = {}, {}
     local node_cache = {}
     local street_types = {}
+    local structures = {}
     local skipped = 0
     local probe = nil
     local base_missing = false
@@ -94,6 +95,11 @@ function M.collect()
             street_types[street_type] = (street_types[street_type] or 0) + 1
         end
 
+        -- 结构类型：0 地面 / 1 桥 / 2 隧道（+ 保留其余取值，避免把未知值硬塞成地面）
+        local edge_type = common.field(base, "type")
+        local structure = common.structure_of(edge_type)
+        structures[structure] = (structures[structure] or 0) + 1
+
         edges[#edges + 1] = {
             entity_id = common.entity_id(edge_entity),
             node0 = id0,
@@ -103,6 +109,8 @@ function M.collect()
             street_type = street_type,
             has_bus = common.field(base, "hasBus") == true,
             has_tram = common.field(base, "hasTram") == true,
+            structure = structure,
+            structure_index = (type(edge_type) == "number" and edge_type) or nil,
         }
     end, errors)
 
@@ -132,6 +140,7 @@ function M.collect()
             street_types = #street_types,
         },
         street_types = street_types,
+        structures = structures,
         field_probe = probe,
         nodes = ordered,
         edges = edges,

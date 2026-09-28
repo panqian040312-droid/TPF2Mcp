@@ -115,6 +115,11 @@ local function collect_tracks(errors)
             speed_limit_mps = type(track_resource_detail) == "table" and track_resource_detail.speed_limit_mps or nil,
             freestyle_station_track = string.find(lower_resource_file, "lollo_freestyle_train_station", 1, true) ~= nil,
             catenary = common.field(track, "catenary"),
+            -- 边结构：GROUND / BRIDGE / TUNNEL。注意这和上面的 track_type 是两回事 ——
+            -- track_type 是轨道型号（用来算限速），这个才是"这段是不是在桥/隧道里"。
+            -- 判据见 common.structure_of 的注释（游戏自己在 selectortooltip.lua 里就这么判）。
+            structure = common.structure_of(common.field(base, "type")),
+            structure_index = number(common.field(base, "typeIndex")),
         }
     end, errors)
     if not ok then errors[#errors + 1] = { component = "BASE_EDGE_TRACK", error = tostring(reason) } end
@@ -325,9 +330,16 @@ function M.collect()
     local stations, terminal_lookup = collect_stations(node_map, errors)
     local lines = collect_lines(terminal_lookup, errors)
     local depots = collect_depots(lines, errors)
+    -- 地面 / 桥 / 隧道各多少条。前端靠它判断这层有没有结构信息（旧版数据没有这个字段）。
+    local structures = {}
+    for index = 1, #edges do
+        local name = edges[index].structure or "UNKNOWN"
+        structures[name] = (structures[name] or 0) + 1
+    end
     return {
         schema_version = 1, status = "OK", source_status = "ENGINE_OBSERVED",
         nodes = nodes, edges = edges, stations = stations, lines = lines, depots = depots,
+        structures = structures,
         counts = { nodes = #nodes, edges = #edges, stations = #stations, lines = #lines, depots = #depots },
         errors = errors, write_command_sent = false,
     }

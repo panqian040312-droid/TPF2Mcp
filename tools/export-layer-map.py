@@ -78,6 +78,66 @@ def tile_of(x: float, y: float, minimum: dict, tile_size: float) -> str:
     return f"{ix}_{iy}"
 
 
+def grid_bounds(grid: dict) -> dict | None:
+    """从网格参数推它自己的覆盖范围：origin + step × (cols-1)。"""
+    try:
+        origin = grid.get("origin") or {}
+        origin_x, origin_y = float(origin["x"]), float(origin["y"])
+        step_x, step_y = float(grid["step_x"]), float(grid["step_y"])
+        cols, rows = int(grid["cols"]), int(grid["rows"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if cols < 2 or rows < 2:
+        return None
+    return {"min": {"x": origin_x, "y": origin_y},
+            "max": {"x": origin_x + step_x * (cols - 1), "y": origin_y + step_y * (rows - 1)}}
+
+
+def export_grid(name: str, payload: dict, output_directory: Path) -> dict:
+    """网格图层（地形高度）：整层一个数据文件，**不分块**。
+
+    为什么不分块：等高线必须连续。按 tile 切开的话，同一条等高线会在边上断掉，
+    接缝处还得额外处理跨块连接 —— 而网格本身才几十 KB，整层加载的成本远低于
+    维护一套跨块接续逻辑。地图（水体/地形）这类"底图"性质的数据都适合这条路径，
+    与公路/产业/车辆那种"细节"性质的分块数据是两种东西。
+    """
+    grid = payload.get("grid") or {}
+    heights = payload.get("heights") or []
+
+    data = {
+        "schema_version": 1,
+        "layer": name,
+        "geometry_kind": "GRID",
+        "grid": grid,
+        "counts": payload.get("counts") or {},
+        "heights": heights,
+    }
+    (output_directory / f"{name}-data.json").write_text(
+        json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    manifest = {
+        "schema_version": 1,
+        "layer": name,
+        "geometry_kind": "GRID",
+        "source_status": payload.get("source_status"),
+        "generated_at": int(time.time()),
+        "data_file": f"{name}-data.json",
+        "grid": grid,
+        "counts": payload.get("counts") or {},
+        "diagnostics": payload.get("diagnostics"),
+        # 网格层不分块，但保留空数组，让前端能走同一套 manifest 解析
+        "tiles": [],
+        "tile_size_m": None,
+        "detail_load_threshold_m": None,
+    }
+    (output_directory / f"{name}-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    return {"grid": f"{int(grid.get('cols', 0))}x{int(grid.get('rows', 0))}",
+            "samples": len(heights),
+            "counts": manifest["counts"]}
+
+
 def tile_bounds(key: str, minimum: dict, tile_size: float) -> dict:
     ix, iy = (int(part) for part in key.split("_", 1))
     return {
@@ -179,13 +239,19 @@ def main() -> None:
             summary[name] = {"skipped": f"source status {payload.get('status')}"}
             continue
 
+        geometry_kind = payload.get("geometry_kind") or "EDGE_GRAPH"
+
+        # 网格层（地形高度）走独立路径：不分块、不参与全局 bounds 切分。
+        if geometry_kind == "GRID":
+            summary[name] = export_grid(name, payload, args.output_directory)
+            continue
+
         layer_bounds = bounds or bounds_from_payload(payload)
         if layer_bounds is None:
             summary[name] = {"skipped": "no bounds available"}
             continue
         minimum = layer_bounds["min"]
 
-        geometry_kind = payload.get("geometry_kind") or "EDGE_GRAPH"
         if geometry_kind == "POINT":
             tiles, grouped, dropped = split_points(payload, minimum, args.tile_size)
         else:

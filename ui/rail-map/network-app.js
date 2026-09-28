@@ -288,6 +288,20 @@ window.renderRailNetwork = function renderRailNetwork() {
   // RAIL_NETWORK_TILES，URL 还写死 /api/rail/tile/），加第二个图层就得整段复制一份、
   // 以后两处还要各自维护。现在每层的差异都收在 spec 里，加载与卸载的逻辑只有一份。
   const extraLayers=[];
+  // 边的结构样式：地面常规、隧道虚线、桥加粗偏金色。
+  // structure 由 mod 采集时从 BASE_EDGE.type 读出（0 地面 / 1 桥 / 2 隧道），判据是
+  // 游戏自己在 res/scripts/selectortooltip.lua 里用的那套。旧数据没有这个字段，
+  // 一律按地面画 —— 不会因为缺字段把整张图变样。
+  const edgeStructureStyle = (edge, spec) => {
+    const base = { 'stroke-width': spec.width || 1, opacity: 1 };
+    if (edge.structure === 'TUNNEL') {
+      return { ...base, stroke: spec.tunnelColor || '#9b8ae0', 'stroke-dasharray': '4 3', opacity: 0.95 };
+    }
+    if (edge.structure === 'BRIDGE') {
+      return { ...base, stroke: spec.bridgeColor || '#dcc07e', 'stroke-width': (spec.width || 1) * 1.6, opacity: 0.95 };
+    }
+    return { ...base, stroke: spec.color };
+  };
   const createTileLayer=spec=>{
     const loaded=new Map(),pending=new Map();
     let desired=new Set(),visible=spec.visible!==false;
@@ -358,7 +372,10 @@ window.renderRailNetwork = function renderRailNetwork() {
       const group=S('g',{'data-tile-key':key},'',detailLayer);
       const tileNodes=new Map(tile.nodes.map(node=>[node.entity_id,node.position]));
       const paths=new Map(tile.edges.map(edge=>[edge.entity_id,edgePath(edge,tileNodes)]));
-      if(!pixiApp)tile.edges.forEach(edge=>S('path',{d:paths.get(edge.entity_id),fill:'none',stroke:'#83a9bd','stroke-width':1,'vector-effect':'non-scaling-stroke','pointer-events':'none'},'',group));
+      if(!pixiApp)tile.edges.forEach(edge=>{
+        const style=edgeStructureStyle(edge,{color:'#83a9bd',width:1,tunnelColor:'#9b8ae0',bridgeColor:'#dcc07e'});
+        S('path',{d:paths.get(edge.entity_id),fill:'none','vector-effect':'non-scaling-stroke','pointer-events':'none',...style},'',group);
+      });
       return {group,tile,tileNodes,paths,pixi:makePixiTile(tile,tileNodes)};
     },
     destroy:entry=>{if(entry.pixi){entry.pixi.container.parent?.removeChild(entry.pixi.container);entry.pixi.container.destroy({children:true});}entry.group.remove();},
@@ -888,13 +905,171 @@ window.renderRailNetwork = function renderRailNetwork() {
   if(requestedStation){selectedStation=requestedStation;const q=P(requestedStation.center);zoom=Math.min(256,Math.max(zoom,scaleBarPixels/baseScale/25));panX=-(q.x-600)*zoom;panY=-(q.y-360)*zoom;renderStationSidebar();loadStationLogs();}
   updateViewport();
 
+  // ===== 地形层：等高线 + 水深 + 地下设施 ==============================
+  // 这层跟其他图层不是一类东西：公路/产业/车辆是"细节"（分块、放大才加载），
+  // 地形是"底图"（整图一个网格、始终显示）。所以它走独立路径：
+  //   * 不分块 —— 等高线按 tile 切开就断了，而整张网格才几十 KB
+  //   * 只画一次 —— mapLayer 用 SVG transform 负责缩放平移，里面的元素不必重画
+  // 数据源：mod 用 game.interface.getHeight({x, y}) 采样的地表高度网格。
+  // 单位米、海平面 = 0：> 0 是陆地（画等高线），< 0 是水下（水深 = -height）。
+  // 同一份采样同时喂两个开关，不需要采两遍。
+  const TERRAIN = {
+    grid: null, heights: null,
+    contourGroup: null, waterGroup: null, undergroundGroup: null,
+    contourCache: null, undergroundCount: null,
+    visibleContours: true, visibleWater: true, visibleUnderground: true,
+    contourInterval: 50,
+  };
+
+  // 任意点的地表高度（双线性插值）。地下车站的判定就靠它：站台 z 与这里得到的
+  // 地表高度一比，差值就是"埋多深"。地形网格没覆盖到的地方返回 null。
+  const terrainHeightAt = (x, y) => {
+    const g = TERRAIN.grid, heights = TERRAIN.heights;
+    if (!g || !heights || !g.step_x || !g.step_y) return null;
+    const fx = (x - g.origin.x) / g.step_x, fy = (y - g.origin.y) / g.step_y;
+    if (fx < 0 || fy < 0 || fx > g.cols - 1 || fy > g.rows - 1) return null;
+    const i = Math.min(Math.floor(fx), g.cols - 2), j = Math.min(Math.floor(fy), g.rows - 2);
+    const tx = fx - i, ty = fy - j, missing = g.missing, scale = g.scale || 1;
+    const at = (ii, jj) => { const v = heights[jj * g.cols + ii]; return (v === missing || v == null) ? NaN : v / scale; };
+    const a = at(i, j), b = at(i + 1, j), c = at(i + 1, j + 1), d = at(i, j + 1);
+    if ([a, b, c, d].some(Number.isNaN)) return null;
+    return (a * (1 - tx) + b * tx) * (1 - ty) + (d * (1 - tx) + c * tx) * ty;
+  };
+
+  // Marching squares：从高度网格里抽出等值线。
+  // 对每个格子看四个角相对某条等高线的高低，四条边上做线性插值得到穿点，再连起来。
+  // 结果按 level 分组，一组一条 path（不是一段一个元素）—— 否则一次要建几万个 DOM 节点。
+  const buildContours = () => {
+    if (TERRAIN.contourCache) return TERRAIN.contourCache;
+    if (!TERRAIN.grid || !TERRAIN.heights) return { groups: [], minH: 0, maxH: 0 };
+    // 算法在 terrain-contour.js —— 纯函数、不含 DOM，Node 里能直接跑它验几何，
+    // 所以不必靠"打开页面看一眼"来判断等高线算得对不对。
+    TERRAIN.contourCache = window.RailTerrainContour.buildContours(
+      TERRAIN.grid, TERRAIN.heights, TERRAIN.contourInterval);
+    return TERRAIN.contourCache;
+  };
+
+  const renderContours = () => {
+    if (!TERRAIN.contourGroup) return;
+    TERRAIN.contourGroup.replaceChildren();
+    if (!TERRAIN.visibleContours || !TERRAIN.grid) return;
+    const built = buildContours();
+    const groups = built.groups || [];
+    if (!groups.length) return;
+    const lo = built.minH, hi = built.maxH;
+    // 高处偏褐、低处偏青，越高的线越不透明 —— 一眼能看出哪儿是山
+    const group = TERRAIN.contourGroup;
+    for (const item of groups) {
+      const t = hi > lo ? (item.level - lo) / (hi - lo) : 0;
+      const hue = 186 - t * 150;          // 186° 青 → 36° 褐
+      const light = 58 - t * 14;
+      const major = Math.abs(item.level % 100) < 1e-6;
+      const d = item.segments.map(seg => {
+        const p0 = P({ x: seg[0][0], y: seg[0][1] }), p1 = P({ x: seg[1][0], y: seg[1][1] });
+        return `M${p0.x.toFixed(1)},${p0.y.toFixed(1)}L${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+      }).join('');
+      S('path', {
+        d, fill: 'none', stroke: `hsl(${hue.toFixed(0)} 34% ${light.toFixed(0)}%)`,
+        'stroke-width': major ? 1.15 : 0.6, 'vector-effect': 'non-scaling-stroke',
+        opacity: major ? 0.8 : 0.45, 'pointer-events': 'none',
+      }, '', group);
+    }
+  };
+
+  const renderWater = () => {
+    if (!TERRAIN.waterGroup) return;
+    TERRAIN.waterGroup.replaceChildren();
+    if (!TERRAIN.visibleWater || !TERRAIN.grid) return;
+    const g = TERRAIN.grid, heights = TERRAIN.heights;
+    const { cols, rows, step_x, step_y } = g;
+    const scale = g.scale || 1, missing = g.missing;
+    const ox = g.origin.x, oy = g.origin.y;
+    const at = (i, j) => { const v = heights[j * cols + i]; return (v === missing || v == null) ? NaN : v / scale; };
+    // 三档深度。格子里四个角的平均高度 < 0 才算水面之下。
+    const bands = [
+      { limit: -5, color: '#2f6d86' },
+      { limit: -20, color: '#1f5170' },
+      { limit: -Infinity, color: '#123b57' },
+    ];
+    const buckets = bands.map(() => []);
+    for (let j = 0; j < rows - 1; j++) {
+      for (let i = 0; i < cols - 1; i++) {
+        const a = at(i, j), b = at(i + 1, j), c = at(i + 1, j + 1), d = at(i, j + 1);
+        if (Number.isNaN(a) || Number.isNaN(b) || Number.isNaN(c) || Number.isNaN(d)) continue;
+        const average = (a + b + c + d) / 4;
+        if (average >= 0) continue;
+        const band = average < -20 ? 2 : (average < -5 ? 1 : 0);
+        const corners = [
+          [ox + i * step_x, oy + j * step_y],
+          [ox + (i + 1) * step_x, oy + j * step_y],
+          [ox + (i + 1) * step_x, oy + (j + 1) * step_y],
+          [ox + i * step_x, oy + (j + 1) * step_y],
+        ].map(point => P({ x: point[0], y: point[1] }));
+        buckets[band].push(corners);
+      }
+    }
+    buckets.forEach((cells, index) => {
+      if (!cells.length) return;
+      let d = '';
+      for (const corners of cells) {
+        d += `M${corners[0].x.toFixed(1)},${corners[0].y.toFixed(1)}`
+          + corners.slice(1).map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('') + 'Z';
+      }
+      S('path', { d, fill: bands[index].color, stroke: 'none', opacity: 0.6, 'pointer-events': 'none' }, '', TERRAIN.waterGroup);
+    });
+  };
+
+  // 地下设施：站台坐标自带 z（真实高程），跟同点的地表高度一比就是埋深。
+  // 这个不需要额外采集 —— 地形网格本身就是那把"尺子"。
+  const renderUnderground = () => {
+    if (!TERRAIN.undergroundGroup) return;
+    TERRAIN.undergroundGroup.replaceChildren();
+    if (!TERRAIN.visibleUnderground || !TERRAIN.grid) return;
+    const found = [];
+    (p.stations || []).forEach(station => {
+      const center = station.center;
+      if (!center || typeof center.z !== 'number') return;
+      const surface = terrainHeightAt(center.x, center.y);
+      if (surface == null) return;
+      const depth = surface - center.z;
+      if (depth < 3) return;  // 埋深不到 3 m 的不算地下站（避免把普通地面站误标）
+      found.push({ station, depth });
+    });
+    TERRAIN.undergroundCount = found.length;
+    found.forEach(({ station, depth }) => {
+      const q = P(station.center);
+      S('path', {
+        d: `M${(q.x - 4).toFixed(1)},${(q.y - 5).toFixed(1)}L${(q.x + 4).toFixed(1)},${(q.y - 5).toFixed(1)}L${q.x.toFixed(1)},${(q.y + 3).toFixed(1)}Z`,
+        fill: '#6c5aa8', stroke: '#ded4ff', 'stroke-width': 0.8, 'pointer-events': 'none',
+      }, '', TERRAIN.undergroundGroup);
+      S('text', {
+        x: (q.x + 6).toFixed(1), y: (q.y - 3).toFixed(1), fill: '#d5c9ff', 'font-size': 7,
+        'font-family': 'Consolas, Microsoft YaHei', 'paint-order': 'stroke',
+        stroke: '#0b1020', 'stroke-width': 2.2, 'pointer-events': 'none',
+      }, `地下 ${depth.toFixed(0)}m`, TERRAIN.undergroundGroup);
+    });
+  };
+
+  const renderTerrain = () => { renderContours(); renderWater(); renderUnderground(); };
+
+  // 地形容器插到最底：水 → 等高线 → （地下标记在最上，因为它是标注）
+  (() => {
+    TERRAIN.contourGroup = S('g', { id: 'network-terrain-contour-layer', 'pointer-events': 'none' });
+    TERRAIN.waterGroup = S('g', { id: 'network-terrain-water-layer', 'pointer-events': 'none' });
+    TERRAIN.undergroundGroup = S('g', { id: 'network-terrain-underground-layer', 'pointer-events': 'none' });
+    // insertBefore(firstChild) 每调用一次都把元素放到更下层，所以先插等高线、再插水深
+    mapLayer.insertBefore(TERRAIN.contourGroup, mapLayer.firstChild);
+    mapLayer.insertBefore(TERRAIN.waterGroup, mapLayer.firstChild);
+    mapLayer.appendChild(TERRAIN.undergroundGroup);
+  })();
+
   // ===== 新增图层 ======================================================
   // 数据链：mod 自驱写 bridge/layer-<name>.json → export-layer-map.py 切块 →
   // /api/layers/<name>/manifest 与 /api/layers/<name>/tile/<key>。
   // 切块时用的是铁路 manifest 里那份全局 bounds，所以各层叠加不会错位；
   // 分块的加载 / 卸载复用上面的 createTileLayer，与铁路同一套逻辑。
   const LAYER_SPECS=[
-    {name:'road',label:'公路',color:'#8d9aa8',width:1.1,z:'bottom'},
+    {name:'road',label:'公路',color:'#8d9aa8',width:1.1,z:'bottom',tunnelColor:'#9b8ae0',bridgeColor:'#dcc07e'},
     {name:'industry',label:'产业',color:'#e8890c',z:'top'},
     {name:'vehicles',label:'车辆',z:'top'},
   ];
@@ -909,7 +1084,10 @@ window.renderRailNetwork = function renderRailNetwork() {
   const renderExtraTile=(spec,container,tile)=>{
     const group=S('g',{'data-tile-key':tile.key},'',container);
     const nodeById=new Map((tile.nodes||[]).map(node=>[node.entity_id,node.position]));
-    (tile.edges||[]).forEach(edge=>S('path',{d:edgePath(edge,nodeById),fill:'none',stroke:spec.color,'stroke-width':spec.width||1,'vector-effect':'non-scaling-stroke','pointer-events':'none'},'',group));
+    (tile.edges||[]).forEach(edge=>{
+      const style=edgeStructureStyle(edge,spec);
+      S('path',{d:edgePath(edge,nodeById),fill:'none','vector-effect':'non-scaling-stroke','pointer-events':'none',...style},'',group);
+    });
     (tile.points||[]).forEach(point=>{
       const q=P(point.position);
       if(spec.name==='vehicles')S('circle',{cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:3.2,fill:carrierColor(point.carrier),stroke:'#fbfbfa','stroke-width':0.7,'pointer-events':'none'},'',group);
@@ -918,13 +1096,16 @@ window.renderRailNetwork = function renderRailNetwork() {
     return {group};
   };
   const layerPanel=document.querySelector('#layer-panel');
-  const addLayerToggle=(label,layer,count)=>{
+  // prepend=true 时插到列表最前（地形是底图，放最上面一行更符合阅读顺序）
+  const addLayerToggle=(label,layer,count,prepend)=>{
     if(!layerPanel)return;
     const wrap=document.createElement('label');
     const box=document.createElement('input');box.type='checkbox';box.checked=layer.isVisible();
     box.addEventListener('change',()=>layer.setVisible(box.checked));
     const text=document.createElement('span');text.textContent=count==null?label:`${label} · ${count}`;
-    wrap.appendChild(box);wrap.appendChild(text);layerPanel.appendChild(wrap);
+    wrap.appendChild(box);wrap.appendChild(text);
+    if(prepend&&layerPanel.firstChild)layerPanel.insertBefore(wrap,layerPanel.firstChild);
+    else layerPanel.appendChild(wrap);
   };
   (async()=>{
     addLayerToggle('铁路',railLayer,p.tiles.length);
@@ -973,5 +1154,34 @@ window.renderRailNetwork = function renderRailNetwork() {
       layer.update();
       addLayerToggle(spec.label,layer,(manifest.counts&&manifest.counts.total)||manifest.tiles.length);
     }
+  })();
+
+  // 地形层加载：走独立路径（整图、不分块）。三个开关都插到面板最前，因为它是底图。
+  (async()=>{
+    let manifest=null;
+    try{
+      const response=await fetch('/api/layers/terrain/manifest',{cache:'no-store'});
+      if(response.ok)manifest=await response.json();
+    }catch(error){console.error(error);}
+    if(!manifest||!manifest.grid||!manifest.data_file)return;
+    let data=null;
+    try{
+      const response=await fetch(`/layers/${manifest.data_file}`,{cache:'no-store'});
+      if(response.ok)data=await response.json();
+    }catch(error){console.error(error);}
+    if(!data||!Array.isArray(data.heights)||!data.heights.length)return;
+    TERRAIN.grid=data.grid||manifest.grid;
+    TERRAIN.heights=data.heights;
+    TERRAIN.contourCache=null;
+    renderTerrain();
+    const counts=manifest.counts||{};
+    const gridLabel=(counts.cols&&counts.rows)?`${counts.cols}×${counts.rows}`:null;
+    const waterLabel=counts.water_points!=null?`${counts.water_points} 格`:null;
+    const proxy=spec=>({isVisible:()=>spec.get(),setVisible:value=>{spec.set(value);spec.render();}});
+    // 倒序 prepend，最终自上而下是：等高线 → 水深 → 地下站 → 铁路 → 公路 → …
+    addLayerToggle('地下站',proxy({get:()=>TERRAIN.visibleUnderground,set:v=>TERRAIN.visibleUnderground=v,render:renderUnderground}),
+      TERRAIN.undergroundCount??null,true);
+    addLayerToggle('水深',proxy({get:()=>TERRAIN.visibleWater,set:v=>TERRAIN.visibleWater=v,render:renderWater}),waterLabel,true);
+    addLayerToggle('等高线',proxy({get:()=>TERRAIN.visibleContours,set:v=>TERRAIN.visibleContours=v,render:renderContours}),gridLabel,true);
   })();
 };

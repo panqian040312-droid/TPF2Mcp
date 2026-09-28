@@ -98,7 +98,7 @@ foreach ($fileName in @('pyproject.toml', 'requirements.txt', 'start_server.py',
 }
 $packageSource = Join-Path $companionSource 'src'
 foreach ($file in Get-ChildItem -LiteralPath $packageSource -Recurse -File -Filter '*.py') {
-    $relativePath = [System.IO.Path]::GetRelativePath($packageSource, $file.FullName)
+    $relativePath = $file.FullName.Substring($packageSource.Length).TrimStart('\', '/')
     $target = Join-Path (Join-Path $companionDestination 'src') $relativePath
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
     Copy-Item -LiteralPath $file.FullName -Destination $target
@@ -107,7 +107,7 @@ foreach ($file in Get-ChildItem -LiteralPath $packageSource -Recurse -File -Filt
 $uiSource = Join-Path $repository 'ui\rail-map'
 $uiDestination = Join-Path $destination 'ui\rail-map'
 New-Item -ItemType Directory -Force -Path $uiDestination | Out-Null
-foreach ($fileName in @('app.js', 'bridge-crossings.js', 'index.html', 'network-app.js', 'network-page.js', 'network.css', 'README.md', 'template-runtime.js', 'timetable-page.js', 'timetable.css', 'timetable.html', 'timetable.js')) {
+foreach ($fileName in @('app.js', 'bridge-crossings.js', 'index.html', 'network-app.js', 'network-page.js', 'network.css', 'README.md', 'template-runtime.js', 'terrain-contour.js', 'timetable-page.js', 'timetable.css', 'timetable.html', 'timetable.js')) {
     Copy-Item -LiteralPath (Join-Path $uiSource $fileName) -Destination $uiDestination
 }
 foreach ($directoryName in @('templates', 'vendor')) {
@@ -115,7 +115,7 @@ foreach ($directoryName in @('templates', 'vendor')) {
 }
 $toolDestination = Join-Path $destination 'tools'
 New-Item -ItemType Directory -Force -Path $toolDestination | Out-Null
-foreach ($fileName in @('serve-rail-map.py', 'export-rail-network-map.py')) {
+foreach ($fileName in @('serve-rail-map.py', 'export-rail-network-map.py', 'export-layer-map.py')) {
     Copy-Item -LiteralPath (Join-Path $repository "tools\$fileName") -Destination $toolDestination
 }
 

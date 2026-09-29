@@ -42,6 +42,26 @@ local function bounds_center(entity)
 end
 
 -- 并查集：互通是传递关系，站群就是连通分量
+-- 取某点的地形高度（米）。参数形式按游戏源码里的用法逐个试，写法照抄 layer_terrain.lua。
+-- 🔴 地下站判定必须用「在站台上直接采样」的结果，不能拿地形层的网格插值代替：
+--    那张网格 170 m 一格，落在山谷里的站会被相邻格点的山坡拉高，
+--    实测 24 个普通站因此被算成"地下 3~17 m"（2026-09-29 用户报的，这个存档一个地下站都没有）。
+local function sample_height(fn, x, y)
+    local ok, value = pcall(fn, { x, y })
+    if ok and type(value) == "number" then return value end
+    ok, value = pcall(fn, { x = x, y = y })
+    if ok and type(value) == "number" then return value end
+    ok, value = pcall(fn, { x, y, 0 })
+    if ok and type(value) == "number" then return value end
+    return nil
+end
+
+local function get_height_function()
+    local ok, fn = pcall(function() return game.interface.getHeight end)
+    if ok and type(fn) == "function" then return fn end
+    return nil
+end
+
 local function make_union_find()
     local parent = {}
     local function find(value)
@@ -104,6 +124,22 @@ function M.collect()
     local diagnostics = { catchment_probe = {}, stations_seen = 0, links = 0, clusters = 0 }
 
     -- ① 车站位置（站台自己的 vehicleNodeId → BASE_NODE，四种站台通用）
+    local height_fn = get_height_function()
+
+    -- 车站 → 建筑 的映射（与 rail_network.lua 同一个接口）。
+    -- 有了它才能知道每座车站**是什么交通方式**：游戏的建筑就是按
+    -- `station/<类型>/...` 分目录的（本体纹理目录同样是 air / harbor / rail / road / train / water），
+    -- 所以前端只看文件路径就能分辨火车站、汽车站、码头、机场 —— 局部视图里要列"附近交通枢纽"就靠它。
+    local station_to_construction = nil
+    local map_ok, map_or_error = pcall(function()
+        return api.engine.system.streetConnectorSystem.getStation2ConstructionMap()
+    end)
+    if map_ok then
+        station_to_construction = map_or_error
+    else
+        errors[#errors + 1] = { component = "STATION_TO_CONSTRUCTION_MAP", error = tostring(map_or_error) }
+    end
+
     local stations = {}
     local station_entity_by_id = {}
     common.safe_for_each_entity("STATION_GROUP", function(entity)
@@ -115,29 +151,111 @@ function M.collect()
 
         local name = common.name_from_component(component_access.get(entity, "NAME"))
         local center = bounds_center(entity)
-        -- 没拿到包围盒就用第一个站台的位置兜底
-        if center == nil then
-            for _, station_entity in ipairs(common.sequence_values(common.field(group, "stations"))) do
-                local station = component_access.get(station_entity, "STATION")
-                for _, terminal in ipairs(common.sequence_values(common.field(station, "terminals"))) do
-                    local node_entity = common.field(common.field(terminal, "vehicleNodeId"), "entity")
-                    local node = node_entity ~= nil and component_access.get(node_entity, "BASE_NODE") or nil
-                    center = vec(common.field(node, "position")) or vec(common.field(node, "pos"))
-                    if center ~= nil then break end
+        -- 站台的真实几何：把每个站台的发车节点坐标都收下来。
+        -- 为什么需要：局部视图要像火车站那样显示**具体形状** —— 码头是一排泊位、
+        -- 汽车站是一排车位。只给一个中心点就只能画个符号，看不出站场长什么样。
+        -- 顺带也给 center 兜底（原先那段"拿第一个站台位置当中心"的逻辑合并到这里）。
+        local platforms = {}
+        for _, station_entity in ipairs(common.sequence_values(common.field(group, "stations"))) do
+            local station = component_access.get(station_entity, "STATION")
+            local cargo = common.field(station, "cargo")
+            for _, terminal in ipairs(common.sequence_values(common.field(station, "terminals"))) do
+                local node_entity = common.field(common.field(terminal, "vehicleNodeId"), "entity")
+                local node = node_entity ~= nil and component_access.get(node_entity, "BASE_NODE") or nil
+                local position = vec(common.field(node, "position")) or vec(common.field(node, "pos"))
+                if position ~= nil then
+                    platforms[#platforms + 1] = { x = position.x, y = position.y, z = position.z, cargo = cargo }
+                    if center == nil then center = position end
                 end
-                if center ~= nil then break end
             end
         end
         local cargo_any = false
+        -- 子车站（STATION 实体）的 id。互通表用的就是这套 id，不是 STATION_GROUP 的 id
+        -- （2026-09-29 实测：35 个铁路站的 child_station_id 有 28 个能在互通表命中，
+        --  同一批站的 group id 命中 0 个 —— 两套编号范围重叠但零交集）。
+        local child_ids = {}
+        -- 本车站用到的建筑文件（去重）。前端据此判断这是什么站：
+        -- station/rail|train → 火车站、station/road → 汽车站、station/air → 机场、
+        -- station/harbor|water → 码头。「附近交通枢纽」就是靠它分类的。
+        local construction_files = {}
+        local seen_files = {}
+        -- 每座**子车站**一条：建筑文件 + 它自己的客货属性。
+        -- 为什么不能只留一个 cargo 布尔值：一座站群常常同时有客运站台和货运站台
+        -- （火车站旁边就是货场、码头同时跑客船和货船），压成一个布尔值就把
+        -- "公路货运 / 公路客运 / 海运货运 / 海运客运"这四种区别全抹掉了。
+        -- 有了 (交通方式 × 客货) 这个二维信息，前端才能像游戏那样分别标出来。
+        local services = {}
         for _, station_entity in ipairs(common.sequence_values(common.field(group, "stations"))) do
+            local child_id = common.entity_id(station_entity)
+            if child_id ~= nil then child_ids[#child_ids + 1] = child_id end
             local station = component_access.get(station_entity, "STATION")
-            if station ~= nil and common.field(station, "cargo") == true then cargo_any = true break end
+            local cargo = station ~= nil and common.field(station, "cargo") == true
+            if cargo then cargo_any = true end
+            -- 车站承载能力（客运 / 货运，单位见游戏内站台窗口）。
+            -- 出处：官方 API `type.Station.pool : Pool { edges, moreCapacity }`；
+            -- `.con` 侧由 `modulesutil.getStationPoolCapacities`（res/scripts/modulesutil.lua:19）
+            -- 把「该站所有模块的 metadata.moreCapacity 之和」写进 pool.moreCapacity：
+            --   铁路 / 汽车站 / 码头 → 各自 .con 的 updateFn 显式写；
+            --   机场 → modulesutil.makeAutoTerminals 里写（四类站都有）。
+            -- 2026-09-30：这是**唯一**能一次性拿到全部车站容量的字段
+            -- （按模块目录求和需要每座站的模块清单，探针只采了首例）。
+            local pool = common.field(station, "pool")
+            local capacity = pool ~= nil and common.field(pool, "moreCapacity") or nil
+            if type(capacity) ~= "number" then capacity = nil end
+            local file = nil
+            if station_to_construction ~= nil then
+                local raw_construction_id = common.field(station_to_construction, station_entity)
+                    or common.field(station_to_construction, child_id)
+                local construction_id = common.entity_id(raw_construction_id)
+                if construction_id ~= nil then
+                    local construction = component_access.get(construction_id, "CONSTRUCTION")
+                    file = common.field(construction, "fileName")
+                    if type(file) == "string" and not seen_files[file] then
+                        seen_files[file] = true
+                        construction_files[#construction_files + 1] = file
+                    end
+                end
+            end
+            services[#services + 1] = {
+                entity_id = child_id,
+                file = type(file) == "string" and file or nil,
+                cargo = cargo,
+                capacity = capacity,
+            }
+        end
+        -- 地表高度 / 埋深：在车站中点直接采样。
+        -- 前端拿 depth_m 判地下站（>= 3 m 才算），比让它自己插值可靠得多。
+        local surface_z = nil
+        if center ~= nil and height_fn ~= nil then
+            surface_z = sample_height(height_fn, center.x, center.y)
+        end
+        -- 站群口径的容量合计：把同一 cargo 标志的子车站容量加总。
+        -- ⚠️ 这是**加法**不是取最大：一座站群里每个 (交通方式 × 客货) 子车站各有一个 pool，
+        -- 它们物理上分散在不同建筑里，候车也分别排队，所以加总才是站群能承接的总量。
+        local capacity_passenger = nil
+        local capacity_cargo = nil
+        for _, s in ipairs(services) do
+            if s.capacity ~= nil then
+                if s.cargo then
+                    capacity_cargo = (capacity_cargo or 0) + s.capacity
+                else
+                    capacity_passenger = (capacity_passenger or 0) + s.capacity
+                end
+            end
         end
         stations[group_id] = {
             entity_id = group_id,
+            child_ids = child_ids,
             name = name or ("Station " .. tostring(group_id)),
             position = center,
+            surface_z = surface_z,
+            depth_m = (surface_z ~= nil and center ~= nil) and (surface_z - center.z) or nil,
             cargo = cargo_any,
+            construction_files = construction_files,
+            capacity_passenger = capacity_passenger,
+            capacity_cargo = capacity_cargo,
+            services = services,
+            platforms = platforms,
         }
         station_entity_by_id[group_id] = entity
     end, {})
@@ -265,25 +383,59 @@ function M.collect()
     diagnostics.catchment_probe = { samples = probe_samples, map_type = diagnostics.map_type,
                                     map_length = diagnostics.map_length, pairs_ok = pairs_ok }
 
+    -- ②.5 决定每个站群拿哪个 id 去参与并查集。
+    -- 🔴 互通表（catchmentAreaSystem）的键是「子车站 STATION 实体」的 id，不是
+    --    STATION_GROUP 的 id。2026-09-29 实测：35 个铁路站的 child_station_id 里
+    --    28 个能命中互通表，而 group id 命中 0 个 —— 两套编号范围重叠但交集为空。
+    --    用 group id 建并查集，结果就是 1497 条边却 328 个孤群。
+    --    没命中互通表的站（孤站，互通表本来就不列）退回自己的 group id，自成一群。
+    local catchment_key_set = {}
+    for _, entry in ipairs(top_entries) do
+        local id = common.entity_id(entry.key)
+        if id == nil and type(entry.key) == "number" then id = entry.key end
+        if id ~= nil then catchment_key_set[id] = true end
+    end
+    local key_matched, key_fallback = 0, 0
+    for _, station in pairs(stations) do
+        local chosen = nil
+        for _, child_id in ipairs(station.child_ids or {}) do
+            if catchment_key_set[child_id] then
+                -- 一个站群的多个子车站同属一片，先互相连起来
+                if chosen == nil then chosen = child_id else union_find.union(chosen, child_id) end
+            end
+        end
+        if chosen ~= nil then
+            station.key_id = chosen
+            key_matched = key_matched + 1
+        else
+            station.key_id = station.entity_id
+            key_fallback = key_fallback + 1
+        end
+    end
+    diagnostics.cluster_key_matched = key_matched
+    diagnostics.cluster_key_fallback = key_fallback
+
     -- ③ 分组成站群。注意 catchment 表可能只包含"有互通关系的站"，
     --    没出现在表里的站各自成一个独立站群（互通表不列孤站）。
     local clusters_by_root = {}
     for _, station in pairs(stations) do
-        union_find.add(station.entity_id)
+        union_find.add(station.key_id)
     end
     for _, station in pairs(stations) do
-        local root = union_find.find(station.entity_id)
+        local root = union_find.find(station.key_id)
         clusters_by_root[root] = clusters_by_root[root] or {}
-        clusters_by_root[root][#clusters_by_root[root] + 1] = station.entity_id
+        clusters_by_root[root][#clusters_by_root[root] + 1] = station
     end
 
     local clusters = {}
-    for root, member_ids in pairs(clusters_by_root) do
+    for root, members in pairs(clusters_by_root) do
+        local member_ids = {}
+        for _, member in ipairs(members) do member_ids[#member_ids + 1] = member.entity_id end
         table.sort(member_ids)
         local sum_x, sum_y, count = 0, 0, 0
         local min_x, max_x, min_y, max_y = nil, nil, nil, nil
-        for _, member_id in ipairs(member_ids) do
-            local position = stations[member_id] and stations[member_id].position
+        for _, member in ipairs(members) do
+            local position = member.position
             if position ~= nil then
                 sum_x, sum_y, count = sum_x + position.x, sum_y + position.y, count + 1
                 min_x = min_x == nil and position.x or math.min(min_x, position.x)
@@ -311,8 +463,19 @@ function M.collect()
                 entity_id = station.entity_id,
                 name = station.name,
                 position = station.position,
+                surface_z = station.surface_z,
+                depth_m = station.depth_m,
                 cargo = station.cargo,
-                cluster = common.entity_id(union_find.find(station.entity_id)),
+                -- 🔴 下面这四个**必须在这里再列一次**：payload 发出去的是这个 station_list，
+                --    不是上面那个 `stations[group_id]` 内部表。2026-09-29 踩过：
+                --    只往内部表里加字段 → 数据其实采到了（errors 为空、探针都在跑），
+                --    却在最后一步被静默裁掉，前端永远收不到（表现是"改了没生效"）。
+                --    以后给车站加字段，**两处都要加**。
+                child_ids = station.child_ids,
+                construction_files = station.construction_files,
+                services = station.services,
+                platforms = station.platforms,
+                cluster = common.entity_id(union_find.find(station.key_id or station.entity_id)),
             }
         end
     end
@@ -322,6 +485,53 @@ function M.collect()
     for _, cluster in ipairs(clusters) do
         if cluster.member_count > 1 then multi = multi + 1 end
     end
+
+    -- ---- 联通关系探针（2026-09-29）----
+    -- 游戏里**选中车站**会把"与它联通"的产业 / 货场高亮成浅白色。判定这些关系的接口都在
+    -- `stationSystem` 下（getStation2TownMap / getStation2edgesMap / getPersonNodeId2StationTerminalsMap
+    -- / getTown2StationsMap），但返回结构没有文档。先把几条样本塞进诊断看清键值长什么样，
+    -- 再写正式采集 —— 改一次 Lua 就要重启一次游戏，先探明比猜着写好。
+    local function dump_shape(value, depth)
+        if value == nil then return "nil" end
+        local kind = type(value)
+        if kind ~= "table" and kind ~= "userdata" then return kind .. "=" .. tostring(value) end
+        if depth <= 0 then return kind end
+        local pieces = {}
+        local count = common.array_count(value)
+        if count ~= nil then pieces[#pieces + 1] = "#" .. tostring(count) end
+        local taken = 0
+        local ok = pcall(function()
+            for key, item in pairs(value) do
+                if taken >= 4 then pieces[#pieces + 1] = "..." break end
+                taken = taken + 1
+                pieces[#pieces + 1] = tostring(key) .. ":" .. dump_shape(item, depth - 1)
+            end
+        end)
+        if not ok then pieces[#pieces + 1] = "<pairs failed>" end
+        return "{" .. table.concat(pieces, ", ") .. "}"
+    end
+    local link_probe = {}
+    local function probe_map(label, fn)
+        local ok, value = pcall(fn)
+        if not ok then
+            link_probe[label] = { error = tostring(value) }
+            return
+        end
+        link_probe[label] = { shape = dump_shape(value, 3) }
+    end
+    local station_system = api.engine.system.stationSystem
+    if station_system ~= nil then
+        probe_map("station2town", function() return station_system.getStation2TownMap() end)
+        probe_map("station2edges", function() return station_system.getStation2edgesMap() end)
+        probe_map("personNode2terminals", function() return station_system.getPersonNodeId2StationTerminalsMap() end)
+        probe_map("town2stations", function() return station_system.getTown2StationsMap() end)
+    else
+        link_probe.station_system = "unavailable"
+    end
+    probe_map("station2construction", function()
+        return api.engine.system.streetConnectorSystem.getStation2ConstructionMap()
+    end)
+    diagnostics.link_probe = link_probe
 
     return {
         status = "OK",

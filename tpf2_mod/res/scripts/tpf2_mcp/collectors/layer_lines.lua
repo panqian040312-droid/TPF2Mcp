@@ -144,6 +144,15 @@ function M.collect()
         diagnostics.lines_seen = diagnostics.lines_seen + 1
         if #lines >= LINE_LIMIT then return end
 
+        -- 线路颜色 = **游戏里那条线的真实颜色**，不是我们自己分配的。
+        -- 出处（官方 API）：通用实体组件 `Color`（"Specifies the color of an entity"，字段 `color: Vec3f`，
+        -- 组件枚举里是 `COLOR = 64`）；`Line` 类自身也带 `color: Vec3f`。
+        -- 两条路都试，哪条通就用哪条；都拿不到留 nil —— 前端退回自己的调色板，**绝不猜颜色**。
+        local line_color = vec(common.field(component, "color"))
+        if line_color == nil then
+            line_color = vec(common.field(component_access.get(entity, "COLOR"), "color"))
+        end
+
         local points, cargo_true, cargo_false = {}, 0, 0
         local kind_tally = {}
         for _, stop in ipairs(common.sequence_values(common.field(component, "stops"))) do
@@ -199,6 +208,7 @@ function M.collect()
                 or ("Line " .. tostring(line_id)),
             carrier = carrier,
             cargo = cargo,
+            color = line_color ~= nil and { r = line_color.x, g = line_color.y, b = line_color.z } or nil,
             vehicle_count = entry ~= nil and entry.count or 0,
             stop_count = #points,
             points = points,

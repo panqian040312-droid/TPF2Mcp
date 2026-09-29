@@ -191,6 +191,28 @@ nav button.active {
     display: none
 }
 
+/* 线路列表上方的一键全选 / 全不选 */
+.layer-bulk {
+    display: flex;
+    gap: 5px;
+    margin: 6px 0 4px
+}
+
+.layer-bulk button {
+    flex: 1;
+    height: 22px;
+    border: 1px solid #3a6178;
+    background: #102535;
+    color: #7ee6ff;
+    border-radius: 2px;
+    font: 11px "Microsoft YaHei";
+    cursor: pointer
+}
+
+.layer-bulk button:hover {
+    background: #17384c
+}
+
 .layer-panel label {
     display: flex;
     align-items: center;
@@ -227,6 +249,26 @@ nav button.active {
     font: 11px Consolas;
     letter-spacing: .06em;
     margin-bottom: 1px
+}
+
+/* 线路色块：显示游戏里这条线的**真实颜色**（官方通用组件 Color / Line.color 采出来的）。
+   深底上深色块靠描边兜底 —— 保证再暗的线色也能看出边界，不然就成了一个看不出的黑洞。 */
+.line-swatch {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, .45);
+    vertical-align: -1px;
+    flex: 0 0 auto
+}
+
+.line-swatch-lg {
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+    vertical-align: -2px
 }
 
 /* 线路按运输方式再分一层 */
@@ -303,6 +345,96 @@ nav button.active {
     background: #15506a;
     color: #d7f8ff;
     border-color: #43c8ef
+}
+
+/* 朝向控件单独一行。
+   .map-controls button 把宽度写死成 30px，塞「朝向 90°」进来必然换行溢出到框外，
+   所以拆出来用自适应宽度 + nowrap，并给它自己的 ±90° 按钮和度数输入框。 */
+.heading-controls {
+    position: absolute;
+    left: 16px;
+    top: 62px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: #09131ee6;
+    border: 1px solid #31495e;
+    border-radius: 3px;
+    box-shadow: 0 3px 12px #0008;
+    white-space: nowrap;
+    z-index: 2
+}
+
+.heading-controls .ctl-label,
+.heading-controls .ctl-unit {
+    color: #a9bdcf;
+    font: 11px Consolas;
+    white-space: nowrap
+}
+
+.heading-controls button {
+    height: 26px;
+    min-width: 46px;
+    padding: 0 7px;
+    border: 1px solid #3a6178;
+    background: #102535;
+    color: #7ee6ff;
+    border-radius: 2px;
+    font: 12px Consolas;
+    white-space: nowrap;
+    cursor: pointer
+}
+
+.heading-controls button:hover {
+    background: #17384c
+}
+
+.heading-controls input {
+    width: 50px;
+    height: 26px;
+    padding: 0 4px;
+    text-align: center;
+    border: 1px solid #3a6178;
+    background: #07131e;
+    color: #7ee6ff;
+    border-radius: 2px;
+    font: 12px Consolas
+}
+
+.heading-controls input:focus {
+    outline: 1px solid #43c8ef;
+    border-color: #43c8ef
+}
+
+/* 侧边栏折叠按钮：贴地图右上角，收起来之后仍然点得到。
+   top 避开右上角已有的 .watermark（right:18px / top:14px）。 */
+.sidebar-toggle {
+    position: absolute;
+    right: 10px;
+    top: 38px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #3a6178;
+    background: #102535e6;
+    color: #7ee6ff;
+    border-radius: 2px;
+    font: 14px Consolas;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 3
+}
+
+.sidebar-toggle:hover {
+    background: #17384c
+}
+
+.workspace.sidebar-collapsed {
+    grid-template-columns: 64px 1fr 0
+}
+
+.workspace.sidebar-collapsed aside {
+    display: none
 }
 
 .zoom-value {
@@ -885,4 +1017,52 @@ aside {
 
 aside * {
     -webkit-user-drag: auto
+}
+
+/* 局部视图"附近交通枢纽"的图标：取自游戏本体 res/textures/ui/ui.zip，
+   转换后放在 assets/icons/。高度对齐表格行，不抢文字。 */
+.hub-icon-cell {
+    width: 26px;
+    padding-right: 2px
+}
+
+.hub-icon {
+    display: block;
+    height: 18px;
+    width: auto;
+    opacity: .95
+}
+
+/* 线路高亮侧边栏：「沿线停靠」列表（点站名跳到该站） */
+.line-sidebar .line-stop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 6px
+}
+
+.line-sidebar .line-stop-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 5px 7px;
+    background: #0c1a25;
+    border: 1px solid #1e3648;
+    border-radius: 3px;
+    color: #c8f3ff;
+    font: 11px Consolas, Microsoft YaHei;
+    cursor: pointer
+}
+
+.line-sidebar .line-stop-row:hover {
+    background: #143044;
+    border-color: #2f6f8c;
+    color: #eaf9ff
+}
+
+/* 枢纽标记里的游戏图标：原图是"深蓝描边 + 透明底"，给浅色底板用的，
+   直接放到深色地图上等于隐形。统一刷成白色符号，配彩色圆角底板 —— 
+   这就是游戏内建筑标记的观感。 */
+.hub-mark-icon {
+    filter: brightness(0) invert(1)
 }

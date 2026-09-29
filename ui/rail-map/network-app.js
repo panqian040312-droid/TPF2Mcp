@@ -89,10 +89,37 @@ window.renderRailNetwork = function renderRailNetwork() {
   const stationLayer=S('g',{id:'network-station-layer'});
   const depotLayer=S('g',{id:'network-depot-layer'});
   const liveLayer=S('g',{id:'network-live-layer'});
+  // 船 / 飞机的实时层（与铁路分开）：它们**不挂在 BASE_EDGE_* 上**（实测 current_edge_id
+  // 全为空），位置直接来自服务端从遥测里挑出来的包围盒中心，所以不走下面那套轨道吸附。
+  // 挂 svg 根、用 screenPoint —— 和 liveLayer 一样是"屏幕坐标的标记层"。
+  const otherVehicleLayer=S('g',{id:'network-other-vehicle-layer','pointer-events':'none'});
+  // 线路高亮的站点标记层：单独挂 **svg 根**（屏幕坐标）—— 它们是"标记"，必须固定屏幕尺寸。
+  // 挂在 mapLayer 里的话 zoom=1 时 r=5 世界单位只有 0.2 px，全图根本看不见。
+  // ⚠️ 这一组必须定义在 updateViewport **被首次调用之前**：`setCollapsed()` 在脚本执行期
+  //    就立刻调 updateViewport()，而这些是 const/let（暂时性死区），放后面会直接报错白屏。
+  const lineStopLayer=S('g',{id:'network-line-stop-layer','pointer-events':'none'});
+  let lineGapInfo={count:0,skipped:0};   // 本次高亮补了几段缺口（侧边栏要如实说明）
+  let lineStopMarks=[];              // {circle,label,position} —— 平移缩放时重算屏幕坐标
+  const updateLineStopMarks=()=>{
+    lineStopMarks.forEach(mark=>{
+      const q=screenPoint(mark.position);
+      mark.group.setAttribute('transform',`translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`);
+    });
+  };
   const stationViews=[];
   const depotViews=[];
   const platformViews=[];
   const trainViews=new Map(),signalViews=new Map();
+  // 船 / 飞机的视图。**分两张表**，否则同步时要靠 carrier 区分该删谁，容易误删。
+  const airViews=new Map(),waterViews=new Map();
+  // 用户 2026-09-29 定：飞机跟列车同频（随 500 ms 的 /api/live 一起走），船 90 秒才刷新一次。
+  const WATER_REFRESH_MS=90000;
+  const OTHER_MARK_RADIUS=4;      // 屏幕像素半径，直径 8 px，与车辆图层一致
+  // 「交通工具 · 种类」那几个框是**唯一**的显示控制点（勾谁显示谁，全不勾 = 都不显示）。
+  // 这里用一个"可赋值函数"而不是直接引用 FILTER —— FILTER 定义在这后面，
+  // 直接引用会踩 const 暂时性死区；applyFilters 负责把它换成真正的判定函数。
+  let carrierVisibleFn=()=>true;
+  let waterCommittedAt=0;         // 0 = 还没画过，第一次立刻落位
   let signalsVisible=true;
   const lineById=new Map(p.lines.map(line=>[line.entity_id,line]));
   const stationById=new Map(p.stations.map(station=>[station.entity_id,station]));
@@ -238,11 +265,19 @@ window.renderRailNetwork = function renderRailNetwork() {
   window.RAIL_NETWORK_TILES={};
   const updateTileStatus=()=>{const value=document.querySelector('#loaded-tile-count');if(value)value.textContent=`${railLayer.loaded.size} / ${p.tiles.length}`;};
   const representedMeters=()=>scaleBarPixels/baseScale/zoom;
+  // 🔴 这两个输出**只依赖 zoom 落在哪个档位**（要不要显示细节、有没有近到能看清站台宽度），
+  //    平移时完全不变。原来每帧都往 185 个站台 × 6 个属性上重写一遍 ——
+  //    约 1100 次/帧、6.6 万次/秒，是这份地图最大的每帧开销，而且**写进去的值与上一帧一模一样**。
+  //    加档位缓存：没跨档就直接整段跳过。
+  let detailState = null, closeState = null;
   const updateMapDetailVisibility=()=>{
-    const detail=representedMeters()<p.detail_load_threshold_m;
+    const meters = representedMeters();
+    const detail = meters < p.detail_load_threshold_m;
+    const closePlatforms = meters < 120;
+    if (detail === detailState && closePlatforms === closeState) return;
+    detailState = detail; closeState = closePlatforms;
     if(physicalOverview)physicalOverview.setAttribute('opacity',detail?0:1);
-    const showPlatforms=detail,closePlatforms=representedMeters()<120;
-    platformViews.forEach(view=>{if(view.outline){view.outline.style.display=showPlatforms?'block':'none';view.outline.setAttribute('stroke-width',(closePlatforms?6:1.5)*view.widthUnits+2);}if(view.surface){view.surface.style.display=showPlatforms?'block':'none';view.surface.setAttribute('stroke-width',(closePlatforms?6:1.5)*view.widthUnits);}if(!showPlatforms&&view.divider)view.divider.style.display='none';view.hit.setAttribute('stroke-width',(closePlatforms?6:1.5)*view.widthUnits+4);view.hit.setAttribute('pointer-events',showPlatforms?'stroke':'none');});
+    platformViews.forEach(view=>{if(view.outline){view.outline.style.display=detail?'block':'none';view.outline.setAttribute('stroke-width',(closePlatforms?6:1.5)*view.widthUnits+2);}if(view.surface){view.surface.style.display=detail?'block':'none';view.surface.setAttribute('stroke-width',(closePlatforms?6:1.5)*view.widthUnits);}if(!detail&&view.divider)view.divider.style.display='none';view.hit.setAttribute('stroke-width',(closePlatforms?6:1.5)*view.widthUnits+4);view.hit.setAttribute('pointer-events',detail?'stroke':'none');});
   };
   const screenPoint=point=>{const q=P(point);return{x:600+(q.x-600)*zoom+panX,y:360+(q.y-360)*zoom+panY};};
   const worldPoint=(x,y)=>{
@@ -253,13 +288,22 @@ window.renderRailNetwork = function renderRailNetwork() {
   logicalStations.forEach(station=>{
     const group=S('g',{'data-station-id':station.entity_id,cursor:'pointer'},'',stationLayer);
     const dot=S('circle',{r:3.2,fill:'#08141e',stroke:'#83ecff','stroke-width':1.2},'',group);
-    const name=S('text',{fill:'#c8f3ff','font-size':7.5,'font-family':'Consolas, Microsoft YaHei','paint-order':'stroke','stroke':'#061019','stroke-width':2.5,'stroke-linejoin':'round'},station.name,group);
+    const name=S('text',{x:6,y:-5,visibility:'hidden',fill:'#c8f3ff','font-size':7.5,'font-family':'Consolas, Microsoft YaHei','paint-order':'stroke','stroke':'#061019','stroke-width':2.5,'stroke-linejoin':'round'},station.name,group);
     const hit=S('circle',{r:10,fill:'transparent','pointer-events':'fill',cursor:'pointer'},'',group);
     const show=()=>{tooltip.textContent=stationPreview(station);tooltip.style.display='block';dot.setAttribute('fill','#56dcff');name.setAttribute('visibility','visible');};
     hit.addEventListener('pointerenter',show);hit.addEventListener('pointermove',event=>{show();moveTooltip(event);});hit.addEventListener('pointerleave',()=>{tooltip.style.display='none';dot.setAttribute('fill','#08141e');updateStations();});
     group.addEventListener('pointerdown',event=>{if(event.button===0)event.stopPropagation();});
     group.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();selectedVehicleId=null;vehicleDetail=null;selectedStation=station;stationLogRows=[];renderStationSidebar();loadStationLogs();updateStations();});
-    hit.addEventListener('dblclick',()=>{const target=Math.min(256,Math.max(zoom,scaleBarPixels/baseScale/25));const q=P(station.center);zoom=target;panX=-(q.x-600)*zoom;panY=-(q.y-360)*zoom;updateViewport();});
+    // 双击车站 = 直接进入该站的局部视图（原来只是原地放大，看不出附近的枢纽/客流）。
+    // 局部视图由 app.js 处理（URL 带 ?view=local&station=<id>），那边会显示站台、
+    // 附近交通枢纽和本站客货。
+    hit.addEventListener('dblclick',()=>{
+      const target=new URL(location.href);
+      target.search='';
+      target.searchParams.set('view','local');
+      target.searchParams.set('station',String(station.entity_id));
+      location.assign(target.href);
+    });
     stationViews.push({station,group,dot,name,hit,served:relatedStations(station).some(item=>servedStationIds.has(item.entity_id))});
   });
   (p.depots||[]).forEach(depot=>{
@@ -288,6 +332,10 @@ window.renderRailNetwork = function renderRailNetwork() {
   // RAIL_NETWORK_TILES，URL 还写死 /api/rail/tile/），加第二个图层就得整段复制一份、
   // 以后两处还要各自维护。现在每层的差异都收在 spec 里，加载与卸载的逻辑只有一份。
   const extraLayers=[];
+  let vehiclesLayer=null;   // 车辆层单独留个引用 —— 它是唯一会"自己动"的图层，需要定时重载
+  // 自动刷新**默认关**：车辆层是快照（1296 个点，1154 个是公路车），源数据约 18 秒才重采一轮，
+  // 每轮都要重切分块 + 前端重建上千个点，收益很小。想让它动就自己勾上。
+  let vehiclesAutoRefresh=false;
   // 边的结构样式：地面常规、隧道虚线、桥加粗偏金色。
   // structure 由 mod 采集时从 BASE_EDGE.type 读出（0 地面 / 1 桥 / 2 隧道），判据是
   // 游戏自己在 res/scripts/selectortooltip.lua 里用的那套。旧数据没有这个字段，
@@ -340,6 +388,9 @@ window.renderRailNetwork = function renderRailNetwork() {
     const layer={
       name:spec.name,loaded,
       isVisible:()=>visible,
+      // 当前是不是"缩得太远、只画概览骨架"的状态（此时没有分块可重载）
+      isSummary:()=>representedMeters()>=spec.thresholdM,
+      refreshSummary(){if(visible&&spec.refreshSummary)spec.refreshSummary();},
       update(){
         if(!visible||!spec.manifest)return;
         // 看得比阈值更远（总览）时不加载分块，改由图层自己的概览骨架顶上 ——
@@ -358,7 +409,31 @@ window.renderRailNetwork = function renderRailNetwork() {
         if(!visible){desired=new Set();[...loaded.keys(),...pending.keys()].forEach(unloadTile);if(spec.hideSummary)spec.hideSummary();}
         else layer.update();
       },
+      // 重新拉取"当前已经显示"的分块内容。
+      // 为什么需要：源数据（bridge/layer-*.json）由 mod 定时重写、服务端 watch() 会自动重切，
+      // 但前端只在首次加载时 fetch 一次 —— 不重拉的话，页面上的车辆永远停在打开那一刻。
+      // 做法是「先拿到新数据、再换掉旧的」，不是先卸后拉，避免中间出现空窗闪一下。
+      reload(keys){
+        if(!visible)return;
+        const targets=keys?keys.filter(key=>loaded.has(key)&&desired.has(key)):[...loaded.keys()].filter(key=>desired.has(key));
+        targets.forEach(key=>{
+          const token=(reloadTokens.get(key)||0)+1;reloadTokens.set(key,token);
+          fetch(spec.tileUrl(key),{cache:'no-store'})
+            .then(response=>{if(!response.ok)throw new Error(`${spec.name} tile ${key}: ${response.status}`);return response.json();})
+            .then(tile=>{
+              if(reloadTokens.get(key)!==token||!desired.has(key))return;   // 期间又刷新/已移出视口 → 丢弃这次结果
+              const old=loaded.get(key);
+              if(old){if(spec.destroy)spec.destroy(old);else if(old.group)old.group.remove();if(old.resource)old.resource.remove();loaded.delete(key);}
+              const entry=spec.render(tile,key);
+              entry.resource={remove:()=>{}};
+              loaded.set(key,entry);
+              if(spec.onChanged)spec.onChanged();
+            })
+            .catch(error=>{if(error.name!=='AbortError')console.error(error);});
+        });
+      },
     };
+    const reloadTokens=new Map();
     return layer;
   };
   const railLayer=createTileLayer({
@@ -381,7 +456,9 @@ window.renderRailNetwork = function renderRailNetwork() {
     destroy:entry=>{if(entry.pixi){entry.pixi.container.parent?.removeChild(entry.pixi.container);entry.pixi.container.destroy({children:true});}entry.group.remove();},
   });
   const updateStations=()=>{
-    stationViews.forEach(view=>{const q=screenPoint(view.station.center);view.screen=q;view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);view.name.setAttribute('x',6);view.name.setAttribute('y',-5);view.name.setAttribute('visibility','hidden');view.hit.setAttribute('pointer-events','fill');const selected=selectedStation?.entity_id===view.station.entity_id;view.dot.setAttribute('fill',selected?'#56dcff':'#08141e');view.dot.setAttribute('r',selected?'4.5':'3.2');});
+    // 注意：x / y / visibility / pointer-events 这几个是**恒定值**，已经在元素创建时设过一次，
+    // 不要在这里每帧重写 —— 原来每帧对 73 个站重复写 4 个固定属性，约 300 次/帧纯浪费。
+    stationViews.forEach(view=>{const q=screenPoint(view.station.center);view.screen=q;view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);const selected=selectedStation?.entity_id===view.station.entity_id;view.dot.setAttribute('fill',selected?'#56dcff':'#08141e');view.dot.setAttribute('r',selected?'4.5':'3.2');});
     const occupied=[];
     const showEveryStationName=representedMeters()<50;
     [...stationViews].sort((a,b)=>Number(b.served)-Number(a.served)||a.station.name.length-b.station.name.length).forEach(view=>{
@@ -397,19 +474,68 @@ window.renderRailNetwork = function renderRailNetwork() {
       view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);
       view.group.style.display=q.x>=-10&&q.x<=1210&&q.y>=-10&&q.y<=730?'block':'none';
       Object.entries({x1:q.x,y1:q.y,x2:connection.x,y2:connection.y}).forEach(([key,value])=>view.connector.setAttribute(key,value));
-      view.connector.style.display=representedMeters()<300&&view.depot.track_connection_position?'block':'none';
+      const showConnector=representedMeters()<300&&Boolean(view.depot.track_connection_position);
+      if(view.connectorShown!==showConnector){view.connectorShown=showConnector;view.connector.style.display=showConnector?'block':'none';}
     });
   };
   const updateTrainPositions=()=>{
+    // 位置每帧都要更新（车在动），但"显不显示"只取决于 zoom 档位 ——
+    // 按元素记下上次的显示状态，只有跨档时才写 style（原来每帧对 72 辆车写 144 次）。
+    const meters=representedMeters();
+    const showMarker=meters<1500,showLabel=meters<500;
     trainViews.forEach(view=>{
       const q=screenPoint(view.position||view.vehicle.snapped_position||view.vehicle.position);
       view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);
-      view.group.style.display=representedMeters()<1500?'block':'none';
-      view.label.style.display=representedMeters()<500?'block':'none';
+      if(view.markerShown!==showMarker){view.markerShown=showMarker;view.group.style.display=showMarker?'block':'none';}
+      if(view.labelShown!==showLabel){view.labelShown=showLabel;view.label.style.display=showLabel?'block':'none';}
+    });
+  };
+  // 把一批船/机落到视图上：**位置更新 + 增删一次做完**（车辆入库/到站要从图上消失）。
+  const syncOtherVehicleViews=(views,list)=>{
+    const active=new Set();
+    (list||[]).forEach(entry=>{
+      if(!Number.isFinite(entry.x)||!Number.isFinite(entry.y))return;
+      active.add(entry.entity_id);
+      let view=views.get(entry.entity_id);
+      if(!view){
+        const el=S('circle',{r:OTHER_MARK_RADIUS,fill:carrierColor(entry.carrier),
+          stroke:'#eaf6ff','stroke-width':.8,'pointer-events':'none'},'',otherVehicleLayer);
+        // 新建的船/机点也要立刻遵守当前种类勾选（否则取消勾选"船舶"后新造的船会冒出来）
+        el.style.display=carrierVisibleFn(entry.carrier)?'':'none';
+        view={el,position:null,carrier:entry.carrier};
+        views.set(entry.entity_id,view);
+      }
+      view.position={x:entry.x,y:entry.y,z:entry.z};
+      const q=screenPoint(view.position);
+      view.el.setAttribute('cx',q.x.toFixed(1));
+      view.el.setAttribute('cy',q.y.toFixed(1));
+    });
+    views.forEach((view,id)=>{
+      if(active.has(id))return;
+      view.el.remove();views.delete(id);
+    });
+  };
+  // 船：**90 秒才落一次位**。窗口没到就整批跳过 —— 连位置都不记，免得半路又被更新。
+  // （数据其实每 ~1.5 秒来一次，这里主动降频。）
+  const syncWaterVehicles=(list)=>{
+    const now=performance.now();
+    if(waterCommittedAt&&now-waterCommittedAt<WATER_REFRESH_MS)return;
+    waterCommittedAt=now;
+    syncOtherVehicleViews(waterViews,list);
+  };
+  const updateOtherVehiclePositions=()=>{
+    [airViews,waterViews].forEach(views=>{
+      views.forEach(view=>{
+        if(!view.position)return;
+        const q=screenPoint(view.position);
+        view.el.setAttribute('cx',q.x.toFixed(1));
+        view.el.setAttribute('cy',q.y.toFixed(1));
+      });
     });
   };
   const updateLivePositions=()=>{
     updateTrainPositions();
+    updateOtherVehiclePositions();
     signalViews.forEach(view=>{
       const q=screenPoint(view.signal.position);
       view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);
@@ -803,6 +929,10 @@ window.renderRailNetwork = function renderRailNetwork() {
       view.vehicle=vehicle;view.group.__vehicle=vehicle;view.lastSeenAt=sampleAt;view.frontendStale=false;view.label.textContent=`${vehicle.name||`列车${vehicle.entity_id}`}-${vehicle.speed_kmh==null?'—':Math.round(vehicle.speed_kmh)}-${vehicleStatus(vehicle)}`;
       const stale=Boolean(vehicle.position_stale);view.marker.setAttribute('fill','#ffd34f');view.marker.setAttribute('stroke',stale?'#66e2ff':'#2a1a00');view.marker.setAttribute('stroke-width',stale?'2':'1.2');
      });
+     // 船 / 飞机：位置来自服务端的 air_vehicles / water_vehicles（包围盒中心，不吸附轨道）。
+     // 飞机每次新帧都跟（与列车同频）；船走 90 秒节流。
+     if(Array.isArray(value.air_vehicles))syncOtherVehicleViews(airViews,value.air_vehicles);
+     if(Array.isArray(value.water_vehicles))syncWaterVehicles(value.water_vehicles);
      if(isNewFrame)lastVehicleSampleAt=sampleAt;
     }
     if(Object.prototype.hasOwnProperty.call(value,'signals')){
@@ -822,6 +952,37 @@ window.renderRailNetwork = function renderRailNetwork() {
     updateLivePositions();
     if(selectedStation&&hasVehicles)refreshStationLiveSidebar();else if(selectedVehicleId!=null&&hasVehicles){refreshVehicleLiveSidebar();loadVehicleDetail();}
   };
+  // POINT 类图层的图标（车辆等）：尺寸要和列车菱形（`M0,-5 L4,0 L0,5 L-4,0 Z`＝8×10 px）
+  // 一致 —— 也就是**屏幕固定尺寸**，不能随地图缩放变大变小。
+  // 这些点挂在 mapLayer 里（位置用 P() 底图坐标、跟着地图走是对的），但尺寸会被
+  // mapLayer 的 scale(zoom) 一起放大，所以给每个点补一个反向缩放。
+  //
+  // 🔴 反向缩放是 **1/zoom**，**不是** 1/(baseScale*zoom)。
+  //    P() 的输出已经是【底图坐标】（世界坐标在 P() 里就乘过 baseScale 了），
+  //    元素进了 mapLayer 之后，底图 → 屏幕**只乘 zoom**。多乘一个 baseScale 会让
+  //    屏幕尺寸变成 baseScale 分之一 —— 本机 baseScale≈0.0443，也就是**放大 22.6 倍**，
+  //    4 px 的圆变成 90 px（2026-09-29 实测踩过：满屏巨圆把地图盖住）。
+  //    验证：屏幕尺寸 = r × (1/zoom) × zoom = r，与 zoom 和 baseScale 都无关 ✓
+  //
+  // ⚠ 只在 zoom 变化时重算：平移不改变这个比例，每帧写上千个属性会掉帧。
+  const pointMarks=new Map();        // 元素 → {x, y}（底图坐标）
+  let lastMarkScale=null;
+  const refreshPointMarks=()=>{
+    const s=1/zoom;
+    if(s===lastMarkScale)return;
+    lastMarkScale=s;
+    pointMarks.forEach((item,el)=>{
+      el.setAttribute('transform',`translate(${item.x.toFixed(1)} ${item.y.toFixed(1)}) scale(${s.toFixed(4)})`);
+    });
+  };
+  // 登记一个点：半径按"屏幕像素"给，位置仍用底图坐标
+  const addPointMark=(el,x,y)=>{
+    pointMarks.set(el,{x,y});
+    const s=lastMarkScale!=null?lastMarkScale:1/zoom;
+    el.setAttribute('transform',`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(4)})`);
+    lastMarkScale=s;
+  };
+  const dropPointMarks=marks=>{if(marks)marks.forEach(el=>pointMarks.delete(el));};
   const updateViewport=()=>{
     mapLayer.setAttribute('transform',`translate(${panX} ${panY}) translate(600 360) scale(${zoom}) translate(-600 -360)`);
     document.querySelector('#zoom-value').textContent=`${Math.round(zoom*100)}%`;
@@ -830,30 +991,65 @@ window.renderRailNetwork = function renderRailNetwork() {
     updateMapDetailVisibility();
     updateStations();
     updateLivePositions();
+    updateLineStopMarks();
+    refreshPointMarks();
     railLayer.update();
     extraLayers.forEach(entry=>entry.layer.update());
+    // 等高线的"该画到哪一级"由缩放决定（官方 fadeDist）。包 try/catch：
+    // 首帧 updateViewport 可能跑在等高线那几个 const 初始化之前（暂时性死区）。
+    try{ refreshContoursOnViewChange(); }catch(error){}
     syncPixiViewport();
   };
   let panFrame=0;
   const schedulePanRender=()=>{if(!panFrame)panFrame=requestAnimationFrame(()=>{panFrame=0;updateViewport();});};
   const setZoom=(value,focusX=600,focusY=360)=>{const next=Math.max(1,Math.min(256,value)),ratio=next/zoom,offsetX=focusX-600,offsetY=focusY-360;panX=offsetX-(offsetX-panX)*ratio;panY=offsetY-(offsetY-panY)*ratio;zoom=next;updateViewport();};
+  // 朝向：改角度要让整张图按新朝向重绘，所以写进 URL 后重新加载页面。
+  // 入口 = ±90° 按钮 + 直接输入度数（回车应用）。
+  const headingValue=((Math.round(mapHeading)%360)+360)%360;
+  const applyHeading=next=>{
+    const value=((Math.round(next)%360)+360)%360;
+    try{localStorage.setItem('railMapHeading',String(value));}catch(error){}
+    const url=new URL(location.href);
+    if(value===90)url.searchParams.delete('heading');else url.searchParams.set('heading',String(value));
+    location.href=url.toString();
+  };
   document.querySelector('#zoom-in').onclick=()=>setZoom(zoom*1.6,600,360);
   document.querySelector('#zoom-out').onclick=()=>setZoom(zoom/1.6,600,360);
-  document.querySelector('#zoom-reset').onclick=()=>{zoom=1;panX=0;panY=0;updateViewport();};
-  // 朝向切换：左键 +15°、Shift+左键 +90°（粗调）、右键 −15°。记住选择并重新加载，让整张图按新朝向重绘。
-  const headingButton=document.querySelector('#map-heading');
-  if(headingButton){
-    const normalized=((Math.round(mapHeading)%360)+360)%360;
-    const applyHeading=next=>{
-      const value=((Math.round(next)%360)+360)%360;
-      try{localStorage.setItem('railMapHeading',String(value));}catch(error){}
-      const url=new URL(location.href);
-      if(value===90)url.searchParams.delete('heading');else url.searchParams.set('heading',String(value));
-      location.href=url.toString();
+  // 复位：缩放、平移、朝向一起回初始状态（朝向 = 90°）。朝向不对就重载一次，那次顺带把视野也归零。
+  document.querySelector('#zoom-reset').onclick=()=>{
+    zoom=1;panX=0;panY=0;
+    if(headingValue!==90){applyHeading(90);return;}
+    updateViewport();
+  };
+  const headingInput=document.querySelector('#heading-input');
+  if(headingInput){
+    headingInput.value=String(headingValue);
+    headingInput.addEventListener('keydown',event=>{
+      if(event.key!=='Enter')return;
+      event.preventDefault();
+      const raw=Number(headingInput.value);
+      if(!Number.isFinite(raw)){headingInput.value=String(headingValue);return;}
+      applyHeading(raw);
+    });
+  }
+  const headingCcw=document.querySelector('#heading-ccw');
+  if(headingCcw)headingCcw.onclick=()=>applyHeading(headingValue-90);
+  const headingCw=document.querySelector('#heading-cw');
+  if(headingCw)headingCw.onclick=()=>applyHeading(headingValue+90);
+  // 侧边栏折叠：状态记在 localStorage，收起后地图占满宽度（grid 第三列归零）
+  const sidebarToggle=document.querySelector('#sidebar-toggle');
+  const workspaceEl=document.querySelector('.workspace');
+  if(sidebarToggle&&workspaceEl){
+    const storedCollapsed=(()=>{try{return localStorage.getItem('railMapSidebarCollapsed');}catch(error){return null;}})();
+    const setCollapsed=collapsed=>{
+      workspaceEl.classList.toggle('sidebar-collapsed',collapsed);
+      sidebarToggle.textContent=collapsed?'«':'»';
+      sidebarToggle.title=collapsed?'展开右侧栏':'收起右侧栏';
+      try{localStorage.setItem('railMapSidebarCollapsed',collapsed?'1':'0');}catch(error){}
+      updateViewport();
     };
-    headingButton.textContent=`朝向 ${normalized}°`;
-    headingButton.onclick=event=>applyHeading(normalized+(event.shiftKey?90:15));
-    headingButton.oncontextmenu=event=>{event.preventDefault();applyHeading(normalized-15);};
+    setCollapsed(storedCollapsed==='1');
+    sidebarToggle.onclick=()=>setCollapsed(!workspaceEl.classList.contains('sidebar-collapsed'));
   }
   svg.addEventListener('wheel',event=>{event.preventDefault();const rect=svg.getBoundingClientRect(),focusX=(event.clientX-rect.left)*1200/rect.width,focusY=(event.clientY-rect.top)*720/rect.height;setZoom(zoom*(event.deltaY<0?1.35:1/1.35),focusX,focusY);},{passive:false});
   svg.addEventListener('dragstart',event=>event.preventDefault());
@@ -913,9 +1109,207 @@ window.renderRailNetwork = function renderRailNetwork() {
     pollAdvice();setInterval(pollAdvice,10000);
     pollLive();pollControl();setInterval(pollLive,500);setInterval(pollControl,30000);setInterval(loadStationLogs,2000);
   }
+  // ===== 线路路径高亮：沿实际轨道覆盖一层颜色（像游戏里选中线路那样）===========
+  // 数据源 `rail-network-data.json`（6.4 MB，含 9765 条边 + 9667 个节点的完整几何）。
+  //   **按需加载** —— 首屏绝不碰它，只有真的要画某条线时才 fetch，之后缓存在内存 + 浏览器缓存。
+  //   为什么不用 manifest：manifest 的 lines 只有 `stops` / `overview_segments`，
+  //   **没有 `route_edge_ids`** —— 而那是"按顺序的边 ID 列表"，是重建真实走行路径的唯一依据。
+  // 画法：逐边复用 `edgePath` 拼成一条 path。**不需要处理方向与接续** ——
+  //   每条边自己就是从 node0 到 node1 的一段贝塞尔曲线，相邻边共享端点，首尾自然接上。
+  //   （实测 30/36 条线有 route_edge_ids，相邻边首尾相接 4215 处 / 断开 70 处，
+  //    断开处本来就是各自独立的子路径，不连反而对。）
+  const lineRouteLayer=S('g',{id:'network-line-route-layer','pointer-events':'none'},'',mapLayer);
+  // 用户 2026-09-29：青色在深色底上"看不清"，改红。**内层亮线保持这个色**，不再动。
+  const LINE_HIGHLIGHT_COLOR='#ff3b30';
+
+  // 线路的**真实颜色**：来自游戏本体（官方通用组件 `Color`「Specifies the color of an entity」，
+  // 字段 `color: Vec3f`；`Line` 类自己也带 `color`），由 collectors/layer_lines.lua 采出来。
+  // 采不到（老数据 / mod 没给）就返回 null，调用方自己兜底 —— 不猜颜色。
+  const lineColorOf=line=>{
+    const c=line&&line.color;
+    if(!c||typeof c.r!=='number'||typeof c.g!=='number'||typeof c.b!=='number')return null;
+    const to=v=>Math.round(Math.max(0,Math.min(1,v))*255);
+    return `rgb(${to(c.r)} ${to(c.g)} ${to(c.b)})`;
+  };
+  // 光晕专用：游戏里的线色常常很暗（例如官方调色板第一档 rgb(94,47,0)），
+  // 直接拿它当光晕，在深底上等于没画。所以**保色相、抬亮度**——最多提到峰值 1.0、最多提 2.6 倍。
+  // 这样"看着就是那条线的颜色"，而内层那条亮线保证任何底色/缩放下都看得清。
+  const lineGlowColor=line=>{
+    const c=line&&line.color;
+    if(!c||typeof c.r!=='number')return LINE_HIGHLIGHT_COLOR;
+    const peak=Math.max(c.r,c.g,c.b)||1;
+    const lift=Math.min(1/peak,2.6);
+    const to=v=>Math.round(Math.min(1,Math.max(0,v)*lift)*255);
+    return `rgb(${to(c.r)} ${to(c.g)} ${to(c.b)})`;
+  };
+  // 缺口补偿的直线：超过这个长度就不补（明显穿墙，宁缺勿错）。
+  const LINE_GAP_MAX_METERS=3000;
+  let lineRouteData=null,lineRouteRequest=null,highlightedLineId=null;
+
+  const ensureLineRouteData=()=>{
+    if(lineRouteData)return Promise.resolve(lineRouteData);
+    if(!lineRouteRequest){
+      lineRouteRequest=fetch('/rail-network-data.json')
+        .then(response=>response.ok?response.json():null)
+        .then(data=>{lineRouteData=data;return data;})
+        .catch(error=>{console.error('[map] 线路路径数据加载失败',error);return null;});
+    }
+    return lineRouteRequest;
+  };
+  const lineOf=id=>(p.lines||[]).find(line=>Number(line.entity_id)===Number(id))||null;
+  // 这条线停靠哪些站：manifest 的 stops 只给 `station_group_id`，要回 stations 里查名字。
+  const lineStopsOf=id=>{
+    const line=lineOf(id);
+    if(!line)return [];
+    return (line.stops||[])
+      .map(stop=>({stop,station:p.stations.find(item=>Number(item.entity_id)===Number(stop.station_group_id))||null}))
+      .filter(item=>item.station)
+      .sort((a,b)=>(a.stop.sequence_index||0)-(b.stop.sequence_index||0));
+  };
+  const renderLineSidebar=()=>{
+    const line=highlightedLineId!=null?lineOf(highlightedLineId):null;
+    if(!line){renderOverviewSidebar();return;}
+    setSidebarBackVisible(true);
+    const stops=lineStopsOf(line.entity_id);
+    const edgeIds=((lineRouteData&&lineRouteData.lines)||[]).find(item=>Number(item.entity_id)===Number(line.entity_id));
+    const hasRoute=Boolean(edgeIds&&(edgeIds.route_edge_ids||[]).length);
+    const sidebar=document.createElement('div');
+    sidebar.className='station-sidebar line-sidebar';
+    const add=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!=null)el.textContent=text;sidebar.appendChild(el);return el;};
+    const title=add('h3',null,null);
+    // 标题前放一个游戏里的真实线色块 —— 和游戏内线路表一致，一眼认得出是哪条线。
+    const swatch=lineColorOf(line);
+    if(swatch){
+      const dot=document.createElement('i');
+      dot.className='line-swatch line-swatch-lg';
+      dot.style.background=swatch;
+      title.appendChild(dot);
+    }
+    title.appendChild(document.createTextNode(line.name||`线路 ${line.entity_id}`));
+    const parts=[];
+    if(lineGapInfo.count)parts.push(`补缺口 ${lineGapInfo.count} 段`);
+    if(lineGapInfo.skipped)parts.push(`${lineGapInfo.skipped} 段过长未补`);
+    if(lineGapInfo.ring)parts.push(`环线收口 ${lineGapInfo.ring} 段（合并接缝后找到的另一半）`);
+    const gapNote=parts.length?(` · `+parts.join(' · ')):'';
+    add('div','event',`经过 ${stops.length} 站 · 路径数据 ${hasRoute?'可用':'缺失（这条线没有 route_edge_ids）'}`
+      +(lineRouteData?'':' · 首次点击时加载')+gapNote);
+    add('div','panel-title','沿线停靠（点站名跳到该站）');
+    const list=add('div','line-stop-list');
+    if(!stops.length)list.appendChild(templates.message('UNKNOWN','这条线没有停靠站记录',true));
+    stops.forEach((item,index)=>{
+      const row=document.createElement('button');
+      row.type='button';
+      row.className='line-stop-row';
+      row.textContent=`${index+1}. ${item.station.name}`;
+      row.addEventListener('click',()=>{
+        selectedStation=item.station;selectedVehicleId=null;
+        const q=P(item.station.center);
+        zoom=Math.min(256,Math.max(zoom,scaleBarPixels/baseScale/25));
+        panX=-(q.x-600)*zoom;panY=-(q.y-360)*zoom;
+        clearLineHighlight();updateViewport();renderStationSidebar();loadStationLogs();
+      });
+      list.appendChild(row);
+    });
+    const clear=add('button','line-stop-row','清除线路高亮');
+    clear.addEventListener('click',()=>{clearLineHighlight();updateViewport();});
+    document.querySelector('#sidebar').replaceChildren(sidebar);
+    document.querySelector('#station-name').textContent=line.name||`线路 ${line.entity_id}`;
+  };
+  const clearLineHighlight=()=>{
+    highlightedLineId=null;
+    lineGapInfo={count:0,skipped:0};
+    lineRouteLayer.replaceChildren();
+    lineStopLayer.replaceChildren();
+    lineStopMarks=[];
+  };
+  const highlightLine=async lineId=>{
+    const wanted=Number(lineId);
+    if(!Number.isFinite(wanted)){clearLineHighlight();renderOverviewSidebar();return null;}
+    highlightedLineId=wanted;
+    renderLineSidebar();                        // 先用 manifest 的信息出面板，不等那 6 MB
+    const data=await ensureLineRouteData();
+    if(highlightedLineId!==wanted)return null;  // 这期间用户又选了别的线
+    lineRouteLayer.replaceChildren();
+    lineStopLayer.replaceChildren();
+    lineStopMarks=[];
+    if(!data){renderLineSidebar();return null;}
+    const source=(data.lines||[]).find(item=>Number(item.entity_id)===wanted);
+    const edgeIds=(source&&source.route_edge_ids)||[];
+    if(!edgeIds.length){renderLineSidebar();return null;}
+    const edgeById=new Map((data.edges||[]).map(edge=>[Number(edge.entity_id),edge]));
+    const nodeById=new Map((data.nodes||[]).map(node=>[Number(node.entity_id),node.position]));
+    let d='',drawn=0;
+    edgeIds.forEach(id=>{
+      const edge=edgeById.get(Number(id));
+      if(!edge)return;
+      if(!nodeById.get(Number(edge.node0))||!nodeById.get(Number(edge.node1)))return;
+      d+=edgePath(edge,nodeById);drawn++;
+    });
+    // 断连缺口补偿：导出时因**图不连通**算不出路径，`routing.disconnected_segments`
+    // 记下了这些"本该连上却算不出"的段（本存档共 11 段，例如
+    // 津京空轨外环 北京(428174)→前北京(411748) 422 m、天津中央车站→天津中央车站 564 m）。
+    // 不补的话环线的端头就是断的 —— 用户 2026-09-29 报的"环线没识别出来"正是这个。
+    // 只补**直线距离 ≤ 3 km** 的（更长的直线会明显穿墙，宁缺勿错）。
+    let gapCount=0,gapSkipped=0;
+    ((p.routing&&p.routing.disconnected_segments)||[]).forEach(seg=>{
+      if(Number(seg.line_id)!==wanted)return;
+      const a=nodeById.get(Number(seg.from)),b=nodeById.get(Number(seg.to));
+      if(!a||!b){gapSkipped++;return;}
+      if(Math.hypot(a.x-b.x,a.y-b.y)>LINE_GAP_MAX_METERS){gapSkipped++;return;}
+      const pa=P(a),pb=P(b);
+      d+=`M${pa.x.toFixed(1)},${pa.y.toFixed(1)}L${pb.x.toFixed(1)},${pb.y.toFixed(1)}`;
+      gapCount++;
+    });
+    lineGapInfo={count:gapCount,skipped:gapSkipped,ring:0};
+    // 环线收口（用户约定：环线命名为「xx环线」）：TPF2 的轨道接缝是**同一坐标的两个节点**
+    // （实测环线两端各相距 5 m），按 node id 建图会把一条连通的环切成两棵独立的树 ——
+    // 这就是"环线看着不闭合 / 像被盖住了"的根因。rail-graph.js 先合并 ≤10 m 的近邻节点，
+    // 再找"**没画过的**另一半"（实测 4 条环线都能找到，且与主路径 0 重叠）。
+    // ⚠️ 名字要从 manifest 现查（`lineOf`）—— 这里的入参是 `lineId`，
+    //    之前误写成 `line.name`，`line` 根本不存在 → ReferenceError，
+    //    而且是抛在 `if(d)` **之前**，导致**整条线的高亮全部画不出来**（2026-09-29 浏览器实测发现）。
+    const manifestLine=lineOf(wanted);
+    if(/环/.test((manifestLine&&manifestLine.name)||'')&&window.RailGraph){
+      const closure=window.RailGraph.findRingClosure(lineRouteData,edgeIds);
+      closure.forEach(id=>{const edge=edgeById.get(Number(id));if(edge)d+=edgePath(edge,nodeById);});
+      lineGapInfo.ring=closure.length;
+    }
+    if(d){
+      // 两层：外层光晕（宽、半透明）做出"覆盖"的观感，内层亮线保证任何缩放下都看得见。
+      // 光晕用**游戏里这条线的真实颜色**（抬过亮度，见 lineGlowColor）；采不到就退回红色。
+      S('path',{d,fill:'none',stroke:lineGlowColor(manifestLine),'stroke-width':7,opacity:.32,
+        'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke','pointer-events':'none'},'',lineRouteLayer);
+      S('path',{d,fill:'none',stroke:'#eaf9ff','stroke-width':1.8,opacity:.95,
+        'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke','pointer-events':'none'},'',lineRouteLayer);
+    }
+    // 站点标记做成**游戏里那种"编号方块 + 站名"**（用户 2026-09-29 给的截图就是这样式：
+    // 橙色方块写着停靠顺序，旁边跟站名）。编号与 stops 顺序一致，和运行图/游戏对得上。
+    lineStopsOf(wanted).forEach((item,index)=>{
+      const group=S('g',{transform:'translate(-999 -999)','pointer-events':'none'},'',lineStopLayer);
+      S('rect',{x:-9,y:-9,width:18,height:18,rx:3,fill:LINE_HIGHLIGHT_COLOR,
+        stroke:'#3d0b07','stroke-width':1.3},'',group);
+      // ⚠️ 本文件的 S() 签名是 (tag, attrs, text, **parent=DOM 节点**) —— 第 4 个参数就是父节点，
+      //    不是 app.js 那套 jQuery 版。多塞一个 `''` 会把父节点变成字符串 →
+      //    "parent.appendChild is not a function"（2026-09-29 浏览器实测发现）。
+      S('text',{x:0,y:4.5,'text-anchor':'middle',fill:'#fff','font-size':11,'font-weight':'bold',
+        'font-family':'Consolas'},String(index+1),group);
+      S('text',{x:13,y:4.5,fill:'#ffe6e2','font-size':9,
+        'font-family':'Consolas, Microsoft YaHei','paint-order':'stroke',stroke:'#100405','stroke-width':2.6,
+        'stroke-linejoin':'round'},item.station.name,group);
+      lineStopMarks.push({group,position:item.station.center});
+    });
+    updateLineStopMarks();
+    console.log(`[map] 线路高亮 ${wanted}：${drawn} 条边 / ${lineStopMarks.length} 站`);
+    renderLineSidebar();
+    return {edges:drawn,stops:lineStopMarks.length};
+  };
+
   const requestedStationId=Number(new URLSearchParams(window.location.search).get('station'));
   const requestedStation=p.stations.find(station=>station.entity_id===requestedStationId);
   if(requestedStation){selectedStation=requestedStation;const q=P(requestedStation.center);zoom=Math.min(256,Math.max(zoom,scaleBarPixels/baseScale/25));panX=-(q.x-600)*zoom;panY=-(q.y-360)*zoom;renderStationSidebar();loadStationLogs();}
+  // ?line=<id>：从运行图/别处跳进来时直接高亮这条线路（**异步**，路径数据 6.4 MB 按需加载）。
+  const requestedLineId=Number(new URLSearchParams(window.location.search).get('line'));
+  if(Number.isFinite(requestedLineId)&&requestedLineId>0)highlightLine(requestedLineId);
   updateViewport();
 
   // ===== 地形层：等高线 + 水深 + 地下设施 ==============================
@@ -926,12 +1320,26 @@ window.renderRailNetwork = function renderRailNetwork() {
   // 数据源：mod 用 game.interface.getHeight({x, y}) 采样的地表高度网格。
   // 单位米、海平面 = 0：> 0 是陆地（画等高线），< 0 是水下（水深 = -height）。
   // 同一份采样同时喂两个开关，不需要采两遍。
+  // 官方四级等高线：base_config.gui.layers.contourLines（res/config/base_config.lua:209–222）。
+  //   majorContour        100 m / 线宽 1.5 / fadeDist −1（-1 = 一直画）
+  //   minorContour         50 m / 线宽 0.75 / −1
+  //   intermediateContour  10 m / 线宽 0.75 / 4000
+  //   detailContour         2 m / 线宽 0.75 / 500    （官方 alpha 再乘 0.3）
+  // ⚠️ 官方那套颜色是"浅底上的深线"（近黑 + alpha .5，细节级 .15）——本图是**深底**，
+  //    照抄等于不画。所以这里只搬**结构**（级别 / 线宽 / 淡出距离 / 主次透明秩序），
+  //    颜色沿用本图按高度渐变的那套（青→褐），alpha 等比抬到 .95/.75/.55/.30 保住秩序。
+  const CONTOUR_SPEC = [
+    { level: 100, width: 1.5,  alpha: 0.95, fadeDist: -1 },
+    { level: 50,  width: 0.75, alpha: 0.75, fadeDist: -1 },
+    { level: 10,  width: 0.75, alpha: 0.55, fadeDist: 4000 },
+    { level: 2,   width: 0.75, alpha: 0.30, fadeDist: 500 },
+  ];
   const TERRAIN = {
     grid: null, heights: null,
     contourGroup: null, waterGroup: null, undergroundGroup: null,
-    contourCache: null, undergroundCount: null,
+    contourCache: null, contourCacheKey: null, contourInterval: 50,
+    undergroundCount: null,
     visibleContours: true, visibleWater: true, visibleUnderground: true,
-    contourInterval: 50,
   };
 
   // 任意点的地表高度（双线性插值）。地下车站的判定就靠它：站台 z 与这里得到的
@@ -949,17 +1357,70 @@ window.renderRailNetwork = function renderRailNetwork() {
     return (a * (1 - tx) + b * tx) * (1 - ty) + (d * (1 - tx) + c * tx) * ty;
   };
 
-  // Marching squares：从高度网格里抽出等值线。
-  // 对每个格子看四个角相对某条等高线的高低，四条边上做线性插值得到穿点，再连起来。
-  // 结果按 level 分组，一组一条 path（不是一段一个元素）—— 否则一次要建几万个 DOM 节点。
+  // Marching squares：从高度网格里抽出等值线。算法在 terrain-contour.js —— 纯函数、不含 DOM，
+  // Node 里能直接跑它验几何，所以不必靠"打开页面看一眼"来判断等高线算得对不对。
+  //
+  // 这一层按**官方四级**做（见 CONTOUR_SPEC），并落实官方的 fadeDist：
+  //   · 100 / 50 m 无 fadeDist ⇒ 永远算；
+  //   · 10 m 只在视口跨度 ≤ 4000 m 时算；2 m 只在 ≤ 500 m 时算。
+  //   · 细则档**按视口裁窗**：整图 2 m 实测 21.4 万段 / 411 ms / 路径串约 4 MB，
+  //     整图铺出来会卡死（本项目已经栽过一次：4.6 万格逐格 SVG = 2.6 MB 路径串）。
+
+  // 当前可视范围的世界跨度（米）。baseScale 把世界换成底图坐标，zoom 再把底图换成屏幕，
+  // 所以 1200 px 宽的视口对应 1200/(baseScale*zoom) 米。
+  const visibleSpanMeters = () => (baseScale > 0 ? 1200 / (baseScale * zoom) : Infinity);
+
+  // 官方 fadeDist 的等价物：跨度越小，才允许放越细的一级。下限 50 —— 100/50 永不淡出。
+  const contourIntervalFor = span => (span <= 500 ? 2 : span <= 4000 ? 10 : 50);
+
+  // 细则档的视口窗口。四周留 50% 余量、再乘 √2 抵消地图旋转，下标吸附到 8 格 ——
+  // 吸附是为了平移时大部分帧窗口不变，不必重建（重建 10 m 档约 110 ms）。
+  const contourWindowFor = interval => {
+    const g = TERRAIN.grid;
+    if (!g || interval > 10) return null;
+    const bx = 600 - panX / zoom, by = 360 - panY / zoom;   // 视口中心在底图坐标里的位置
+    const rx = (bx - originX) / baseScale, ry = (originY - by) / baseScale;
+    const centre = rotInv(rx, ry);                          // 再换回世界坐标
+    const half = visibleSpanMeters() * 0.5 * 1.5 * Math.SQRT2;
+    const snap = value => Math.round(value / 8) * 8;
+    return {
+      i0: snap(Math.floor((centre.x - half - g.origin.x) / g.step_x)),
+      i1: snap(Math.ceil((centre.x + half - g.origin.x) / g.step_x)) + 8,
+      j0: snap(Math.floor((centre.y - half - g.origin.y) / g.step_y)),
+      j1: snap(Math.ceil((centre.y + half - g.origin.y) / g.step_y)) + 8,
+    };
+  };
+
+  const contourCacheKeyFor = (interval, win) =>
+    `${interval}|${win ? [win.i0, win.i1, win.j0, win.j1].join(',') : 'all'}`;
+
   const buildContours = () => {
-    if (TERRAIN.contourCache) return TERRAIN.contourCache;
     if (!TERRAIN.grid || !TERRAIN.heights) return { groups: [], minH: 0, maxH: 0 };
-    // 算法在 terrain-contour.js —— 纯函数、不含 DOM，Node 里能直接跑它验几何，
-    // 所以不必靠"打开页面看一眼"来判断等高线算得对不对。
+    const interval = contourIntervalFor(visibleSpanMeters());
+    const win = contourWindowFor(interval);
+    const key = contourCacheKeyFor(interval, win);
+    if (TERRAIN.contourCacheKey === key && TERRAIN.contourCache) return TERRAIN.contourCache;
     TERRAIN.contourCache = window.RailTerrainContour.buildContours(
-      TERRAIN.grid, TERRAIN.heights, TERRAIN.contourInterval);
+      TERRAIN.grid, TERRAIN.heights, interval, win);
+    TERRAIN.contourCacheKey = key;
+    TERRAIN.contourInterval = interval;
     return TERRAIN.contourCache;
+  };
+
+  // 缩放/平移会改变"该画到哪一级"，但不必每帧重画 —— 只在级别或窗口真的变了才重建。
+  const refreshContoursOnViewChange = () => {
+    if (!TERRAIN.visibleContours || !TERRAIN.grid) return;
+    const interval = contourIntervalFor(visibleSpanMeters());
+    const key = contourCacheKeyFor(interval, contourWindowFor(interval));
+    if (key === TERRAIN.contourCacheKey) return;
+    renderContours();
+  };
+
+  // 某条等高线属于官方四级里的哪一级：能整除它的**最大**那个
+  // （100 → 主；150 → 次；20 → 中；4 → 细节；不属于任何一级的按最细处理）。
+  const contourRankOf = level => {
+    for (const spec of CONTOUR_SPEC) if (Math.abs(level % spec.level) < 1e-6) return spec;
+    return CONTOUR_SPEC[CONTOUR_SPEC.length - 1];
   };
 
   const renderContours = () => {
@@ -970,25 +1431,39 @@ window.renderRailNetwork = function renderRailNetwork() {
     const groups = built.groups || [];
     if (!groups.length) return;
     const lo = built.minH, hi = built.maxH;
-    // 高处偏褐、低处偏青，越高的线越不透明 —— 一眼能看出哪儿是山
+    // 高处偏褐、低处偏青，一眼能看出哪儿是山；线宽与透明度按官方四级给。
     const group = TERRAIN.contourGroup;
     for (const item of groups) {
+      // 0 m 是海岸线，归海陆底色层（它更醒目，且和"哪里有水"该同开同关）
+      if (Math.abs(item.level) < 1e-9) continue;
       const t = hi > lo ? (item.level - lo) / (hi - lo) : 0;
       const hue = 186 - t * 150;          // 186° 青 → 36° 褐
       const light = 58 - t * 14;
-      const major = Math.abs(item.level % 100) < 1e-6;
+      const spec = contourRankOf(item.level);
       const d = item.segments.map(seg => {
         const p0 = P({ x: seg[0][0], y: seg[0][1] }), p1 = P({ x: seg[1][0], y: seg[1][1] });
         return `M${p0.x.toFixed(1)},${p0.y.toFixed(1)}L${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
       }).join('');
       S('path', {
         d, fill: 'none', stroke: `hsl(${hue.toFixed(0)} 34% ${light.toFixed(0)}%)`,
-        'stroke-width': major ? 1.15 : 0.6, 'vector-effect': 'non-scaling-stroke',
-        opacity: major ? 0.8 : 0.45, 'pointer-events': 'none',
+        'stroke-width': spec.width, 'vector-effect': 'non-scaling-stroke',
+        opacity: spec.alpha, 'pointer-events': 'none',
       }, '', group);
     }
   };
 
+  // 海陆底色。这是这张图最该先做对的一层：存档 2 有 **60.5% 是水**（水深 0 ~ −62 m 的浅海），
+  // 而原来只给水下填了三档暗蓝、**陆地完全不填** —— 陆地就剩画布背景（近黑），
+  // 于是两边都是暗色，用户原话「我都要把海洋看成陆地了」。
+  //
+  // 参照真实地图的做法（海图的 bathymetry / 地形图的 hypsometric tint，Google Maps 与 OSM 同理）：
+  //   · **水陆两侧都设色**，不是只画水；漏掉任何一侧都等于把那一侧交给背景色。
+  //   · **色相拉开**才是关键：水走蓝、陆走中性灰。同色系只差明度，缩远了照样分不清。
+  //   · 各自再分档（浅海亮 → 深海暗；低地暗 → 高地亮），让底图有层次、像地图而不是色块。
+  //   · 都保持半透明：铁路是 Pixi canvas、在 SVG **底下**，填实了会把它盖住。
+  //
+  // 另外把 0 m 等值线（海岸线）单独画成一条亮线 —— 真实海图上这条线最醒目，
+  // 也是"这里开始没有水"最直接的判据。它和底色同开同关，所以放在这一层。
   const renderWater = () => {
     if (!TERRAIN.waterGroup) return;
     TERRAIN.waterGroup.replaceChildren();
@@ -998,54 +1473,85 @@ window.renderRailNetwork = function renderRailNetwork() {
     const scale = g.scale || 1, missing = g.missing;
     const ox = g.origin.x, oy = g.origin.y;
     const at = (i, j) => { const v = heights[j * cols + i]; return (v === missing || v == null) ? NaN : v / scale; };
-    // 三档深度。格子里四个角的平均高度 < 0 才算水面之下。
-    const bands = [
-      { limit: -5, color: '#2f6d86' },
-      { limit: -20, color: '#1f5170' },
-      { limit: -Infinity, color: '#123b57' },
-    ];
-    const buckets = bands.map(() => []);
-    for (let j = 0; j < rows - 1; j++) {
-      for (let i = 0; i < cols - 1; i++) {
-        const a = at(i, j), b = at(i + 1, j), c = at(i + 1, j + 1), d = at(i, j + 1);
-        if (Number.isNaN(a) || Number.isNaN(b) || Number.isNaN(c) || Number.isNaN(d)) continue;
-        const average = (a + b + c + d) / 4;
-        if (average >= 0) continue;
-        const band = average < -20 ? 2 : (average < -5 ? 1 : 0);
-        const corners = [
-          [ox + i * step_x, oy + j * step_y],
-          [ox + (i + 1) * step_x, oy + j * step_y],
-          [ox + (i + 1) * step_x, oy + (j + 1) * step_y],
-          [ox + i * step_x, oy + (j + 1) * step_y],
-        ].map(point => P({ x: point[0], y: point[1] }));
-        buckets[band].push(corners);
+
+    // 🔴 用 canvas 位图，**不要**逐格画 SVG 四边形。
+    //    4.6 万个格子的 path 字符串实测约 2.6 MB，而且它挂在 mapLayer 里 ——
+    //    每次平移/缩放浏览器都要重新解析并重绘这几千万个坐标，直接卡死。
+    //    画成 cols×rows 的位图后，渲染端只剩一个 <image>，缩放插值交给 GPU。
+    const canvas = document.createElement('canvas');
+    canvas.width = cols; canvas.height = rows;
+    const context = canvas.getContext('2d');
+    const pixels = context.createImageData(cols, rows);
+    const data = pixels.data;
+    // 同一套配色，但**把不透明度直接烘进像素的 alpha**（省一层 SVG compositing）：
+    // 铁路是 Pixi canvas、在 SVG 底下，所以底色必须半透明，否则会把铁路盖住。
+    const waterBands = [[92, 192, 230], [61, 149, 192], [42, 112, 153], [27, 81, 117]];
+    const landBands = [[29, 35, 41], [39, 47, 55], [50, 59, 69], [63, 74, 86]];
+    const WATER_ALPHA = 153, LAND_ALPHA = 184;   // 0.60 / 0.72
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const value = at(i, j);
+        const offset = (j * cols + i) * 4;
+        if (Number.isNaN(value)) { data[offset + 3] = 0; continue; }
+        let rgb, alpha;
+        if (value < 0) {
+          rgb = waterBands[value < -40 ? 3 : value < -20 ? 2 : value < -5 ? 1 : 0];
+          alpha = WATER_ALPHA;
+        } else {
+          rgb = landBands[value > 150 ? 3 : value > 60 ? 2 : value > 20 ? 1 : 0];
+          alpha = LAND_ALPHA;
+        }
+        data[offset] = rgb[0]; data[offset + 1] = rgb[1]; data[offset + 2] = rgb[2]; data[offset + 3] = alpha;
       }
     }
-    buckets.forEach((cells, index) => {
-      if (!cells.length) return;
-      let d = '';
-      for (const corners of cells) {
-        d += `M${corners[0].x.toFixed(1)},${corners[0].y.toFixed(1)}`
-          + corners.slice(1).map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('') + 'Z';
-      }
-      S('path', { d, fill: bands[index].color, stroke: 'none', opacity: 0.6, 'pointer-events': 'none' }, '', TERRAIN.waterGroup);
-    });
+    context.putImageData(pixels, 0, 0);
+
+    // 位图坐标 → 底图坐标 的矩阵：像素 (i,j) 代表格点 (i,j)，所以左上角在世界
+    // (ox−step_x/2, oy−step_y/2)，x 向右 = +step_x、y 向下（图像行）= +step_y。
+    const corner = P({ x: ox - step_x / 2, y: oy - step_y / 2 });
+    const stepRight = P({ x: ox + step_x / 2, y: oy - step_y / 2 });
+    const stepDown = P({ x: ox - step_x / 2, y: oy + step_y / 2 });
+    const m = [stepRight.x - corner.x, stepRight.y - corner.y,
+               stepDown.x - corner.x, stepDown.y - corner.y, corner.x, corner.y];
+    S('image', {
+      href: canvas.toDataURL('image/png'),
+      width: cols, height: rows, preserveAspectRatio: 'none', 'pointer-events': 'none',
+      transform: `matrix(${m[0].toFixed(5)} ${m[1].toFixed(5)} ${m[2].toFixed(5)} ${m[3].toFixed(5)} ${m[4].toFixed(2)} ${m[5].toFixed(2)})`,
+    }, '', TERRAIN.waterGroup);
+
+    // 海岸线（0 m 等值线）仍走矢量：4907 段约 300 KB，比底色小一个数量级，
+    // 而且它是要"锐"的线条，位图化反而糊。
+    const coast = (buildContours().groups || []).find(item => Math.abs(item.level) < 1e-9);
+    if (coast && coast.segments.length) {
+      const d = coast.segments.map(seg => {
+        const p0 = P({ x: seg[0][0], y: seg[0][1] }), p1 = P({ x: seg[1][0], y: seg[1][1] });
+        return `M${p0.x.toFixed(1)},${p0.y.toFixed(1)}L${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+      }).join('');
+      S('path', { d, fill: 'none', stroke: '#8fdcf5', 'stroke-width': 1.4, 'vector-effect': 'non-scaling-stroke',
+        opacity: 0.85, 'pointer-events': 'none' }, '', TERRAIN.waterGroup);
+    }
   };
 
-  // 地下设施：站台坐标自带 z（真实高程），跟同点的地表高度一比就是埋深。
-  // 这个不需要额外采集 —— 地形网格本身就是那把"尺子"。
+  // 地下设施：埋深来自采集器在站点上**直接采样**的 surface_z（存成 depth_m）。
+  // 🔴 不再回退到"用地形网格插值算地表高度"：那张网格 170 m 一格，落在山谷里的站
+  // 会被相邻格点的山坡拉高，实测把 24 个普通站误标成"地下 3~17 m"（用户报过：
+  // 这个存档一个地下站都没有，唯一那个在另一个存档的 Hanoï）。
+  // 拿不到 depth_m 就**不标** —— 宁可漏报，也不要再报一堆假的。
   const renderUnderground = () => {
     if (!TERRAIN.undergroundGroup) return;
     TERRAIN.undergroundGroup.replaceChildren();
-    if (!TERRAIN.visibleUnderground || !TERRAIN.grid) return;
+    if (!TERRAIN.visibleUnderground) return;
     const found = [];
     (p.stations || []).forEach(station => {
       const center = station.center;
       if (!center || typeof center.z !== 'number') return;
-      const surface = terrainHeightAt(center.x, center.y);
-      if (surface == null) return;
-      const depth = surface - center.z;
-      if (depth < 3) return;  // 埋深不到 3 m 的不算地下站（避免把普通地面站误标）
+      const depth = station.depth_m;
+      if (typeof depth !== 'number' || !Number.isFinite(depth) || depth < 3) return;
+      // 光"比地表低"还不够 —— 得区分两类：
+      //   * 下凹式地面站：站台只是沉在凹地里，上方是空的、或者只有很高的桥 → 不是地下站
+      //   * 真地下站：上面盖着**贴地**的道路/建筑 → 才是
+      // 采集器已经在 station.overhead 里标好（只认地面类型的公路，桥和隧道不算）。
+      if (station.overhead !== 'road') return;
       found.push({ station, depth });
     });
     TERRAIN.undergroundCount = found.length;
@@ -1090,6 +1596,7 @@ window.renderRailNetwork = function renderRailNetwork() {
   // 分块里带什么就画什么：边（EDGE_GRAPH，复用铁路的 Hermite 曲线画法）和点（POINT）
   const renderExtraTile=(spec,container,tile)=>{
     const group=S('g',{'data-tile-key':tile.key},'',container);
+    const marks=[];   // 本分块登记的"固定屏幕尺寸"图标，卸块时要撤登记
     const nodeById=new Map((tile.nodes||[]).map(node=>[node.entity_id,node.position]));
     (tile.edges||[]).forEach(edge=>{
       const style=edgeStructureStyle(edge,spec);
@@ -1098,18 +1605,22 @@ window.renderRailNetwork = function renderRailNetwork() {
     (tile.points||[]).forEach(point=>{
       const q=P(point.position);
       if(spec.name==='vehicles'){
+        // r 按**屏幕像素**给（4 px ≈ 列车菱形宽 8 px 的一半），位置仍用底图坐标，
+        // 由 addPointMark 的 transform 反缩放保证缩放时大小不变。
         // data-carrier / data-line 是给筛选用的标记。**职能（客货）不在这里算** ——
         // 它要查线路表，而线路数据可能比车辆分块晚到，所以留到 applyFilters 时现查。
-        const attrs={cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:3.2,fill:carrierColor(point.carrier),
+        const attrs={r:4,fill:carrierColor(point.carrier),
           stroke:'#0b1218','stroke-width':0.7,'pointer-events':'none',
           'data-carrier':point.carrier||'UNKNOWN'};
         if(point.line!=null)attrs['data-line']=String(point.line);
-        S('circle',attrs,'',group);
+        const el=S('circle',attrs,'',group);
+        addPointMark(el,q.x,q.y);
+        marks.push(el);
       }else{
         S('rect',{x:(q.x-2.5).toFixed(1),y:(q.y-2.5).toFixed(1),width:5,height:5,fill:spec.color,'pointer-events':'none'},'',group);
       }
     });
-    return {group};
+    return {group,marks};
   };
   // ===== 图层面板与三维筛选 ==============================================
   // 三个互相独立、可叠加的分类维度：
@@ -1132,6 +1643,9 @@ window.renderRailNetwork = function renderRailNetwork() {
                 lines:{restricted:false,set:new Set()}};
   const lineMeta=new Map();       // line_id → {carrier,cargo,name}
   const filterBoxes={carrier:new Map(),cargo:new Map(),lines:new Map()};
+  // 「种类」这一组的信息，给 syncFilterBoxes 用：本存档实际有哪些种类、以及"全部种类"那个框。
+  let kindCarriers=[];
+  let kindAllBox=null;
 
   const lineMetaOf=id=>id==null?null:(lineMeta.get(Number(id))||null);
 
@@ -1146,15 +1660,29 @@ window.renderRailNetwork = function renderRailNetwork() {
         &&passCargo(meta?meta.cargo:'UNKNOWN')&&passLine(node.dataset.line);
       node.style.display=ok?'':'none';
     });
-    document.querySelectorAll('#network-lines-layer [data-carrier]').forEach(node=>{
-      const ok=passCarrier(node.dataset.carrier||'UNKNOWN')
-        &&passCargo(node.dataset.cargo||'UNKNOWN')&&passLine(node.dataset.line);
-      node.style.display=ok?'':'none';
-    });
+    // ⚠️ 线路折线已不画，所以这里只剩车辆那一轮 —— 但**筛选维度照样作用于车辆**：
+    //    车辆点自带 data-carrier，且 passCargo/passLine 会现查 lineMeta（见上面）。
+
+    // 车辆图层整体显隐：种类全不勾 = 整个图层不显示（连分块都不加载）。
+    // 这样「种类」那几个框就是**唯一**控制点，不需要额外的"显示车辆"开关。
+    // ⚠️ 只在状态真的变了才调 setVisible —— 它内部会 unloadTile → onChanged → 可能绕回这里。
+    if(vehiclesLayer){
+      const f=FILTER.carrier;
+      const want=!f.restricted||f.set.size>0;
+      if(vehiclesLayer.isVisible()!==want)vehiclesLayer.setVisible(want);
+    }
+    // 实时船 / 飞机跟同一套判定走：勾了"船舶"才显示船，勾了"航空器"才显示飞机。
+    carrierVisibleFn=passCarrier;
+    airViews.forEach(view=>{view.el.style.display=passCarrier('AIR')?'':'none';});
+    waterViews.forEach(view=>{view.el.style.display=passCarrier('WATER')?'':'none';});
   };
   const syncFilterBoxes=()=>{
-    filterBoxes.carrier.forEach((box,v)=>{box.checked=FILTER.carrier.set.has(v);});
-    filterBoxes.cargo.forEach((box,v)=>{box.checked=FILTER.cargo.set.has(v);});
+    // ⚠️「无限制」= 全选，不是"全不选"。种类框现在**同时决定图层显隐**，
+    // 所以框的状态必须和"实际显示了什么"一致 —— 否则会出现"框全没勾但满屏是车"。
+    const cf=FILTER.carrier;
+    filterBoxes.carrier.forEach((box,v)=>{box.checked=!cf.restricted||cf.set.has(v);});
+    if(kindAllBox)kindAllBox.checked=!cf.restricted||kindCarriers.every(v=>cf.set.has(v));
+    filterBoxes.cargo.forEach((box,v)=>{box.checked=!FILTER.cargo.restricted||FILTER.cargo.set.has(v);});
     filterBoxes.lines.forEach((box,v)=>{box.checked=FILTER.lines.set.has(v);});
   };
   // 用户第一次动勾选时，先把"当前实际是全选"这件事补进集合，
@@ -1184,9 +1712,12 @@ window.renderRailNetwork = function renderRailNetwork() {
     return box;
   };
   const addOption=(group,label,options={})=>{
-    const{checked=true,onChange,count,title,scroll}=options;
+    const{checked=true,onChange,count,title,scroll,swatch}=options;
     const wrap=document.createElement('label');
     if(title)wrap.title=title;
+    // 线路色块：游戏里这条线是什么颜色，列表里就显示什么颜色（官方 `Line.color` / `Color` 组件）。
+    // 采不到就不画色块 —— 不用自造颜色冒充。
+    if(swatch){const dot=document.createElement('i');dot.className='line-swatch';dot.style.background=swatch;wrap.appendChild(dot);}
     const box=document.createElement('input');box.type='checkbox';box.checked=checked;
     box.addEventListener('change',()=>{if(onChange)onChange(box.checked);});
     const text=document.createElement('span');
@@ -1214,12 +1745,11 @@ window.renderRailNetwork = function renderRailNetwork() {
   addAction('只看客运','只保留客运与客货混运',()=>onlyFilter('cargo',['PASSENGER','MIXED']));
   addAction('只看货运','只保留货运与客货混运',()=>onlyFilter('cargo',['FREIGHT','MIXED']));
   addAction('只看列车','只保留铁路',()=>onlyFilter('carrier',['RAIL']));
-  addAction('还原','取消所有筛选',clearFilters);
+  addAction('还原','取消所有筛选（注意：车辆"种类"会变成全选 = 全部显示）',clearFilters);
   if(layerPanel)layerPanel.appendChild(actionBar);
 
   // ---- 路网（铁路 / 公路 / 线路）----
   addOption(netGroup,'铁路',{onChange:v=>railLayer.setVisible(v),count:p.tiles.length});
-  let linesVisible=true;
 
   const createLayerContainer=spec=>{
     const group=S('g',{id:`network-${spec.name}-layer`});
@@ -1242,13 +1772,19 @@ window.renderRailNetwork = function renderRailNetwork() {
       // 概览骨架（总览时显示，放大后被分块取代）—— 与铁路的 physical_overview_segments
       // 同一角色。是静态文件，直接读 /layers/<name>-overview.json，不必再开接口。
       let overview=null;
-      try{
-        const response=await fetch(`/layers/${spec.name}-overview.json`,{cache:'no-store'});
-        if(response.ok)overview=await response.json();
-      }catch(error){console.error(error);}
+      const loadOverview=async()=>{
+        try{
+          const response=await fetch(`/layers/${spec.name}-overview.json`,{cache:'no-store'});
+          if(response.ok)overview=await response.json();
+        }catch(error){console.error(error);}
+      };
+      await loadOverview();
       const overviewGroup=S('g',{id:`network-${spec.name}-overview`},'',container);
       let overviewDrawn=false;
-      const hideSummary=()=>{overviewGroup.replaceChildren();overviewDrawn=false;};
+      let overviewMarks=[];
+      const hideSummary=()=>{overviewGroup.replaceChildren();dropPointMarks(overviewMarks);overviewMarks=[];overviewDrawn=false;};
+      // 概览模式下重新拉一次缩略数据并重画（车辆位置会变，概览也得跟着更新）
+      const refreshSummary=()=>{hideSummary();loadOverview().then(()=>{showSummary();applyFilters();});};
       const showSummary=()=>{
         if(overviewDrawn||!overview)return;
         overviewDrawn=true;
@@ -1256,11 +1792,14 @@ window.renderRailNetwork = function renderRailNetwork() {
           (overview.points||[]).forEach(entry=>{
             const q=P({x:entry[0],y:entry[1]});
             if(spec.name==='vehicles'){
-              // 概览里的车辆同样带标记，筛选才能作用于它们
-              const attrs={cx:q.x.toFixed(1),cy:q.y.toFixed(1),r:2,fill:carrierColor(entry[2]),'pointer-events':'none',
+              // 概览里的车辆同样带标记，筛选才能作用于它们。
+              // 同样固定屏幕尺寸，但略小于分块里的 4 px —— 概览时上千个点挤在一起。
+              const attrs={r:3,fill:carrierColor(entry[2]),'pointer-events':'none',
                 'data-carrier':entry[2]||'UNKNOWN'};
               if(entry[3]!=null)attrs['data-line']=String(entry[3]);
-              S('circle',attrs,'',overviewGroup);
+              const el=S('circle',attrs,'',overviewGroup);
+              addPointMark(el,q.x,q.y);
+              overviewMarks.push(el);
             }else{
               S('rect',{x:(q.x-1.5).toFixed(1),y:(q.y-1.5).toFixed(1),width:3,height:3,fill:spec.color,'pointer-events':'none'},'',overviewGroup);
             }
@@ -1276,10 +1815,23 @@ window.renderRailNetwork = function renderRailNetwork() {
         thresholdM:manifest.detail_load_threshold_m||600,
         tileSizeM:manifest.tile_size_m||2000,
         render:tile=>{const entry=renderExtraTile(spec,container,tile);applyFilters();return entry;},
-        destroy:entry=>{if(entry.group)entry.group.remove();},
-        showSummary:()=>{showSummary();applyFilters();},hideSummary,
+        destroy:entry=>{if(entry.group)entry.group.remove();dropPointMarks(entry.marks);},
+        showSummary:()=>{showSummary();applyFilters();},hideSummary,refreshSummary,
       });
       extraLayers.push({spec,layer});
+      // 车辆图层**默认不显示**，由「交通工具 · 种类」那几个框统一控制（见下面）：
+      // 默认一个都不勾 → 图层不显示、也不加载分块。
+      // ⚠️ **不要再单独加"显示车辆"开关** —— 和种类框重复，用户会以为两者冲突
+      //    （2026-09-29 用户原话："单独做个显示汽车何意味？"）。
+      if(spec.name==='vehicles'){
+        vehiclesLayer=layer;
+        layer.setVisible(false);
+        addOption(cargoGroup,'自动刷新车辆位置',{
+          checked:false,
+          title:'勾选后每 5 秒回看一次，源数据变了就重载当前视口的分块（源数据约 18 秒一轮）',
+          onChange:value=>{vehiclesAutoRefresh=value;},
+        });
+      }
       layer.update();
       // 加载诊断：打开浏览器控制台就能看到每层采到多少，不必去翻 bridge 文件
       console.log(`[map] 图层 ${spec.name}：${(manifest.counts&&manifest.counts.total)||manifest.tiles.length}`, manifest.by_carrier||manifest.by_cargo||'');
@@ -1289,28 +1841,29 @@ window.renderRailNetwork = function renderRailNetwork() {
       }else if(spec.name==='industry'){
         addOption(facilityGroup,'产业',{onChange:v=>layer.setVisible(v),count:manifest.counts&&manifest.counts.total});
       }else if(spec.name==='vehicles'){
-        // 车辆的数量按种类拆开显示，让用户知道每类有多少
+        // 车辆的数量按种类拆开显示，让用户知道每类有多少。
+        // ★ 这几个框就是**唯一**的显示控制点：勾哪个种类就显示哪个
+        //   （静态点 + 实时船/飞机点一起管），全不勾 = 车辆图层整个不显示，
+        //   连分块都不加载 —— 用户 2026-09-29 的要求："勾选哪个就显示哪个"。
         const byCarrier=(manifest.counts&&manifest.counts.total)||0;
         const split=manifest.by_carrier||{};
-        const kindBoxes=[];
-        CARRIER_ORDER.forEach(carrier=>{
-          const count=split[carrier];
-          if(count==null)return;
+        const carriers=CARRIER_ORDER.filter(carrier=>split[carrier]!=null);
+        kindCarriers=carriers;
+        carriers.forEach(carrier=>{
           const box=addOption(kindGroup,CARRIER_LABEL[carrier]||carrier,{
-            checked:true,
-            count,
-            title:`只控制交通工具（车辆与线路）的种类显示，不影响路网图层`,
-            onChange:checked=>toggleFilter('carrier',carrier,checked,CARRIER_ORDER),
+            checked:false,
+            count:split[carrier],
+            title:'勾了就显示这一类（含实时船/飞机），不勾就隐藏',
+            onChange:checked=>toggleFilter('carrier',carrier,checked,carriers),
           });
           filterBoxes.carrier.set(carrier,box);
-          kindBoxes.push(box);
         });
-        // 上面所有种类框一起控制车辆图层本身：全不勾 = 车都不显示（集合为空且 restricted）
-        addOption(kindGroup,'全部种类',{
-          checked:true,count:byCarrier,
-          title:'一键：本组全选 / 全不选',
-          onChange:checked=>{if(checked)clearFilters();else onlyFilter('carrier',[]);},
+        kindAllBox=addOption(kindGroup,'全部种类',{
+          checked:false,count:byCarrier,
+          title:'一键：本组全选 / 全不选（只影响"种类"，不动职能与线路）',
+          onChange:checked=>onlyFilter('carrier',checked?carriers:[]),
         });
+        onlyFilter('carrier',[]);   // 默认一个都不勾 = 不显示车辆
         CARGO_ORDER.forEach(cargo=>{
           const box=addOption(cargoGroup,CARGO_LABEL[cargo]||cargo,{
             checked:true,
@@ -1345,30 +1898,12 @@ window.renderRailNetwork = function renderRailNetwork() {
     if(vehiclesGroup)mapLayer.insertBefore(group,vehiclesGroup);
     else mapLayer.appendChild(group);
 
-    const lineGroupNode=S('g',{id:'network-lines-content'},'',group);
-    data.lines.forEach(line=>{
-      if(!Array.isArray(line.points)||line.points.length<2)return;
-      lineMeta.set(Number(line.entity_id),line);
-      const d=line.points.map((point,index)=>{
-        const q=P(point);
-        return `${index?'L':'M'}${q.x.toFixed(1)},${q.y.toFixed(1)}`;
-      }).join('');
-      const attrs={d,fill:'none',stroke:carrierColor(line.carrier),'stroke-width':1.6,
-        'vector-effect':'non-scaling-stroke',opacity:.8,'pointer-events':'none',
-        'data-carrier':line.carrier||'UNKNOWN','data-cargo':line.cargo||'UNKNOWN',
-        'data-line':String(line.entity_id)};
-      // 线型表示职能：客运实线、货运虚线、客货混运点线 —— 与种类（颜色）分开编码，
-      // 这样两个维度能同时读出来，不必切换。
-      if(line.cargo==='FREIGHT')attrs['stroke-dasharray']='7 4';
-      else if(line.cargo==='MIXED')attrs['stroke-dasharray']='2 3';
-      const path=S('path',attrs,'',lineGroupNode);
-      path.setAttribute('data-line-name',line.name||'');
-    });
-
-    addOption(netGroup,'线路',{
-      onChange:visible=>{linesVisible=visible;group.style.display=visible?'':'none';},
-      count:data.lines.length,
-    });
+    // ⛔ 线路折线**不再画**（用户 2026-09-29 同上）。
+    //    原本画的是 `line.points` 的折线 —— 那是**停靠站坐标的直连**，不沿实际轨道路径；
+    //    水运/航空更只有起降两个点，就是一根直线。真正的走向看路网图层。
+    //    ⚠️ `lineMeta` **必须照旧登记**：车辆点只带 `line` id，而"职能（客/货/混）"
+    //    这个维度是靠它现查线路表的（见 applyFilters 的 passCargo）。
+    data.lines.forEach(line=>lineMeta.set(Number(line.entity_id),line));
 
     // 线路逐条勾选：按种类分组，列表可滚动。140 条全列也不会把面板撑爆。
     const linesByCarrier=new Map();
@@ -1378,6 +1913,28 @@ window.renderRailNetwork = function renderRailNetwork() {
       linesByCarrier.get(key).push(line);
     });
     const allLineIds=data.lines.map(line=>Number(line.entity_id));
+    // 一键全选 / 全不选。140 条线逐条勾太累。
+    // 全选直接把这一维复位成"不限制"（restricted=false）—— 比往集合里塞 140 个 id 干净，
+    // 效果一样，而且以后新采到的线路也自动算在全选里。
+    // 按钮挂在 netGroup 而不是滚动列表里，否则列表一滚按钮就跟着跑掉了。
+    const bulkRow=document.createElement('div');
+    bulkRow.className='layer-bulk';
+    const makeBulk=(label,hint,handler)=>{
+      const button=document.createElement('button');
+      button.type='button';button.textContent=label;button.title=hint;
+      button.onclick=handler;bulkRow.appendChild(button);
+    };
+    makeBulk('全选','勾上全部线路（等于不限制）',()=>{
+      FILTER.lines.restricted=false;FILTER.lines.set.clear();
+      filterBoxes.lines.forEach(box=>{box.checked=true;});
+      applyFilters();
+    });
+    makeBulk('全不选','一条线路都不显示',()=>{
+      FILTER.lines.restricted=true;FILTER.lines.set.clear();
+      filterBoxes.lines.forEach(box=>{box.checked=false;});
+      applyFilters();
+    });
+    netGroup.appendChild(bulkRow);
     CARRIER_ORDER.forEach(carrier=>{
       const groupLines=linesByCarrier.get(carrier);
       if(!groupLines)return;
@@ -1388,6 +1945,7 @@ window.renderRailNetwork = function renderRailNetwork() {
       groupLines.forEach(line=>{
         const box=addOption(sub,line.name||`线路${line.entity_id}`,{
           checked:true,
+          swatch:lineColorOf(line),
           title:`种类：${CARRIER_LABEL[line.carrier]||line.carrier}　职能：${CARGO_LABEL[line.cargo]||line.cargo}　车 ${line.vehicle_count||0} 辆`,
           onChange:checked=>toggleFilter('lines',Number(line.entity_id),checked,allLineIds),
         });
@@ -1458,40 +2016,24 @@ window.renderRailNetwork = function renderRailNetwork() {
     STATION_CLUSTERS.byStation=new Map(data.stations.map(item=>[Number(item.entity_id),item]));
     STATION_CLUSTERS.sizeOf=new Map((data.clusters||[]).map(item=>[Number(item.root),item.member_count]));
 
+    // ⚠ 坐标系：本文件有两套，混用必然错位（已踩过）。
+    //   · 挂在 mapLayer 里的层（地形 / 公路 / 产业 / 车辆 / 路网）用 **P() 底图坐标**，
+    //     平移缩放交给 mapLayer 的 transform —— 会跟着地图动。
+    //   · 挂在 svg 根的层（network-station-layer / depot-layer / live-layer）没有 transform，
+    //     必须用 **screenPoint()** 算屏幕坐标，在 updateViewport() 里每帧重算。
+    //   站群这一层只画连线（跟着地图缩放），不画圈。
     const group=S('g',{id:'network-station-cluster-layer','pointer-events':'none'});
-    if(stationLayer.parentNode)stationLayer.parentNode.insertBefore(group,stationLayer);
-    else mapLayer.appendChild(group);
+    mapLayer.appendChild(group);
     STATION_CLUSTERS.group=group;
 
     // 站群配色：黄金角分布，相邻簇的色相拉得够开，便于区分
     const clusterColor=root=>`hsl(${((Number(root)||0)*137.508)%360} 58% 64%)`;
     STATION_CLUSTERS.colorOf=clusterColor;
 
-    // ① 互通连线：直接画引擎给出的互通对，不自己按距离阈值连
-    (data.links||[]).forEach(link=>{
-      const a=STATION_CLUSTERS.byStation.get(Number(link.a));
-      const b=STATION_CLUSTERS.byStation.get(Number(link.b));
-      if(!a||!b)return;
-      const start=P(a.position),end=P(b.position);
-      S('line',{x1:start.x.toFixed(1),y1:start.y.toFixed(1),x2:end.x.toFixed(1),y2:end.y.toFixed(1),
-        stroke:clusterColor(a.cluster),'stroke-width':1,'stroke-dasharray':'3 3',opacity:.7,
-        'vector-effect':'non-scaling-stroke'},'',group);
-    });
-
-    // ② 只给真的连成一片的站画同色环（孤站不标，否则满图是圈）
-    data.stations.forEach(station=>{
-      if((STATION_CLUSTERS.sizeOf.get(Number(station.cluster))||1)<2)return;
-      const point=P(station.position);
-      S('circle',{cx:point.x.toFixed(1),cy:point.y.toFixed(1),r:6.5,fill:'none',
-        stroke:clusterColor(station.cluster),'stroke-width':1.2,opacity:.85,
-        'vector-effect':'non-scaling-stroke'},'',group);
-    });
-
-    addOption(netGroup,'互通站群',{
-      count:`${data.counts.clusters} 群 · ${data.counts.linked_clusters} 片相连`,
-      title:'把步行可换乘的车站连成一片（数据是游戏自己的车站辐射表）',
-      onChange:visible=>{STATION_CLUSTERS.visible=visible;group.style.display=visible?'':'none';},
-    });
+    // ⛔ 互通虚线**不再画**（用户 2026-09-29：这些连线起不到作用）。
+    //    ⚠️ 数据本身**要留着** —— 侧边栏的"站群"信息（几站互通、同群有哪些站）
+    //    走 stationClusterInfo() → STATION_CLUSTERS.byStation / sizeOf，
+    //    所以上面那几行登记不能删，只是不再画线。
     console.log(`[map] 站群图层：${data.counts.clusters} 群，其中 ${data.counts.linked_clusters} 片多站相连`,
       `最大一片 ${data.counts.largest_cluster} 站`, `互通 ${data.counts.links} 对`);
   })());
@@ -1513,16 +2055,18 @@ window.renderRailNetwork = function renderRailNetwork() {
     TERRAIN.grid=data.grid||manifest.grid;
     TERRAIN.heights=data.heights;
     TERRAIN.contourCache=null;
+    TERRAIN.contourCacheKey=null;
     renderTerrain();
     const counts=manifest.counts||{};
     addOption(baseGroup,'等高线',{
       count:(counts.cols&&counts.rows)?`${counts.cols}×${counts.rows}`:null,
-      title:`等高距 ${TERRAIN.contourInterval} m`,
+      title:'按官方四级画（base_config.gui.layers.contourLines）：主 100 m / 次 50 m 常显，'
+        +'中间 10 m 只在视口 ≤4 km 时出现，细节 2 m 只在 ≤500 m 时出现（细则档按视口裁窗生成）',
       onChange:value=>{TERRAIN.visibleContours=value;renderContours();},
     });
-    addOption(baseGroup,'水深',{
-      count:counts.water_points!=null?`${counts.water_points} 格`:null,
-      title:'地表高度为负的区域，按深度分三档上色',
+    addOption(baseGroup,'海陆底色',{
+      count:counts.water_points!=null?`${counts.water_points} 格水面`:null,
+      title:'水按深度分档上蓝、陆按高度分档上灰，并描出 0 m 海岸线 —— 参照海图的分层设色',
       onChange:value=>{TERRAIN.visibleWater=value;renderWater();},
     });
     addOption(baseGroup,'地下站',{
@@ -1543,7 +2087,7 @@ window.renderRailNetwork = function renderRailNetwork() {
       const count=selector=>[...document.querySelectorAll(selector)]
         .filter(node=>node.style.display!=='none').length;
       const snapshot=label=>console.log(
-        `[selftest] ${label}｜车辆 ${count('#network-vehicles-layer [data-carrier]')}　线路 ${count('#network-lines-layer [data-carrier]')}`);
+        `[selftest] ${label}｜车辆 ${count('#network-vehicles-layer [data-carrier]')}`);
       snapshot('初始（不限制）');
       onlyFilter('cargo',['PASSENGER']);snapshot('只看客运');
       onlyFilter('cargo',['FREIGHT']);snapshot('只看货运');
@@ -1553,4 +2097,33 @@ window.renderRailNetwork = function renderRailNetwork() {
       console.log('[selftest] 完成');
     });
   }
+
+  // ---- 车辆位置自动跟随 ----
+  // 车辆是唯一会持续移动的图层：
+  //   mod 每 15 个 update 重写 bridge/layer-vehicles.json
+  //   → 服务端 watch() 检测到改动就自动重切分块（POST 到 ui/rail-map/layers/）
+  //   → 但前端只在**首次加载**时 fetch 一次分块，之后从不重拉，
+  //     所以页面上的车永远停在打开那一刻。这里补上"回看 → 变了就重画"。
+  // 只做这一层：公路/产业/地形几乎不变，重载纯属浪费。
+  // 两种显示状态都要照顾：放大时分块（reload），全图时概览骨架（refreshSummary）。
+  // ⚠️ **默认关闭**（开关在侧边栏「交通工具 · 职能」组里）。用户 2026-09-29 定：
+  //    车辆图层是快照，1296 个点里 1154 个是公路车，位置本来就变得慢；
+  //    每 ~18 秒整层重切 + 重建上千个点，收益不值这个代价。要动态就自己勾。
+  let vehiclesStamp=null;
+  setInterval(()=>{
+    if(!vehiclesAutoRefresh)return;                       // 默认关，勾了才刷新
+    if(!vehiclesLayer||!vehiclesLayer.isVisible())return;
+    fetch('/api/layers/vehicles/manifest',{cache:'no-store'})
+      .then(response=>{if(!response.ok)throw new Error(`vehicles manifest: ${response.status}`);return response.json();})
+      .then(manifest=>{
+        const stamp=manifest.generated_at;
+        if(stamp==null)return;
+        if(vehiclesStamp==null){vehiclesStamp=stamp;return;}   // 首次只记基线
+        if(stamp===vehiclesStamp)return;
+        vehiclesStamp=stamp;
+        if(vehiclesLayer.isSummary())vehiclesLayer.refreshSummary();
+        else vehiclesLayer.reload();
+      })
+      .catch(()=>{});
+  },5000);
 };

@@ -6,10 +6,16 @@
 > **本仓库是 [`BlackIce417/TPF2Mcp`](https://github.com/BlackIce417/TPF2Mcp) 的分支**（分支 `feature/multi-layer-map`）。
 > 上游是"铁路调度 + 受控操作"；这个分支在它的基础上做**多图层地图**与一批新的只读采集/诊断能力。
 
-> **关于"DLL 注入"：本仓库不含任何 DLL，也不需要注入、不需要管理员权限。**
-> 全仓搜索只有上游 README 提到过 `tpf2_control.dll`，代码里并不存在（本分支没有采纳那条技术路线）。
-> 本项目的通信是**纯文件轮询**：Mod 在引擎的 update 回调里读命令、写数据到 `bridge/`，
-> Python 侧读同一个目录 —— 你随时可以打开那些 JSON 自己核对 AI 说的是不是真的。
+> 🔴 **使用前说明（沿用上游声明）**：本项目在**需要于游戏内执行操作**时（加车、改线路、调速度），
+> 采用**远程线程注入**方式，将 `tpf2_control.dll` 注入 Transport Fever 2 游戏进程。
+> **如果你介意 DLL 注入，请勿使用本项目。**
+>
+> - **只读采集**（图层数据、诊断分析）**不走注入**：Mod 在引擎的 update 回调里读写 `bridge/` 下的
+>   JSON，Python 侧读写同一个目录 —— 这部分是纯文件轮询，你随时能打开那些 JSON 自己核对。
+> - **写操作默认关闭**（`allow_write_operations=false`）。当前处于 **mod 开发阶段**，以只读能力为主；
+>   写操作（`setLine` / `buyVehicle` / `setGameSpeed`）留待后续阶段启用。
+>
+> 部署步骤与权限说明见 [`docs/AI_DEPLOY_GUIDE.md`](docs/AI_DEPLOY_GUIDE.md)。
 
 ---
 

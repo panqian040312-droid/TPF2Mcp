@@ -79,7 +79,17 @@ window.renderRailNetwork = function renderRailNetwork() {
   const detailLayer=S('g',{id:'network-detail-layer'},'',mapLayer);
   const bridgeLayer=S('g',{id:'network-bridge-layer'},'',mapLayer);
   let pixiApp=null;
-  try{if(window.PIXI)pixiApp=new PIXI.Application({resizeTo:boardWrap,backgroundAlpha:0,antialias:true,autoDensity:true,resolution:Math.min(window.devicePixelRatio||1,2),powerPreference:'high-performance'});}catch(error){console.error('PixiJS rail renderer unavailable; using SVG fallback',error);}
+  // ⚠️ `autoStart:false` 是**必须的**，两个原因：
+  //   ① 性能：默认开启时 Pixi 自带 ticker，**即使什么都不动也每帧重绘整块 canvas**。
+  //      本机 GPU/CPU 基本都让给游戏了，前端不能偷偷空转。关掉后，只有我们显式 render 才画。
+  //   ② 正确性（用户 2026-09-30 报的"拖动时铁路线迟滞然后复位"）：
+  //      开着 autoStart 时 Pixi 有自己的 rAF，而 SVG 的更新在 schedulePanRender 的另一个 rAF 里，
+  //      两个渲染器不同帧 —— Pixi 层（铁路网）永远慢一帧，松手才追上。
+  //      关掉它、改成在 updateViewport() 末尾**同步** render，两层就同帧了。
+  try{if(window.PIXI)pixiApp=new PIXI.Application({resizeTo:boardWrap,backgroundAlpha:0,antialias:true,autoDensity:true,resolution:Math.min(window.devicePixelRatio||1,2),powerPreference:'high-performance',autoStart:false});}catch(error){console.error('PixiJS rail renderer unavailable; using SVG fallback',error);}
+  // Pixi 内容变了（分块增删）才需要重画 —— 用 rAF 去重，避免一次加载多块时重复 render。
+  let pixiRenderFrame=0;
+  const schedulePixiRender=()=>{if(!pixiApp||pixiRenderFrame||document.hidden)return;pixiRenderFrame=requestAnimationFrame(()=>{pixiRenderFrame=0;if(pixiApp)pixiApp.render();});};
   const pixiWorld=pixiApp?new PIXI.Container():null;
   if(pixiApp){pixiApp.view.id='rail-webgl';pixiApp.stage.addChild(pixiWorld);boardWrap.insertBefore(pixiApp.view,svg);}
 
@@ -288,7 +298,8 @@ window.renderRailNetwork = function renderRailNetwork() {
   logicalStations.forEach(station=>{
     const group=S('g',{'data-station-id':station.entity_id,cursor:'pointer'},'',stationLayer);
     const dot=S('circle',{r:3.2,fill:'#08141e',stroke:'#83ecff','stroke-width':1.2},'',group);
-    const name=S('text',{x:6,y:-5,visibility:'hidden',fill:'#c8f3ff','font-size':7.5,'font-family':'Consolas, Microsoft YaHei','paint-order':'stroke','stroke':'#061019','stroke-width':2.5,'stroke-linejoin':'round'},station.name,group);
+    // 站名字号：用户 2026-09-30 反馈「太小了」—— 7.5 → 11（描边同步加粗，不然字会被压糊）
+    const name=S('text',{x:6,y:-5,visibility:'hidden',fill:'#c8f3ff','font-size':11,'font-family':'Consolas, Microsoft YaHei','paint-order':'stroke','stroke':'#061019','stroke-width':3,'stroke-linejoin':'round'},station.name,group);
     const hit=S('circle',{r:10,fill:'transparent','pointer-events':'fill',cursor:'pointer'},'',group);
     const show=()=>{tooltip.textContent=stationPreview(station);tooltip.style.display='block';dot.setAttribute('fill','#56dcff');name.setAttribute('visibility','visible');};
     hit.addEventListener('pointerenter',show);hit.addEventListener('pointermove',event=>{show();moveTooltip(event);});hit.addEventListener('pointerleave',()=>{tooltip.style.display='none';dot.setAttribute('fill','#08141e');updateStations();});
@@ -442,33 +453,51 @@ window.renderRailNetwork = function renderRailNetwork() {
     scriptBase:'rail-network-tiles',version:p.generated_at,
     globalName:'RAIL_NETWORK_TILES',scriptEvent:'rail-network-tile',
     thresholdM:p.detail_load_threshold_m,tileSizeM:p.tile_size_m,
-    onChanged:()=>{updateTileStatus();scheduleBridgeRender();},
+    // 分块增删会改变 Pixi 的内容，而 autoStart 已关 —— 必须显式登记一次重绘。
+    onChanged:()=>{updateTileStatus();scheduleBridgeRender();schedulePixiRender();},
     render:(tile,key)=>{
       const group=S('g',{'data-tile-key':key},'',detailLayer);
       const tileNodes=new Map(tile.nodes.map(node=>[node.entity_id,node.position]));
       const paths=new Map(tile.edges.map(edge=>[edge.entity_id,edgePath(edge,tileNodes)]));
-      if(!pixiApp)tile.edges.forEach(edge=>{
-        const style=edgeStructureStyle(edge,{color:'#83a9bd',width:1,tunnelColor:'#9b8ae0',bridgeColor:'#dcc07e'});
-        S('path',{d:paths.get(edge.entity_id),fill:'none','vector-effect':'non-scaling-stroke','pointer-events':'none',...style},'',group);
-      });
+      if(!pixiApp){
+        // 回退分支（Pixi 不可用时才走到）：同样按**样式**合并 —— 理由与 renderExtraTile 里那段相同。
+        // 正常路径下铁路走 Pixi，根本不建这些 SVG 元素。
+        const railSpec={color:'#83a9bd',width:1,tunnelColor:'#9b8ae0',bridgeColor:'#dcc07e'};
+        const buckets=new Map();
+        tile.edges.forEach(edge=>{
+          const style=edgeStructureStyle(edge,railSpec);
+          const key=`${style.stroke}|${style['stroke-width']}|${style['stroke-dasharray']||''}|${style.opacity||1}`;
+          let bucket=buckets.get(key);
+          if(!bucket){bucket={style,parts:[]};buckets.set(key,bucket);}
+          bucket.parts.push(paths.get(edge.entity_id));
+        });
+        buckets.forEach(bucket=>{
+          S('path',{d:bucket.parts.join(''),fill:'none','vector-effect':'non-scaling-stroke','pointer-events':'none',...bucket.style},'',group);
+        });
+      }
       return {group,tile,tileNodes,paths,pixi:makePixiTile(tile,tileNodes)};
     },
     destroy:entry=>{if(entry.pixi){entry.pixi.container.parent?.removeChild(entry.pixi.container);entry.pixi.container.destroy({children:true});}entry.group.remove();},
   });
-  const updateStations=()=>{
+  const updateStations=(lightweight=false)=>{
     // 注意：x / y / visibility / pointer-events 这几个是**恒定值**，已经在元素创建时设过一次，
     // 不要在这里每帧重写 —— 原来每帧对 73 个站重复写 4 个固定属性，约 300 次/帧纯浪费。
     stationViews.forEach(view=>{const q=screenPoint(view.station.center);view.screen=q;view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);const selected=selectedStation?.entity_id===view.station.entity_id;view.dot.setAttribute('fill',selected?'#56dcff':'#08141e');view.dot.setAttribute('r',selected?'4.5':'3.2');});
-    const occupied=[];
-    const showEveryStationName=representedMeters()<50;
-    [...stationViews].sort((a,b)=>Number(b.served)-Number(a.served)||a.station.name.length-b.station.name.length).forEach(view=>{
-      const q=view.screen;
-      if(q.x<3||q.x>1197||q.y<3||q.y>717||(!view.served&&zoom<2))return;
-      const labelWidth=Math.max(18,Array.from(view.station.name).length*4.8);
-      const box={left:q.x+4,right:q.x+8+labelWidth,top:q.y-15,bottom:q.y+1};
-      const collides=occupied.some(other=>!(box.right<other.left||box.left>other.right||box.bottom<other.top||box.top>other.bottom));
-      if(showEveryStationName||!collides||selectedStation?.entity_id===view.station.entity_id){view.name.setAttribute('visibility','visible');occupied.push(box);}
-    });
+    // 标签这一段是 O(n²)：73 个站两两比包围盒，而且每帧还先排一次序。
+    // 它只决定"站名显不显示"，跟平移无关 —— 拖动中整段跳过，松手时 stopDrag 会补一次。
+    if(!lightweight){
+      const occupied=[];
+      const showEveryStationName=representedMeters()<50;
+      [...stationViews].sort((a,b)=>Number(b.served)-Number(a.served)||a.station.name.length-b.station.name.length).forEach(view=>{
+        const q=view.screen;
+        if(q.x<3||q.x>1197||q.y<3||q.y>717||(!view.served&&zoom<2))return;
+        // 字号 11 时每个字约占 7 px（原来是 7.5 号字、按 4.8 估），碰撞盒跟着放宽
+        const labelWidth=Math.max(18,Array.from(view.station.name).length*7);
+        const box={left:q.x+4,right:q.x+8+labelWidth,top:q.y-19,bottom:q.y+2};
+        const collides=occupied.some(other=>!(box.right<other.left||box.left>other.right||box.bottom<other.top||box.top>other.bottom));
+        if(showEveryStationName||!collides||selectedStation?.entity_id===view.station.entity_id){view.name.setAttribute('visibility','visible');occupied.push(box);}
+      });
+    }
     depotViews.forEach(view=>{
       const q=screenPoint(view.depot.center),connection=view.depot.track_connection_position?screenPoint(view.depot.track_connection_position):q;
       view.group.setAttribute('transform',`translate(${q.x} ${q.y})`);
@@ -983,25 +1012,51 @@ window.renderRailNetwork = function renderRailNetwork() {
     lastMarkScale=s;
   };
   const dropPointMarks=marks=>{if(marks)marks.forEach(el=>pointMarks.delete(el));};
-  const updateViewport=()=>{
+  // lightweight=true 时只做"平移必须做的那几件"，其余等松手再补一次。
+  // 为什么需要：拖动中每帧都要跑这个函数，而下面这些跟"平移"无关的重活占了大头 ——
+  //   ① updateMapDetailVisibility / 各 tile 层 update()：算的是"要不要加载新分块"。
+  //      拖动中用户还在移动，此刻加载的块很可能马上又要卸掉 —— 纯浪费，等松手再算。
+  //   ② refreshContoursOnViewChange()：等高线只跟**缩放**有关，平移不影响它。
+  //   ③ updateStations 里的标签排序与碰撞检测：只决定"站名显不显示"，而且是 O(n²)
+  //      （73 个站两两比包围盒）—— 拖动中跳过，松手补上。
+  // 屏幕坐标的元素（车站点、列车、信号、停站标记）**必须每帧更新**，
+  // 否则它们会黏在原地而地图在动 —— 所以那几项无论如何都跑。
+  // 外部扩展（独立文件：站点结构 station-struct.js / 产业链流向 freight-flow.js）
+  // 注册的**每帧回调**。它们需要跟着地图重算屏幕坐标，所以挂到这里 —— 而不是各写一个
+  // requestAnimationFrame（那样会跟地图的绘制节奏脱节，拖动时标记会滞后一拍）。
+  const viewportHooks=[];
+  const updateViewport=(lightweight=false)=>{
     mapLayer.setAttribute('transform',`translate(${panX} ${panY}) translate(600 360) scale(${zoom}) translate(-600 -360)`);
     document.querySelector('#zoom-value').textContent=`${Math.round(zoom*100)}%`;
     document.querySelector('#zoom-out').disabled=zoom<=1+1e-9;
     scaleText.textContent=formatDistance(representedMeters());
-    updateMapDetailVisibility();
-    updateStations();
+    if(!lightweight)updateMapDetailVisibility();
+    updateStations(lightweight);
     updateLivePositions();
     updateLineStopMarks();
     refreshPointMarks();
-    railLayer.update();
-    extraLayers.forEach(entry=>entry.layer.update());
-    // 等高线的"该画到哪一级"由缩放决定（官方 fadeDist）。包 try/catch：
-    // 首帧 updateViewport 可能跑在等高线那几个 const 初始化之前（暂时性死区）。
-    try{ refreshContoursOnViewChange(); }catch(error){}
+    viewportHooks.forEach(cb=>{try{cb(lightweight);}catch(error){console.error('[扩展图层]',error);}});
+    if(!lightweight){
+      railLayer.update();
+      extraLayers.forEach(entry=>entry.layer.update());
+      // 等高线的"该画到哪一级"由缩放决定（官方 fadeDist）。包 try/catch：
+      // 首帧 updateViewport 可能跑在等高线那几个 const 初始化之前（暂时性死区）。
+      try{ refreshContoursOnViewChange(); }catch(error){}
+    }
+    // 高亮层必须压在所有数据图层之上。
+    // 叠放顺序完全由 append 顺序决定（越后越上），而数据图层是**异步加载**的，
+    // 拖动/缩放时还会继续 append 分块 —— 谁后到谁就把高亮压住。
+    // 所以每帧都提一次（轻量版也要跑 —— 分块恰恰是在拖动过程中加载的）。
+    // 函数内部自查父子关系，真需要移动时才碰 DOM；首帧可能跑在 lineRouteLayer
+    // 初始化之前（const 暂时性死区），用 try/catch 兜住，与上面同一套办法。
+    try{ raiseHighlightLayers(); }catch(error){}
     syncPixiViewport();
+    // 与 SVG 同帧出图（autoStart 已关）。放最后，保证用的是本帧最新的 pan/zoom。
+    if(pixiApp)pixiApp.render();
   };
   let panFrame=0;
-  const schedulePanRender=()=>{if(!panFrame)panFrame=requestAnimationFrame(()=>{panFrame=0;updateViewport();});};
+  // 拖动中只跑轻量版；松手时 stopDrag 会补一次完整的。
+  const schedulePanRender=()=>{if(!panFrame)panFrame=requestAnimationFrame(()=>{panFrame=0;updateViewport(true);});};
   const setZoom=(value,focusX=600,focusY=360)=>{const next=Math.max(1,Math.min(256,value)),ratio=next/zoom,offsetX=focusX-600,offsetY=focusY-360;panX=offsetX-(offsetX-panX)*ratio;panY=offsetY-(offsetY-panY)*ratio;zoom=next;updateViewport();};
   // 朝向：改角度要让整张图按新朝向重绘，所以写进 URL 后重新加载页面。
   // 入口 = ±90° 按钮 + 直接输入度数（回车应用）。
@@ -1056,7 +1111,7 @@ window.renderRailNetwork = function renderRailNetwork() {
   svg.addEventListener('selectstart',event=>event.preventDefault());
   svg.addEventListener('pointerdown',event=>{if(!event.isPrimary||event.button!==0)return;event.preventDefault();dragging=true;dragPointerId=event.pointerId;lastX=dragStartX=event.clientX;lastY=dragStartY=event.clientY;suppressClick=false;svg.setPointerCapture(event.pointerId);svg.classList.add('dragging');});
   svg.addEventListener('pointermove',event=>{if(!dragging||event.pointerId!==dragPointerId)return;event.preventDefault();if(Math.hypot(event.clientX-dragStartX,event.clientY-dragStartY)>4)suppressClick=true;const rect=svg.getBoundingClientRect();panX+=(event.clientX-lastX)*1200/rect.width;panY+=(event.clientY-lastY)*720/rect.height;lastX=event.clientX;lastY=event.clientY;schedulePanRender();});
-  const stopDrag=event=>{if(event&&dragPointerId!==null&&event.pointerId!==dragPointerId)return;const pointerId=dragPointerId;dragging=false;dragPointerId=null;svg.classList.remove('dragging');if(pointerId!==null&&svg.hasPointerCapture(pointerId))svg.releasePointerCapture(pointerId);};
+  const stopDrag=event=>{if(event&&dragPointerId!==null&&event.pointerId!==dragPointerId)return;const pointerId=dragPointerId;const wasDragging=dragging;dragging=false;dragPointerId=null;svg.classList.remove('dragging');if(pointerId!==null&&svg.hasPointerCapture(pointerId))svg.releasePointerCapture(pointerId);/* 拖动中跑的是轻量版（跳过 tile 装载与标签碰撞检测），松手补一次完整的 */if(wasDragging)updateViewport();};
   svg.addEventListener('pointerup',stopDrag);svg.addEventListener('pointercancel',stopDrag);svg.addEventListener('lostpointercapture',()=>stopDrag());window.addEventListener('blur',()=>stopDrag());
   svg.addEventListener('click',event=>{if(suppressClick){event.preventDefault();event.stopImmediatePropagation();suppressClick=false;}},true);
 
@@ -1091,12 +1146,25 @@ window.renderRailNetwork = function renderRailNetwork() {
   if(window.RAIL_MAP_STATUS)handleStatus(window.RAIL_MAP_STATUS);
   if(location.protocol==='http:'||location.protocol==='https:'){
     let liveRequestPending=false;
+    // 轮询调度：**窗口失去焦点时自动降频到 1/6**。
+    // 为什么需要：本机 CPU/网络基本都让给 TPF2，而前端在"什么都没动"时仍在每 500 ms 拉
+    // /api/live（还有每 2 s 的日志、每 10 s 的建议……）。用户切去玩游戏时，这些纯属白烧。
+    // 为什么**不能直接停**：他可能把地图摆在副屏上盯着看，停掉就再也不刷新了。
+    // 为什么不用 setInterval：间隔得每拍现判（焦点会来回变），而 setInterval 的周期是起表时定死的。
+    const POLL_SLOWDOWN=6;
+    const pollShouldSlow=()=>document.hidden||!document.hasFocus();
+    const loopPoll=(fn,baseMs)=>{
+      const tick=()=>{
+        try{fn();}catch(error){console.error(error);}
+        setTimeout(tick,pollShouldSlow()?baseMs*POLL_SLOWDOWN:baseMs);
+      };
+      tick();
+    };
     const pollLive=()=>{if(liveRequestPending)return;liveRequestPending=true;fetch('/api/live',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`live: ${response.status}`);return response.json();}).then(reconcileLive).catch(()=>{}).finally(()=>{liveRequestPending=false;});};
     const pollControl=()=>fetch('/api/control',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`control: ${response.status}`);return response.json();}).then(reconcileLive).catch(()=>{});
     let operationsRequestPending=false;
     const pollOperationsContext=()=>{if(operationsRequestPending)return;operationsRequestPending=true;fetch('/api/operations-context',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`operations-context: ${response.status}`);return response.json();}).then(value=>{operationsContext=value;operationLineById.clear();(value.lines||[]).forEach(line=>operationLineById.set(line.line_id,line));if(selectedStation)refreshStationOperationsSidebar();}).catch(error=>console.error(error)).finally(()=>{operationsRequestPending=false;});};
-    pollOperationsContext();
-    setInterval(pollOperationsContext,10000);
+    loopPoll(pollOperationsContext,10000);
     const pollAdvice=()=>Promise.all([
       fetch('/api/ai-suggestions',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`ai-suggestions: ${response.status}`);return response.json();}),
       fetch('/api/mcp-work-log?limit=30',{cache:'no-store'}).then(response=>{if(!response.ok)throw new Error(`mcp-work-log: ${response.status}`);return response.json();})
@@ -1106,8 +1174,9 @@ window.renderRailNetwork = function renderRailNetwork() {
       const key=`${advice.generated_at||''}|${aiAdviceVisibleCount}|${(work.entries||[]).length}|${(advice.suggestions||[]).length}`;
       if(!selectedStation&&selectedVehicleId==null&&key!==overviewKey){overviewKey=key;renderOverviewSidebar();}
     }).catch(error=>console.error(error));
-    pollAdvice();setInterval(pollAdvice,10000);
-    pollLive();pollControl();setInterval(pollLive,500);setInterval(pollControl,30000);setInterval(loadStationLogs,2000);
+    loopPoll(pollAdvice,10000);
+    // loopPoll 自带首次调用 —— 不用再像原来那样先手动调一次、否则会立刻重复请求一次。
+    loopPoll(pollLive,500);loopPoll(pollControl,30000);loopPoll(loadStationLogs,2000);
   }
   // ===== 线路路径高亮：沿实际轨道覆盖一层颜色（像游戏里选中线路那样）===========
   // 数据源 `rail-network-data.json`（6.4 MB，含 9765 条边 + 9667 个节点的完整几何）。
@@ -1121,6 +1190,23 @@ window.renderRailNetwork = function renderRailNetwork() {
   const lineRouteLayer=S('g',{id:'network-line-route-layer','pointer-events':'none'},'',mapLayer);
   // 用户 2026-09-29：青色在深色底上"看不清"，改红。**内层亮线保持这个色**，不再动。
   const LINE_HIGHLIGHT_COLOR='#ff3b30';
+  // 把所有"高亮"性质的容器提到各自父节点的**末尾**（= 最上层）。
+  // ⚠️ 两套坐标系要分开提：lineRouteLayer 是世界坐标（挂在 mapLayer 里），
+  //    lineStopLayer 是屏幕坐标（挂在 svg 根层，见 S() 的默认 parent）。
+  //    以后加"产业链流向线"时，只要它的挂载点也写进这里，就自动在最顶层。
+  // 用户 2026-09-30 要求：「流向线要在最顶层，所有高亮线都应该在顶层，
+  //    但是允许高亮线直接覆盖」—— 所以这里不做任何避让，只保证层级。
+  // appendChild 对已存在的元素是**移动**语义，不产生副本；移动前先比 lastElementChild，
+  // 不需要动的时候一次 DOM 操作都不做（拖动中每帧都会调到）。
+  const raiseHighlightLayers=()=>{
+    if(lineRouteLayer.parentNode===mapLayer&&mapLayer.lastElementChild!==lineRouteLayer){
+      mapLayer.appendChild(lineRouteLayer);
+    }
+    const stopsParent=lineStopLayer.parentNode;
+    if(stopsParent&&stopsParent.lastElementChild!==lineStopLayer){
+      stopsParent.appendChild(lineStopLayer);
+    }
+  };
 
   // 线路的**真实颜色**：来自游戏本体（官方通用组件 `Color`「Specifies the color of an entity」，
   // 字段 `color: Vec3f`；`Line` 类自己也带 `color`），由 collectors/layer_lines.lua 采出来。
@@ -1598,9 +1684,25 @@ window.renderRailNetwork = function renderRailNetwork() {
     const group=S('g',{'data-tile-key':tile.key},'',container);
     const marks=[];   // 本分块登记的"固定屏幕尺寸"图标，卸块时要撤登记
     const nodeById=new Map((tile.nodes||[]).map(node=>[node.entity_id,node.position]));
+    // 边按**样式**合并成 path，而不是一条边一个元素。
+    // 为什么：一个分块动辄几千条边（公路 9 970 条边切 74 块），而它们只有 3 种样式
+    //   （普通/隧道/桥，见 edgeStructureStyle）—— 逐边建元素等于把几千个 <path> 塞进 DOM，
+    //   每次平移/缩放都要 CPU 重新栅格化一遍，而游戏正在抢同一个 CPU。
+    //   实测（2026-09-30）：放大状态 SVG 元素 7 279 个、其中 path 5 690；合并后每块只剩 ≤3 条。
+    // 为什么安全：applyFilters 只作用于 `#network-vehicles-layer [data-carrier]`，不碰这里；
+    //   这里的 path 全程 pointer-events:none（没有逐边交互）；
+    //   多段 `M…C…` 直接拼接是合法 SVG。
+    // ⚠️ 不要为了"好看"给这些 path 加 filter/阴影 —— 那才是真正的性能杀手。
+    const buckets=new Map();
     (tile.edges||[]).forEach(edge=>{
       const style=edgeStructureStyle(edge,spec);
-      S('path',{d:edgePath(edge,nodeById),fill:'none','vector-effect':'non-scaling-stroke','pointer-events':'none',...style},'',group);
+      const key=`${style.stroke}|${style['stroke-width']}|${style['stroke-dasharray']||''}|${style.opacity||1}`;
+      let bucket=buckets.get(key);
+      if(!bucket){bucket={style,parts:[]};buckets.set(key,bucket);}
+      bucket.parts.push(edgePath(edge,nodeById));
+    });
+    buckets.forEach(bucket=>{
+      S('path',{d:bucket.parts.join(''),fill:'none','vector-effect':'non-scaling-stroke','pointer-events':'none',...bucket.style},'',group);
     });
     (tile.points||[]).forEach(point=>{
       const q=P(point.position);
@@ -1616,6 +1718,15 @@ window.renderRailNetwork = function renderRailNetwork() {
         const el=S('circle',attrs,'',group);
         addPointMark(el,q.x,q.y);
         marks.push(el);
+      }else if(spec.name==='industry'&&point.extent){
+        // 产业：按**厂区实际占地**画范围框，而不是一个小方块。
+        // extent 是"世界坐标下的尺寸"（米），用 T() 换算成底图尺寸（含地图朝向与 baseScale）。
+        // ⚠️ 兼容旧图块：图块是 09-29 切的、还没带 extent 时，自动退回下面那个小方块。
+        const size=T(point.extent);
+        const w=Math.max(Math.abs(size.x),4),h=Math.max(Math.abs(size.y),4);
+        S('rect',{x:(q.x-w/2).toFixed(1),y:(q.y-h/2).toFixed(1),width:w.toFixed(1),height:h.toFixed(1),
+          fill:spec.color,'fill-opacity':.22,stroke:spec.color,'stroke-width':1,
+          'vector-effect':'non-scaling-stroke','pointer-events':'none'},'',group);
       }else{
         S('rect',{x:(q.x-2.5).toFixed(1),y:(q.y-2.5).toFixed(1),width:5,height:5,fill:spec.color,'pointer-events':'none'},'',group);
       }
@@ -2126,4 +2237,40 @@ window.renderRailNetwork = function renderRailNetwork() {
       })
       .catch(()=>{});
   },5000);
+
+  // ===== 对扩展文件开放的接口 ================================================
+  // 站点结构（station-struct.js）与产业链流向（freight-flow.js）是**独立文件**，
+  // 它们需要地图的坐标换算与绘图工具。这里只暴露最小必要集：只读工具 + 面板入口，
+  // 不暴露内部可变状态，免得两边逻辑互相踩。
+  // 就绪信号：window.dispatchEvent('tpf2map:ready') —— 扩展文件监听它即可，不要轮询。
+  window.TPF2Map = {
+    svg,
+    mapLayer,
+    S,                     // 建 SVG 元素：S(tag, attrs, text, parent)
+    P,                     // 世界坐标 → 底图坐标（会跟着地图平移缩放）
+    T,                     // 世界**向量 / 尺寸** → 底图尺寸（画范围框用这个）
+    screenPoint,           // 世界坐标 → 屏幕坐标（固定屏幕尺寸的标记用这个）
+    onViewport(callback){  // 注册每帧回调；注册时立刻先跑一次，避免首帧空白
+      viewportHooks.push(callback);
+      try{ callback(false); }catch(error){ console.error('[扩展图层]', error); }
+    },
+    worldPerMeter: ()=>baseScale,
+    currentZoom: ()=>zoom,
+    // 车站结构数据（layer-stations 整车版）。扩展文件直接读，不必自己再 fetch 一遍。
+    stationData: ()=>STATION_CLUSTERS.data,
+    // 图层面板：addGroup 让扩展**自建分组**（各占一块，别都挤进 facility）；
+    // addOption 往指定分组里加条目。groups 是主文件自己那几个分组，供扩展复用。
+    panel: { addOption, addGroup, groups: { base:baseGroup, net:netGroup, kind:kindGroup, cargo:cargoGroup, line:lineGroup, facility:facilityGroup } },
+    // 统一取图层数据（manifest + data），省得每个扩展文件各写一遍 fetch 与容错
+    async fetchLayer(name){
+      const manifestResponse = await fetch(`/api/layers/${name}/manifest`, {cache:'no-store'});
+      if(!manifestResponse.ok) throw new Error(`${name} manifest ${manifestResponse.status}`);
+      const manifest = await manifestResponse.json();
+      if(!manifest.data_file) return {manifest, data:null};
+      const dataResponse = await fetch(`/layers/${manifest.data_file}`, {cache:'no-store'});
+      if(!dataResponse.ok) throw new Error(`${name} data ${dataResponse.status}`);
+      return {manifest, data: await dataResponse.json()};
+    },
+  };
+  window.dispatchEvent(new CustomEvent('tpf2map:ready'));
 };

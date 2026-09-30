@@ -71,7 +71,16 @@
     <script src="bridge-crossings.js?v=20260913-bridge-crossing21"></script>
     <script src="terrain-contour.js?v=20260930-official-palette1"></script>
     <script src="rail-graph.js?v=20260929-merge-nodes1"></script>
-    <script src="network-app.js?v=20260930-official-palette1"></script>
+    <script src="network-app.js?v=20260930-stationname1"></script>
+    <!-- 独立扩展图层：各自监听 window 的 'tpf2map:ready' 事件后再用 TPF2Map 接口，
+         所以加载顺序不敏感，但必须排在 network-app.js 之后（它才是接口的定义方）。 -->
+    <script src="station-struct.js?v=20260930-stationshape3"></script>
+    <!-- 产业类型表（名字 → 类型 key）：图标层和产业链层共用一份，必须排在它俩前面 -->
+    <script src="industry-kinds.js?v=20260930-kinds1"></script>
+    <script src="freight-flow.js?v=20260930-recipe1"></script>
+    <script src="industry-icons.js?v=20260930-kinds1"></script>
+    <script src="town-layer.js?v=20260930-town1"></script>
+    <script src="road-congestion.js?v=20260930-roadtraffic1"></script>
     <script src="app.js?v=20260929-street-kind1"></script>
 </body>
 </html>

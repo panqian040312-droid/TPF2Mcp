@@ -196,11 +196,32 @@ local function track_graph(center, radius, errors, node_construction_map)
     return normalized_nodes, edges
 end
 
+-- 挑一个**真实存在**的站群。
+--
+-- 🔴 这个模块原来是写死站群 id 552273 叫进来的。那个组在这个存档里根本不存在，
+--    于是产物永远是 76 字节的 STATION_GROUP_UNAVAILABLE —— 脚本每次都在跑、
+--    数据永远空着，还白搭一次遍历（2026-09-30 全量核对时发现）。
+--    改成现找一个挂了 STATION_GROUP 组件的实体，保证有真实目标。
+local function pick_station_group()
+    local picked = nil
+    common.safe_for_each_entity("STATION_GROUP", function(entity)
+        if picked == nil and common.safe_get_component(entity, "STATION_GROUP") ~= nil then
+            picked = common.entity_id(entity)
+        end
+    end, {})
+    return picked
+end
+
 function M.collect(station_group_id, radius)
-    station_group_id = tonumber(station_group_id) or 552273
     radius = tonumber(radius) or 1200
     local errors, child_stations, terminals, networks = {}, {}, {}, {}
-    local group = common.safe_get_component(station_group_id, "STATION_GROUP", errors)
+    station_group_id = tonumber(station_group_id)
+    local group = station_group_id and common.safe_get_component(station_group_id, "STATION_GROUP", errors) or nil
+    if group == nil then
+        -- 没传 id、或传进来的 id 不是站群 → 自己挑一个，别拿空 id 空跑
+        station_group_id = pick_station_group()
+        group = station_group_id and common.safe_get_component(station_group_id, "STATION_GROUP", errors) or nil
+    end
     if group == nil then
         return { status = "STATION_GROUP_UNAVAILABLE", station_group_id = station_group_id, errors = errors }
     end

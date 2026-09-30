@@ -8,7 +8,14 @@ function M.clock()
     return 0
 end
 
+-- ⚠️ nil 必须短路成 nil。
+-- 老写法 `tonumber(tostring(entity)) or tostring(entity)` 对 nil 会返回**字符串 "nil"**
+-- （`tonumber("nil")` 是 nil，于是走 `tostring(nil)` = "nil"）—— 于是
+-- `if construction_id ~= nil then ... end` 恒成立，引擎收到字符串会报
+-- "expected number, received string"（2026-09-30 实测的错误来源）。
+-- 只加 nil 短路，其余输入的行为**一字不变**。
 function M.entity_id(entity)
+    if entity == nil then return nil end
     return tonumber(tostring(entity)) or tostring(entity)
 end
 
@@ -168,6 +175,65 @@ function M.probe_fields(value, keys)
         result[tostring(key)] = detail
     end
     return result
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 组件清单与"两条取值路"（2026-09-30 晚，被两个探针同时撞出来的坑）
+--
+-- ① **`pairs(api.type.ComponentType)` 在本机枚举不出任何东西** —— 路况层和经济探针
+--    都写了"列出这个实体挂了哪些组件"，两个都返回空数组。要问这个问题，只能照下面
+--    这张常量表逐个 `getComponent` 试。
+-- ② **组件的字段读取有两条路，可能各自单独失效**：
+--    · `component["字段"]`（getter）—— `ROAD_VEHICLE` 的字段在这条路上**全 nil**；
+--    · `pairs(component)`         —— `TOWN.name/position` 在这条路上才拿得到。
+--    还有第三条：`game.interface.getEntity(id)` 的**聚合表**（`TOWN.position`、
+--    `BASE_EDGE_STREET.streetType` 都只在那里）。取字段一律"getter → pairs"，
+--    个别字段还要补 interface。
+-- ─────────────────────────────────────────────────────────────────────────────
+M.COMPONENT_NAMES = {
+    "ACCOUNT", "AIRCRAFT", "ANIMAL", "ASSET_GROUP", "ASSET_GROUP_AUTOREMOVE", "AUDIO_EMITTER",
+    "BASE_EDGE", "BASE_EDGE_STREET", "BASE_EDGE_TRACK", "BASE_NODE", "BASE_NODE_TRAFFIC_LIGHT",
+    "BASE_PARALLEL_STRIP", "BOUNDING_VOLUME", "BRIDGE", "BUILD_COST", "COLLIDER_LIST", "COLOR",
+    "CONSTRUCTION", "EMISSION_GRID", "FIELD", "GAME_SPEED", "GAME_TIME", "LINE", "LOG_BOOK",
+    "LOT_LIST", "MAINTENANCE_COST", "MODEL_INSTANCE_LIST", "MODEL_PERSON", "MOVE_PATH",
+    "MOVE_PATH_AIRCRAFT", "NAME", "PARCEL", "PARTICLE_SYSTEM", "PERSON_CAPACITY", "PLAYER",
+    "PLAYER_OWNED", "RAIL_VEHICLE", "RAILROAD_CROSSING", "ROAD_VEHICLE", "RUNWAY_LIST", "SCAFFOLD",
+    "SHAPE_LIST", "SHIP", "SIGNAL_LIST", "SIM_BUILDING", "SIM_CARGO", "SIM_CARGO_AT_TERMINAL",
+    "SIM_ENTITY_AT_BUILDING", "SIM_ENTITY_AT_STOCK", "SIM_ENTITY_AT_TERMINAL",
+    "SIM_ENTITY_AT_VEHICLE", "SIM_ENTITY_IDLE", "SIM_ENTITY_MOVING", "SIM_PERSON",
+    "SIM_PERSON_AT_TERMINAL", "SIM_PERSON_AT_VEHICLE", "STATION", "STATION_GROUP", "STOCK_LIST",
+    "TERRAIN", "TERRAIN_ALIGNMENT_LIST", "TERRAIN_TILE", "TERRAIN_TILE_BRUSH",
+    "TERRAIN_TILE_HEIGHTMAP", "TICK_EPOCH", "TOWN", "TOWN_BUILDING", "TOWN_CONNECTION", "TRAIN",
+    "TRANSPORT_HISTORY", "TRANSPORT_NETWORK", "TRANSPORT_VEHICLE", "TP_NET_LINK", "VEHICLE_DEPOT",
+    "VEHICLE_ORDER", "WATER_MESH", "WORLD",
+}
+
+-- 一个实体挂了哪些组件（逐个试）。实体为 nil 时返回 nil。
+function M.components_of(entity)
+    if entity == nil then return nil end
+    local names = {}
+    for index = 1, #M.COMPONENT_NAMES do
+        local name = M.COMPONENT_NAMES[index]
+        if M.safe_get_component(entity, name, {}) ~= nil then names[#names + 1] = name end
+    end
+    return names
+end
+
+-- 把引擎组件（userdata）摊成普通 table。失败返回空表。
+function M.flatten(value)
+    local out = {}
+    if value == nil then return out end
+    pcall(function()
+        for key, item in pairs(value) do out[key] = item end
+    end)
+    return out
+end
+
+-- 读字段：**先 getter，再 pairs 兜底**。两条都拿不到才是 nil。
+function M.pick(value, key)
+    local direct = M.field(value, key)
+    if direct ~= nil then return direct end
+    return M.flatten(value)[key]
 end
 
 return M

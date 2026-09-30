@@ -23,6 +23,9 @@ local layer_vehicles = require "tpf2_mcp/collectors/layer_vehicles"
 local layer_lines = require "tpf2_mcp/collectors/layer_lines"
 local layer_stations = require "tpf2_mcp/collectors/layer_stations"
 local layer_terrain = require "tpf2_mcp/collectors/layer_terrain"
+local layer_freight = require "tpf2_mcp/collectors/layer_freight"
+local layer_town = require "tpf2_mcp/collectors/layer_town"
+local layer_road_traffic = require "tpf2_mcp/collectors/layer_road_traffic"
 
 local M = {}
 
@@ -53,6 +56,28 @@ local LAYERS = {
     -- 用 advance(should_start, update_count)：返回 nil = 还在采，返回 table = 采完了。
     -- delay 给得大，因为地形网格要等存档世界完全加载才完整。
     { name = "terrain",  kind = "static",  every = 24000, delay = 300, advance = layer_terrain.advance },
+    -- 产业链物流关系（用户 2026-09-30 诉求：选中产业 → 高亮上下游 + 物料流向 + 关联交通）。
+    -- 全量遍历 SIM_CARGO 聚合成边，比较重（本存档约两万条货 × 每个读 3 个组件），
+    -- 所以频率给得低 —— 物流格局本身变化也慢。
+    -- delay=200 避开 vehicles 的 46+15k 序列（200-46=154，不是 15 的倍数）。
+    { name = "freight",  kind = "static",  every = 9000,  delay = 200, collect = layer_freight.collect },
+    -- 城镇 + 城镇需求（用户 2026-09-30：游戏里城区上空有个牌子，城市名 + 需要的货物）。
+    -- 官方字段是 `Town.cargoNeeds`（{{货种id,…}×3} = 住宅/商业/工业三区），
+    -- 但 ECS 组件里只有 `lu2cargoInfo`，且世界探针里那几个 table **全部报 length 0**
+    -- —— 那很可能是 map 而非空表（`#` 对 map 恒为 0），所以本层**刻意用 pairs 读**，
+    -- 并把"每个字段到底是什么形状"写进产物的 shape_report（见 layer_town.lua 顶部注释）。
+    -- 城镇只有几百个、读字段很轻，频率可与 lines/stations 同级。
+    -- delay=216 避开 vehicles 的 46+15k 序列（216-217=-1 → 首采落在 counter 217，
+    -- 而 217-46=171 不是 15 的倍数），也与其余各层不同相位（freight 200 / stations 160 / industry 121）。
+    { name = "town",     kind = "static",  every = 4500,  delay = 216, collect = layer_town.collect },
+    -- 道路交通（用户 2026-09-30：像高德一样每 5 分钟刷新路况，颜色区分、放大才显示、可开关）。
+    -- 🔴 **它自己按挂钟节流**（每 300 秒真正采一次），这里的 every 只是"勤检查"：
+    --    3000 个 update 检查一次，不到点就把上次的产物原样返回（内容不变）。
+    --    为什么不用 every 直接定 5 分钟：every 是 update 帧数，帧率随机器/负载浮动，
+    --    换算不出分钟；挂钟才是"5 分钟"的准确表达。
+    -- delay=260 避开各层相位（road 76 / lines 100 / industry 121 / stations 160 /
+    -- freight 200 / town 216 / vehicles 每 15 的 46+15k 序列 —— 260-46=214 不是 15 的倍数）。
+    { name = "road-traffic", kind = "dynamic", every = 3000, delay = 260, collect = layer_road_traffic.collect },
 }
 
 local counters = {}

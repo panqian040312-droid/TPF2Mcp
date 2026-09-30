@@ -196,6 +196,11 @@ local function handle(command)
         write_json("api-type-inventory.json", state.api_type_inventory())
         write_json("api-command-inventory.json", state.api_command_inventory())
         write_json("world-probe.json", state.world_probe())
+        -- 水运/航空航路：船和飞机不挂边，路径在 system 命名空间里（见 route_probe.lua）。
+        write_json("route-probe.json", state.route_probe())
+        -- 车站结构（模块网格）：四类站都是"一个 .con + 若干 .module 格子"，见 station_struct_probe.lua。
+        write_json("station-struct-probe.json", state.station_struct_probe())
+        write_json("economy-probe.json", state.economy_probe())
         write_json("station-geometry.json", state.station_geometry())
         return true, snapshot
     end

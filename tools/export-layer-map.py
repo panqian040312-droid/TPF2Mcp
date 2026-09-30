@@ -100,6 +100,27 @@ def grid_bounds(grid: dict) -> dict | None:
 WHOLE_LAYER_FIELDS = {
     "ROUTE": ("lines", "by_carrier", "by_cargo"),
     "STATION_CLUSTER": ("clusters", "stations", "links", "by_cluster"),
+    # 产业链物流关系（用户 2026-09-30 诉求）：source/target 存的是产业的 stock id，
+    # 所以 industry_index（stock → industry）**必须**一起透传，否则前端翻不回产业名。
+    # 🔴 2026-09-30 傍晚变更（用户定调「只划到对应的车站就可以了」）：
+    #   ① 去掉 "nodes" —— 采集器不再自己取坐标（拿 stock id 去 getEntity 取不到，恒为空）。
+    #      边的坐标改由前端拼：产业端取 layer-industry 的 points（entity_id + position），
+    #      车站端取 layer-stations 的 stations[].position。
+    #   ② 每条边新带 "stopovers" = [(线路, 上车站, 下车站)]，它在 links[] 内部会自动透传；
+    #      前端靠它 + layer-lines 的 stops[]（真实下标对齐 + 带车站 id）把终点落到具体车站。
+    #   ③ "coord_source" 只是个显式提示，说明坐标不在本层。注意这里只过滤顶层字段，
+    #      links[] 内部的字段一律原样透传。
+    "LINK": ("industry_index", "links", "sample", "duration_ms", "coord_source"),
+    # 城镇 + 城镇需求（用户 2026-09-30：城区上空的牌子 = 城市名 + 需要的货物）。
+    # shape_report 是**首要交付** —— 它回答"lu2cargoInfo 等字段到底是 map 还是 array、
+    # 有没有内容"这个问题（世界探针报 length 0，但 # 对 map 恒为 0，所以并不代表空）。
+    "TOWN": ("towns", "shape_report", "note", "duration_ms"),
+    # 道路交通（用户 2026-09-30：像高德一样刷新路况，颜色区分 + 放大才显示 + 可开关）。
+    # 🔴 本层**只带每条路的指标，不带几何** —— 几何由前端从静态的公路层几何文件里查
+    #    （`layers/road-edge-geometry.json`，由 tools/build-road-geometry.py 生成）。
+    #    这样几何是静态的、指标每 5 分钟刷一遍，各刷各的，不用重复搬 800 KB 的坐标。
+    "TRAFFIC": ("segments", "summary", "calibration", "thresholds", "vehicles", "diagnostics",
+                "sampled_at", "sample_interval_seconds", "game_time", "unverified", "first_unlocated"),
 }
 
 
@@ -298,11 +319,12 @@ def main() -> None:
 
         geometry_kind = payload.get("geometry_kind") or "EDGE_GRAPH"
 
-        # 整层输出、不分块的两类：网格（地形高度）与线路（路径点序列）
+        # 整层输出、不分块的三类：网格（地形高度）、线路（路径点序列）、
+        # 产业链物流关系（LINK —— 边数量少但每条都要看，切块反而不好用）
         if geometry_kind == "GRID":
             summary[name] = export_grid(name, payload, args.output_directory)
             continue
-        if geometry_kind in ("ROUTE", "STATION_CLUSTER"):
+        if geometry_kind in ("ROUTE", "STATION_CLUSTER", "LINK", "TOWN", "TRAFFIC"):
             summary[name] = export_whole_layer(name, payload, args.output_directory)
             continue
 
@@ -355,6 +377,15 @@ def main() -> None:
         # 这里不追求几何精度（不采样曲线、只连端点），因为总览时线本来就重叠在一起；
         # 目的是让用户一眼看出"哪里有路/哪里有设施"。
         if geometry_kind == "POINT":
+            # 产业要连**名字**一起带出来：局部视图要列"车站附近的产业 / 货场"，
+            # 只给坐标和编号用户看不懂。名字在 state.json 的 industries 里
+            # （layer-industry.json 自己只有坐标和编号），所以在这里合并一次。
+            industry_names = {}
+            if name == "industry":
+                state = read_json(bridge / "state.json") or {}
+                for item in state.get("industries") or []:
+                    if item.get("entity_id") is not None:
+                        industry_names[str(item.get("entity_id"))] = item.get("name")
             summary_points = []
             for point in payload.get("points") or []:
                 position = point.get("position") or {}
@@ -368,6 +399,26 @@ def main() -> None:
                     entry.append(point.get("line"))
                 elif name == "industry":
                     entry.append(point.get("level"))
+                    entry.append(point.get("entity_id"))
+                    entry.append(industry_names.get(str(point.get("entity_id"))))
+                    # 占地尺寸（世界坐标 x/y 长宽，单位米）。来自 layer_industry.lua 从
+                    # `BOUNDING_VOLUME.bbox` 取出的包围盒 —— 前端拿它画每个工厂的实际矩形，
+                    # 而不是把 214 个产业全画成同一个符号（用户 2026-09-29 的原话：
+                    # "地图上的产业我看成橙色方块太丑"/"具体形状要像火车站那样画出来"）。
+                    # ⚠️ 采集器没重启时（或读到旧产物）没有这个字段 —— **必须补 None 占位**，
+                    #    否则前端按固定下标取值会整体错位。前端见到 None 要退回"小方块"表现。
+                    extent = point.get("extent") or {}
+                    ext_x, ext_y = extent.get("x"), extent.get("y")
+                    entry.append(round(float(ext_x), 1) if isinstance(ext_x, (int, float)) else None)
+                    entry.append(round(float(ext_y), 1) if isinstance(ext_y, (int, float)) else None)
+                    # 实时库存：这个厂里现在有多少件货。采集器靠**数 SIM_ENTITY_AT_STOCK
+                    # 实体**得到（SIM_BUILDING 组件里没有现成的库存量字段）。
+                    # 同样"没重启就没有" —— 补 None 占位，前端见到 None 显示"—"。
+                    stock_count = point.get("stock_count")
+                    entry.append(int(stock_count) if isinstance(stock_count, (int, float)) else None)
+                    # 升级进度（同一批顺手补上，之前漏了）
+                    upgrade = point.get("upgrade_progress")
+                    entry.append(round(float(upgrade), 1) if isinstance(upgrade, (int, float)) else None)
                 summary_points.append(entry)
             overview = {"layer": name, "geometry_kind": "POINT", "points": summary_points}
         else:

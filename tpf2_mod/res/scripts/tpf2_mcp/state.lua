@@ -21,12 +21,20 @@ local rail_network = require "tpf2_mcp/collectors/rail_network"
 local operational_telemetry = require "tpf2_mcp/collectors/operational_telemetry"
 local simulation_collector = require "tpf2_mcp/collectors/simulation"
 local line_demand = require "tpf2_mcp/collectors/line_demand"
+local world_probe = require "tpf2_mcp/collectors/world_probe"
+local route_probe = require "tpf2_mcp/collectors/route_probe"
+local station_struct_probe = require "tpf2_mcp/collectors/station_struct_probe"
+local economy_probe = require "tpf2_mcp/collectors/economy_probe"
 
 local M = {}
 local cached_snapshot = nil
 local cached_at = 0
 local cached_station_geometry = nil
 local cached_rail_network = nil
+local cached_world_probe = nil
+local cached_route_probe = nil
+local cached_station_struct_probe = nil
+local cached_economy_probe = nil
 
 local function now()
     return os and os.time and os.time() or 0
@@ -135,11 +143,52 @@ function M.line_creation_probe()
     return ok and result or { error = tostring(result), write_command_sent = false }
 end
 
+-- 水运 / 航空航路探针（只读）：船和飞机不挂在 BASE_EDGE_* 上，它们的路径
+-- 在引擎的 shipMoveSystem / aircraftMoveSystem / runwaySystem / tpNetLinkSystem 里。
+-- 航路属于**基础设施**（跑道、泊位、网络链接），一次进程内不变 → 成功后缓存；
+-- 失败不缓存，下次 get_game_state 还能重试（避免启动瞬间的时机问题被永久记住）。
+function M.route_probe()
+    if cached_route_probe ~= nil then return cached_route_probe end
+    local ok, result = pcall(route_probe.collect)
+    if not ok then return { error = tostring(result), write_command_sent = false } end
+    cached_route_probe = result
+    return result
+end
+
+-- 车站结构探针（只读）：四类站（铁路/汽车/码头/机场）都是"一个 .con + 若干 .module 格子"，
+-- 这个探针回答"模块网格能不能从 Lua 读出来"，以及"水运/公路/航空站的 STATION.terminals 是否存在"。
+-- 结论一次进程内不变 → 成功后缓存；失败不缓存，下次 get_game_state 还能重试。
+function M.station_struct_probe()
+    if cached_station_struct_probe ~= nil then return cached_station_struct_probe end
+    local ok, result = pcall(station_struct_probe.collect)
+    if not ok then return { error = tostring(result), write_command_sent = false } end
+    cached_station_struct_probe = result
+    return result
+end
+
+-- 经济探针（只读）：公司账本（整体收支）+ 每条线的维护费/运价/运量。
+-- 用户 2026-09-30 定的运营前提是"城镇发展优先、保证整体盈利"，所以判据的红线在**整体盈亏**；
+-- 而账本/维护费在现有产物里都没有，靠这个探针补。同样成功后缓存（一次进程内不变）。
+function M.economy_probe()
+    if cached_economy_probe ~= nil then return cached_economy_probe end
+    local ok, value = pcall(economy_probe.collect)
+    cached_economy_probe = ok and value or { status = "ERROR", error = tostring(value) }
+    return cached_economy_probe
+end
+
 function M.api_type_inventory() local ok, value = pcall(api_inventory.type_inventory); return ok and value or { error = tostring(value) } end
 function M.api_command_inventory() local ok, value = pcall(api_inventory.command_inventory); return ok and value or { error = tostring(value) } end
+function M.world_probe()
+    if cached_world_probe ~= nil then return cached_world_probe end
+    local ok, value = pcall(world_probe.probe)
+    cached_world_probe = ok and value or { error = tostring(value) }
+    return cached_world_probe
+end
 function M.station_geometry()
     if cached_station_geometry ~= nil then return cached_station_geometry end
-    local ok, value = pcall(station_geometry.collect, 552273, 1200)
+    -- 站群 id 交给采集器自己挑。这里原本写死 552273 —— 那个组在存档里不存在，
+    -- 产物永远是 STATION_GROUP_UNAVAILABLE（每次 get_game_state 都白跑一趟）。
+    local ok, value = pcall(station_geometry.collect, nil, 1200)
     cached_station_geometry = ok and value or { status = "ERROR", error = tostring(value), write_command_sent = false }
     return cached_station_geometry
 end

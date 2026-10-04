@@ -24,4 +24,4 @@ Current implementation: a legacy/minimal MCP compatibility layer implemented dir
 
 - **OFFLINE TEST** validates Python protocol and transport behavior without a game process.
 - **MOCK TEST** uses `MockBridge` and fixture JSON; it is not a TPF2 bridge result.
-- **LIVE TPF2 TEST** requires an enabled mod in an open TPF2 save and must be run with `tools/test-live-bridge.ps1`.
+- **LIVE TPF2 TEST** requires an enabled mod in an open TPF2 save and must be run with `4_execution_control/acceptance/test-live-bridge.ps1`.

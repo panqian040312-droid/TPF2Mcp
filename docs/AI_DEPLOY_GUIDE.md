@@ -101,7 +101,7 @@ MCP 客户端配置示例（WorkBuddy 是 `~/.workbuddy/mcp.json`，Claude Deskt
 python "<Mod 根>\mcp_server\start_ui.py"
 ```
 
-然后浏览器打开 `http://127.0.0.1:8765/`。
+然后浏览器打开 `http://127.0.0.1:8790/`。
 仓库根的 `start_rail_map.bat` 是同一件事的快捷方式（同样要先改路径）。
 
 ---

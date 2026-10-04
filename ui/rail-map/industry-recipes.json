@@ -1,0 +1,317 @@
+{
+ "note": "产业配方（原料 → 产品）。从游戏 res/construction/construction.zip 的 industry/*.con 里 stockListConfig 抽出，可由 tools/extract-industry-recipes.py 重跑。",
+ "source": "res/construction/construction.zip :: industry/*.con :: stockListConfig",
+ "count": 16,
+ "industries": {
+  "chemical_plant": {
+   "inputs": [
+    "OIL"
+   ],
+   "input_amounts": [
+    1
+   ],
+   "outputs": [
+    "PLASTIC"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  },
+  "coal_mine": {
+   "inputs": [],
+   "input_amounts": [],
+   "outputs": [
+    "COAL"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 400,
+   "levels": 1,
+   "max_per_level": [
+    400
+   ]
+  },
+  "construction_material": {
+   "inputs": [
+    "STONE"
+   ],
+   "input_amounts": [
+    1
+   ],
+   "outputs": [
+    "CONSTRUCTION_MATERIALS"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  },
+  "farm": {
+   "inputs": [],
+   "input_amounts": [],
+   "outputs": [
+    "GRAIN"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 200,
+   "levels": 1,
+   "max_per_level": [
+    200
+   ]
+  },
+  "food_processing_plant": {
+   "inputs": [
+    "GRAIN"
+   ],
+   "input_amounts": [
+    2
+   ],
+   "outputs": [
+    "FOOD"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  },
+  "forest": {
+   "inputs": [],
+   "input_amounts": [],
+   "outputs": [
+    "LOGS"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 400,
+   "levels": 1,
+   "max_per_level": [
+    400
+   ]
+  },
+  "fuel_refinery": {
+   "inputs": [
+    "OIL"
+   ],
+   "input_amounts": [
+    1
+   ],
+   "outputs": [
+    "FUEL"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  },
+  "goods_factory": {
+   "inputs": [
+    "PLASTIC",
+    "STEEL"
+   ],
+   "input_amounts": [
+    1,
+    1
+   ],
+   "outputs": [
+    "GOODS"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  },
+  "iron_ore_mine": {
+   "inputs": [],
+   "input_amounts": [],
+   "outputs": [
+    "IRON_ORE"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 400,
+   "levels": 1,
+   "max_per_level": [
+    400
+   ]
+  },
+  "machines_factory": {
+   "inputs": [
+    "PLANKS",
+    "STEEL"
+   ],
+   "input_amounts": [
+    1,
+    1
+   ],
+   "outputs": [
+    "MACHINES"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  },
+  "oil_refinery": {
+   "inputs": [
+    "CRUDE"
+   ],
+   "input_amounts": [
+    2
+   ],
+   "outputs": [
+    "OIL"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 200,
+   "levels": 2,
+   "max_per_level": [
+    200,
+    400
+   ]
+  },
+  "oil_well": {
+   "inputs": [],
+   "input_amounts": [],
+   "outputs": [
+    "CRUDE"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 400,
+   "levels": 1,
+   "max_per_level": [
+    400
+   ]
+  },
+  "quarry": {
+   "inputs": [],
+   "input_amounts": [],
+   "outputs": [
+    "STONE"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 400,
+   "levels": 1,
+   "max_per_level": [
+    400
+   ]
+  },
+  "saw_mill": {
+   "inputs": [
+    "LOGS"
+   ],
+   "input_amounts": [
+    2
+   ],
+   "outputs": [
+    "PLANKS"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 200,
+   "levels": 2,
+   "max_per_level": [
+    200,
+    400
+   ]
+  },
+  "steel_mill": {
+   "inputs": [
+    "IRON_ORE",
+    "COAL"
+   ],
+   "input_amounts": [
+    2,
+    2
+   ],
+   "outputs": [
+    "STEEL"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 200,
+   "levels": 2,
+   "max_per_level": [
+    200,
+    400
+   ]
+  },
+  "tools_factory": {
+   "inputs": [
+    "PLANKS"
+   ],
+   "input_amounts": [
+    1
+   ],
+   "outputs": [
+    "TOOLS"
+   ],
+   "output_amounts": [
+    1
+   ],
+   "capacity": 100,
+   "levels": 4,
+   "max_per_level": [
+    100,
+    200,
+    300,
+    400
+   ]
+  }
+ }
+}

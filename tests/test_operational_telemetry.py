@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).parents[1]
-SPEC = importlib.util.spec_from_file_location("analyze_operational_telemetry", ROOT / "tools" / "analyze-operational-telemetry.py")
+SPEC = importlib.util.spec_from_file_location("analyze_operational_telemetry", ROOT / "2_brain_analysis" / "analyze-operational-telemetry.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
@@ -52,7 +52,7 @@ class OperationalTelemetryTests(unittest.TestCase):
         self.assertNotIn("api.cmd", source)
 
     def test_runner_does_not_invoke_crashing_station_section(self):
-        source = (ROOT / "tools" / "run-operational-telemetry.py").read_text(encoding="utf-8")
+        source = (ROOT / "4_execution_control" / "actions" / "run-operational-telemetry.py").read_text(encoding="utf-8")
         self.assertIn('for section in ("inventory", "signals", "vehicles")', source)
         self.assertIn('snapshot_path = client.directory / "state.json"', source)
         self.assertNotIn('operational_telemetry("stations")', source)

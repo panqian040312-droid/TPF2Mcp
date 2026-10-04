@@ -49,6 +49,9 @@
   var DEFAULT_LIMIT = 200;
   var MAX_PARTNER_MARKS = 30;   // 上下游各最多标 30 个产业，防止一屏几百个标签糊成一片
   var MAX_ROWS = 80;            // 明细面板最多列 80 行，剩下的用一句"还有 X 条"带过
+  // 面板底部那行提示的默认文案。选中 / 清除 / 数据异常时会临时改写，
+  // 清掉选择就写回这一句（不然用户只看到一句"已选中…"，就再也找不到操作提示了）。
+  var HINT_DEFAULT = '直接点地图上的产业图标也能选中；线越粗=货量越大，橙=下游去向，青=上游来料';
 
   // 所有函数共用一个上下文。用显式对象而不是各写各的闭包变量，
   // 是为了避免"面板的开关回调拿不到 boot 里的局部变量"这类作用域坑。
@@ -75,6 +78,13 @@
       links: [],            // 4330 条流向（源数据格式）
       lines: [],            // 271 条线路（我们要的是里面的 stops）
       lineById: new Map(),  // entity_id → 线路
+      // 线路 id → {spans, points}：**真实轨道几何**。
+      // 来源 = `rail-network-data.json` 的 `route_edge_ids`，经 network-app 的
+      // `railRoutePaths()` 拿到（那个 6.4 MB 与"线路高亮"共用缓存，只拉一次）。
+      // 没有它就只能退回"站点之间的直线"—— 用户 2026-10-03 一眼看出不对：
+      // 「交通线还没有高亮，是还没做吗」（直线不像铁路）。
+      railPaths: new Map(),
+      railPathsPending: null,   // 正在请求的线路 id 串，防重复请求
       industries: [],       // 215 个产业：{id, name, x, y}
       industryById: new Map(),
       degree: new Map(),    // 产业 id → 挂了几条边（列表项上顺手显示，帮用户先挑大的看）
@@ -87,6 +97,15 @@
       markerViews: []       // 屏幕坐标标记：{group, position}
     };
 
+    // 「最多显示」也跟着记忆走 —— 它不是 addOption，面板那套自动记忆接不到，得单独接。
+    // 键按同一套规则拼（分组名/条目名），跟面板里其它项一致。
+    if (window.TPF2UIState) {
+      var savedLimit = window.TPF2UIState.get('产业链/最多显示', null);
+      if (typeof savedLimit === 'number' && LIMIT_CHOICES.indexOf(savedLimit) >= 0) {
+        ctx.state.limit = savedLimit;
+      }
+    }
+
     ctx.board = document.querySelector('#board-wrap');
     if (!ctx.board) { console.error('[地图] 产业链：找不到 #board-wrap，放弃'); return; }
 
@@ -96,6 +115,28 @@
 
     ctx.ui = buildPanel();
     ctx.detail = buildDetailPanel();
+
+    // 地图上点产业图标 → 跟点列表项走**同一条路**（用户 2026-10-02：
+    // 「我不想在左边的栏里面选，我根本不知道是哪一个，我要在地图上直接点击」）。
+    // 用事件广播解耦：产业图标层和这一层各自监听 tpf2map:ready，谁先加载说不准。
+    window.addEventListener('tpf2industry:select', function (event) {
+      var id = event && event.detail ? event.detail.id : null;
+      if (id == null) return;
+      if (!ctx.state.industryById.has(id)) {
+        // 图上点到的产业不在这份产业链数据里 —— 说明两份产物不同源（旧切块），
+        // 别静默忽略，说清楚，不然用户只会觉得"点了没反应"。
+        // 🔴 2026-10-02：原来只 `console.warn`，用户根本看不到控制台，等于**静默失败**。
+        //    改成同时写进面板底部那行提示。
+        var text = '图上点到的产业 ' + id + ' 不在这份产业链数据里（两份产物可能不同源），已忽略';
+        console.warn('[地图] 产业链：' + text);
+        if (ctx.ui) ctx.ui.setHint(text);
+        return;
+      }
+      selectIndustry(id);
+      // 点了给一句明确回执 —— 否则用户分不清"选中了"和"压根没响应"
+      if (ctx.ui) ctx.ui.setHint('已选中「' + ctx.state.industryById.get(id).name + '」');
+      if (event.detail.source === 'map') ctx.ui.revealSelected();
+    });
 
     // 每帧只重算"屏幕标记"的位置，不重建任何东西。
     api.onViewport(function () { paintMarks(); });
@@ -244,6 +285,7 @@
     });
     limitSelect.addEventListener('change', function () {
       state.limit = Number(limitSelect.value) || 0;
+      if (window.TPF2UIState) window.TPF2UIState.set('产业链/最多显示', state.limit);
       renderLines();
     });
     limitLabel.appendChild(limitSelect);
@@ -271,7 +313,7 @@
     group.appendChild(clear);
 
     var hint = el('div', { color: '#6f8ea3', font: '10px Consolas', whiteSpace: 'normal' },
-      '线越粗=货量越大；橙=下游去向，青=上游来料');
+      HINT_DEFAULT);
     group.appendChild(hint);
 
     search.addEventListener('input', function () {
@@ -280,7 +322,9 @@
     });
 
     // 列表项很多（最多 215 个）。只在搜索词 / 选中项变化时重建，不做每帧更新。
+    var selectedRow = null;      // 当前选中那一行 —— 在图上点中后要把它滚进视野
     function renderList() {
+      selectedRow = null;
       var query = state.query.trim().toLowerCase();
       var matched = state.industries.filter(function (item) {
         return !query || String(item.name).toLowerCase().indexOf(query) >= 0;
@@ -300,6 +344,7 @@
         row.appendChild(el('span', { color: '#6f8ea3', flexShrink: '0' }, degree ? degree + ' 条' : '—'));
         row.title = item.name + '（产业 ' + item.id + '）';
         row.addEventListener('click', function () { selectIndustry(item.id); });
+        if (selected) selectedRow = row;
         fragment.appendChild(row);
       });
       if (!matched.length) {
@@ -308,8 +353,17 @@
       list.replaceChildren(fragment);
     }
 
+    // 在图上点中产业后，把列表里对应的那一行滚进视野 ——
+    // 用户本来就说"在列表里根本不知道是哪一个"，点完能看到它在列表的哪儿，比只高亮更有用。
+    function revealSelected() {
+      if (selectedRow && typeof selectedRow.scrollIntoView === 'function') {
+        selectedRow.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
     return {
       renderList: renderList,
+      revealSelected: revealSelected,
       setHint: function (text) { hint.textContent = text; }
     };
   }
@@ -325,23 +379,99 @@
       // 清除选择：把明细浮层整个收起来。只清空内容会让上一次的残留内容留在屏幕上，
       // 让人以为还在看某个产业。
       if (ctx.detail) { ctx.detail.setFoot(''); ctx.detail.hide(); }
+      if (ctx.ui) ctx.ui.setHint(HINT_DEFAULT);
     } else {
       renderDetail();
     }
     if (ctx.ui) ctx.ui.renderList();   // 把列表里的选中项点亮（重建列表，215 个 div 很便宜）
   }
 
-  // 选中产业的边：下游 = 我发出去的货（source_industry 是我）；上游 = 别人发给我的货（target_industry 是我）。
+  // 选中产业的边：**沿产业链两端逐层展开**，不是只取直接上下游。
+  // 用户 2026-10-03 反馈：「只有一级上下游而不是全产业链」。
+  //   上游（DIR_UP）  = 别人发给我的货（target_industry 是我）→ 继续找它的发货方
+  //   下游（DIR_DOWN）= 我发出去的货（source_industry 是我）→ 继续找它的收货方
+  // 上下两个方向各走一遍，方向始终相对**根节点**（不是相对中间节点），
+  // 上层画上游色、下层画下游色才说得通。
+  // ⚠️ 两层上限兜底：这是 4468 条边的图，链条长了会爆。
+  var CHAIN_MAX_DEPTH = 6;
+  var CHAIN_MAX_EDGES = 600;
+
   function collectEdges(id) {
     var state = ctx.state;
     if (id == null) return [];
     var edges = [];
-    state.links.forEach(function (link) {
-      if (link.source_industry === id) edges.push({ link: link, dir: DIR_DOWN });
-      else if (link.target_industry === id) edges.push({ link: link, dir: DIR_UP });
-    });
+    var seen = new Set();
+
+    function walk(root, dir) {
+      if (edges.length >= CHAIN_MAX_EDGES) return;
+      var visited = new Set([root]);
+      var frontier = new Set([root]);
+      for (var depth = 0; depth < CHAIN_MAX_DEPTH; depth += 1) {
+        if (!frontier.size || edges.length >= CHAIN_MAX_EDGES) return;
+        var next = new Set();
+        state.links.forEach(function (link) {
+          // 上游看 target_industry、下游看 source_industry —— 谁是"我方"取决于方向。
+          var mine = dir === DIR_UP ? link.target_industry : link.source_industry;
+          var other = dir === DIR_UP ? link.source_industry : link.target_industry;
+          if (mine == null || !frontier.has(mine)) return;
+          var key = dir + ':' + link.source_industry + '>' + link.target_industry;
+          if (!seen.has(key)) { seen.add(key); edges.push({ link: link, dir: dir }); }
+          // ≤0 是「无」(-1)：运往城镇的货没有上游产业，链条到此为止。
+          if (other != null && other > 0 && !visited.has(other)) {
+            visited.add(other);
+            next.add(other);
+          }
+        });
+        frontier = next;
+      }
+    }
+
+    walk(id, DIR_UP);
+    walk(id, DIR_DOWN);
     edges.sort(function (a, b) { return (Number(b.link.count) || 0) - (Number(a.link.count) || 0); });
     return edges;
+  }
+
+  // ---- 真实铁路几何（按需拉取）--------------------------------------------
+  // 把"这批货用到的线路"的轨道几何拉进来。**异步**，拿不到就退回站点连线。
+  // 数据是 6.4 MB 的 rail-network-data.json，主文件已经有一套缓存（线路高亮在用），
+  // 这里通过 `ctx.api.railRoutePaths()` 借它的缓存，不重复下载。
+  var railPathsQueued = '';
+  function ensureRailPaths(edges) {
+    var state = ctx.state;
+    var api = ctx.api;
+    if (typeof api.railRoutePaths !== 'function') return;   // 主文件是旧版：不折腾
+    var need = [];
+    edges.forEach(function (edge) {
+      (edge.link.lines || []).forEach(function (id) {
+        var key = Number(id);
+        if (!Number.isFinite(key) || state.railPaths.has(key)) return;
+        if (need.indexOf(key) < 0) need.push(key);
+      });
+    });
+    if (!need.length) return;
+    var signature = need.join(',');
+    if (railPathsQueued === signature) return;   // 同一批正在路上，别重复发
+    railPathsQueued = signature;
+    api.railRoutePaths(need).then(function (map) {
+      railPathsQueued = '';
+      if (!map || !map.forEach) return;
+      map.forEach(function (value, key) { state.railPaths.set(Number(key), value); });
+      console.log('[产业链] 铁路几何已就绪：' + map.size + ' 条线路可沿真实轨道绘制');
+      if (state.selected != null) renderLines();   // 几何到齐，重画
+    }).catch(function (error) {
+      railPathsQueued = '';
+      console.warn('[产业链] 铁路几何加载失败，退回站点连线', error);
+    });
+  }
+
+  // 这批货在这条线上从哪站上、到哪站下（`stopovers` 里挑属于这条线的那条）。
+  function pickStopover(link, lineId) {
+    var found = null;
+    (link.stopovers || []).forEach(function (candidate) {
+      if (found === null && Number(candidate.line) === Number(lineId)) found = candidate;
+    });
+    return found;
   }
 
   // ---- 流向线 ------------------------------------------------------------
@@ -354,43 +484,154 @@
 
     var edges = state.limit > 0 ? state.edges.slice(0, state.limit) : state.edges;
 
+    // 铁路几何按需拉取（异步）：到齐后它会自己再调一次 renderLines 重画，这里只管触发。
+    ensureRailPaths(edges);
+
     // 按「方向 × 粗细档」分桶：最多 8 个桶 = 最多 8 条 path，
     // 而不是几千个 <line> —— 这个数据量下唯一撑得住的做法。
     var buckets = new Map();
     var drawn = 0, skipped = 0;
 
-    edges.forEach(function (edge) {
-      var source = state.industryById.get(edge.link.source_industry);
-      if (!source) { skipped += 1; return; }            // 货源地不是产业（或没采到坐标）→ 没有起点，跳过
-      var end = stationOf(edge.link);
-      if (!end) { skipped += 1; return; }               // 还没上车 / 定位不到车站 → 跳过
+    // 同一条线路会在多个货流里重复出现 —— 按「方向:线路id:区间」去重，
+    // 免得同一条线叠画好几遍（叠画会让透明度累加，看着像"特别粗"，其实是重复）。
+    var tracedSpans = new Set();
+    // 「没走的区间」用中性灰蓝 —— 和上游青 / 下游橙**明显不同色**
+    //（用户 2026-10-03：两段要分开着色，好回头查是哪一段出的问题）。
+    var REST_COLOR = '#6f8ea3';
 
-      var a = ctx.api.P(source);   // 世界坐标 → 底图坐标（挂 mapLayer 必须走这个）
-      var b = ctx.api.P(end);
+    var bucketOf = function (dir, tier, rest) {
+      var bucketKey = dir + ':' + tier + (rest ? ':rest' : '');
+      var list = buckets.get(bucketKey);
+      if (!list) { list = []; buckets.set(bucketKey, list); }
+      return list;
+    };
+
+    edges.forEach(function (edge) {
       var tier = tierOf(edge.link.count);
-      var key = edge.dir + ':' + tier;
-      var parts = buckets.get(key);
-      if (!parts) { parts = []; buckets.set(key, parts); }
-      parts.push('M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + 'L' + b.x.toFixed(1) + ',' + b.y.toFixed(1));
+      var traced = false;
+
+      // ① 优先画**这批货实际走的那条线路**。
+      //    · 铁路线：`state.railPaths` 里有**真实轨道几何**（route_edge_ids → 逐边贝塞尔），
+      //      用它才是"沿着铁轨"；并按 `[wait_stop, dest_stop]` 切成「走的」和「没走的」两段。
+      //      用户 2026-10-03「交通线还没有高亮」的根因：之前只拿得到站点连线，画出来是直线；
+      //      而 rail-network-data.json 里**早就有现成的走行路径**（route_edge_ids）。
+      //    · 其余（公路/水运/航空，或还没寻到轨道的少数铁路线）：退回站点连线。
+      (edge.link.lines || []).forEach(function (lineId) {
+        var key = Number(lineId);
+        var geom = state.railPaths.get(key);
+
+        if (geom) {
+          traced = true;
+          var railKey = edge.dir + ':' + key + ':rail';
+          if (tracedSpans.has(railKey)) return;                     // 这条线已经画过
+          tracedSpans.add(railKey);
+
+          // 区间切分：拿**每条轨道边的中点**去比上/下车站的世界坐标，取最近的下标。
+          // （不能拿 stop 下标直接切 `spans` —— 边的粒度比站细得多。）
+          var stopoverForRail = pickStopover(edge.link, key);
+          var railStops = (state.lineById.get(key) || {}).stops || [];
+          var nearestIndex = function (point) {
+            var best = -1, bestGap = Infinity;
+            geom.points.forEach(function (mid, index) {
+              var gap = Math.hypot(mid.x - point.x, mid.y - point.y);
+              if (gap < bestGap) { bestGap = gap; best = index; }
+            });
+            return best;
+          };
+          var fromIndex = -1, toIndex = -1;
+          if (stopoverForRail) {
+            var stopFrom = railStops[Number(stopoverForRail.wait_stop)];
+            var stopTo = railStops[Number(stopoverForRail.dest_stop)];
+            if (stopFrom) fromIndex = nearestIndex(stopFrom);
+            if (stopTo) toIndex = nearestIndex(stopTo);
+          }
+          var railHasRange = fromIndex >= 0 && toIndex >= 0;
+          if (fromIndex > toIndex) { var swapIndex = fromIndex; fromIndex = toIndex; toIndex = swapIndex; }
+          geom.spans.forEach(function (spanText, index) {
+            var onRoute = railHasRange && index >= fromIndex && index <= toIndex;
+            bucketOf(edge.dir, tier, !onRoute).push(spanText);
+          });
+          return;
+        }
+
+        // ② 站点连线（轨道几何还没到位，或这条线没寻到轨道）
+        var line = state.lineById.get(key);
+        var geometry = line && line.points;
+        if (!geometry || geometry.length < 2) return;
+        traced = true;
+
+        var last = geometry.length - 1;
+        var at = function (index) {
+          var screen = ctx.api.P(geometry[index]);
+          return screen.x.toFixed(1) + ',' + screen.y.toFixed(1);
+        };
+        var span = function (from, to) {
+          var out = ['M' + at(from)];
+          for (var i = from + 1; i <= to; i += 1) out.push('L' + at(i));
+          return out.join('');
+        };
+
+        // 这批货真正走的区间 = stops 的 [wait_stop, dest_stop]，下标直接可用：
+        // 实测 **271/271** 条线的 `points` 与 `stops` 一一对应，
+        // 且 4449 个 stopover 的 wait/dest **零越界**。
+        var stopover = pickStopover(edge.link, key);
+        var from = stopover ? Number(stopover.wait_stop) : NaN;
+        var to = stopover ? Number(stopover.dest_stop) : NaN;
+        var hasRange = Number.isFinite(from) && Number.isFinite(to)
+          && from >= 0 && to <= last && from < to;
+
+        var spanKey = edge.dir + ':' + key + ':' + (hasRange ? from + '-' + to : 'full');
+        if (tracedSpans.has(spanKey)) return;                       // 这一段已经画过
+        tracedSpans.add(spanKey);
+
+        if (hasRange) {
+          bucketOf(edge.dir, tier, false).push(span(from, to));     // 经过段
+          if (from > 0) bucketOf(edge.dir, tier, true).push(span(0, from));      // 起点之前
+          if (to < last) bucketOf(edge.dir, tier, true).push(span(to, last));    // 终点之后
+        } else {
+          // 没有区间信息 → 整条算"走的"（退回上一版行为，别让线凭空消失）
+          bucketOf(edge.dir, tier, false).push(span(0, last));
+        }
+      });
+
+      // ② 兜底：线路几何拿不到时，仍旧画「产业 → 目的站」的直线（原来的行为）。
+      //    否则这些货流会直接从图上消失 —— 那比画得糙更糟。
+      if (!traced) {
+        var source = state.industryById.get(edge.link.source_industry);
+        if (!source) { skipped += 1; return; }            // 货源地不是产业（或没采到坐标）→ 没有起点，跳过
+        var end = stationOf(edge.link);
+        if (!end) { skipped += 1; return; }               // 还没上车 / 定位不到车站 → 跳过
+        var a = ctx.api.P(source);   // 世界坐标 → 底图坐标（挂 mapLayer 必须走这个）
+        var b = ctx.api.P(end);
+        bucketOf(edge.dir, tier, false).push(
+          'M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + 'L' + b.x.toFixed(1) + ',' + b.y.toFixed(1));
+      }
       drawn += 1;
     });
 
     // 细线先画、粗线后画，粗的压在上层，免得被细线盖住。
+    // 每一档里**先画"没走的区间"**（中性灰、更细更淡，退到背景），
+    // 再画"走的区间"压在上面 —— 这样一眼能分出"这条线存在"和"这批货真走它"。
+    var paint = function (bucketKey, dir, tierIndex, isRest) {
+      var parts = buckets.get(bucketKey);
+      if (!parts || !parts.length) return;
+      ctx.api.S('path', {
+        d: parts.join(''),
+        fill: 'none',
+        stroke: isRest ? REST_COLOR : (dir === DIR_DOWN ? COLOR_DOWN : COLOR_UP),
+        'stroke-width': isRest ? TIERS[tierIndex].width * 0.65 : TIERS[tierIndex].width,
+        'stroke-linecap': 'round',
+        opacity: isRest ? 0.30 : TIERS[tierIndex].opacity,
+        // 地图靠 mapLayer 的 transform:scale(zoom) 缩放；不加这个，线宽会跟着一起放大缩小。
+        'vector-effect': 'non-scaling-stroke',
+        'pointer-events': 'none'
+      }, '', lineGroup);
+    };
+
     for (var t = TIERS.length - 1; t >= 0; t -= 1) {
       [DIR_UP, DIR_DOWN].forEach(function (dir) {
-        var parts = buckets.get(dir + ':' + t);
-        if (!parts) return;
-        ctx.api.S('path', {
-          d: parts.join(''),
-          fill: 'none',
-          stroke: dir === DIR_DOWN ? COLOR_DOWN : COLOR_UP,
-          'stroke-width': TIERS[t].width,
-          'stroke-linecap': 'round',
-          opacity: TIERS[t].opacity,
-          // 地图靠 mapLayer 的 transform:scale(zoom) 缩放；不加这个，线宽会跟着一起放大缩小。
-          'vector-effect': 'non-scaling-stroke',
-          'pointer-events': 'none'
-        }, '', lineGroup);
+        paint(dir + ':' + t + ':rest', dir, t, true);
+        paint(dir + ':' + t, dir, t, false);
       });
     }
 

@@ -8,7 +8,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 
-MODULE_PATH = Path(__file__).parents[1] / "tools" / "serve-rail-map.py"
+MODULE_PATH = Path(__file__).parents[1] / "3_dashboard_ui" / "server" / "serve-rail-map.py"
 SPEC = importlib.util.spec_from_file_location("serve_rail_map", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None

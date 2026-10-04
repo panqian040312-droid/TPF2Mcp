@@ -12,11 +12,19 @@ from .save_scope import LEGACY_SAVE_ID
 
 
 class StationEventStore:
+    # 同一（车、站、类型）在该游戏时间窗口内重复上报，视为同一次到站。
+    DUPLICATE_WINDOW_MS = 8000
+    # 车辆连续缺帧超过该帧数后，放弃其 presence 记录（防止误判为重新到站）。
+    PRESENCE_TTL_FRAMES = 5
+
     def __init__(self, path: Path):
         self.path = Path(path)
         self._lock = threading.RLock()
         self._presence: dict[int, str] = {}
         self._active_save_id: str | None = None
+        self._last_emit: dict[tuple[int, int, str], int | None] = {}
+        self._frame_index = 0
+        self._presence_frame: dict[int, int] = {}
 
     def _connect(self) -> sqlite3.Connection:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -56,7 +64,10 @@ class StationEventStore:
             raise ValueError("station event frame requires save_id")
         if self._active_save_id != save_id:
             self._presence = {}
+            self._last_emit = {}
+            self._presence_frame = {}
             self._active_save_id = save_id
+        self._frame_index += 1
         lines = {line.get("entity_id"): line for line in manifest.get("lines", [])}
         stations = manifest.get("stations", [])
         station_by_id = {station.get("entity_id"): station for station in stations}
@@ -95,13 +106,30 @@ class StationEventStore:
             station_id = station.get("entity_id")
             presence = f"{station_id}:{event_type}"
             current[vehicle_id] = presence
+            self._presence_frame[vehicle_id] = self._frame_index
+            stamp = int(game_time) if isinstance(game_time, (int, float)) else None
             if self._presence.get(vehicle_id) == presence:
                 continue
+            # 车辆可能因采样缺帧、或在站内短暂脱离站台轨道而丢失 presence，
+            # 下一帧在同一站、同一类型重新出现——那不是新的到站事件。
+            # 按（车、站、类型）在游戏时间窗口内去重，避免同一次停站被记两次。
+            ledger_key = (vehicle_id, station_id, event_type)
+            previous = self._last_emit.get(ledger_key)
+            if stamp is not None and previous is not None and 0 <= stamp - previous < self.DUPLICATE_WINDOW_MS:
+                continue
+            self._last_emit[ledger_key] = stamp if stamp is not None else previous
             pending.append((save_id, station_id, station.get("name") or f"车站 {station_id}", now,
-                            int(game_time) if isinstance(game_time, (int, float)) else None, event_type,
+                            stamp, event_type,
                             vehicle.get("line_id"), line.get("name") or f"线路 {vehicle.get('line_id')}",
                             vehicle_id, vehicle.get("name") or f"列车{vehicle_id}"))
-        self._presence = current
+        # 保留短暂缺帧车辆的 presence：缺帧不等于离开车站，否则回到同站会被当成新到站。
+        merged = {
+            vehicle_id: presence
+            for vehicle_id, presence in self._presence.items()
+            if self._frame_index - self._presence_frame.get(vehicle_id, -(10 ** 9)) <= self.PRESENCE_TTL_FRAMES
+        }
+        merged.update(current)
+        self._presence = merged
         if not pending:
             return 0
         with self._lock, closing(self._connect()) as connection:

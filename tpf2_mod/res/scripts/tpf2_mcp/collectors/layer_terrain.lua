@@ -27,16 +27,22 @@ local component_access = require "tpf2_mcp/collectors/component_access"
 
 local M = {}
 
--- 目标采样步长（米）。170 m 与地形自身的 tile 尺度同量级，画等高线够用。
-local TARGET_STEP = 170
--- 网格点数的下限 / 上限。上限决定最坏情况的分帧帧数（200×200 = 4 万点 / 每帧 400 = 100 帧）。
+-- 目标采样步长（米）。
+-- 原版地形 tile 尺度约 170 m，170 画等高线偏粗（17900 m 宽的地图只剩 107 格）。
+-- 2026-09-29 用户提出加密：按实测 0.2656 ms/点，85 m 约 4.5 万点、纯采样约 12 秒，
+-- 分帧后每帧 ~40 ms，可以接受。
+local TARGET_STEP = 85
+-- 网格点数的下限 / 上限。上限决定最坏情况的分帧帧数（260×260 = 6.8 万点 / 每帧 150 = 450 帧）。
 local MIN_CELLS = 48
-local MAX_CELLS = 200
+local MAX_CELLS = 260
 -- 采样范围在活动范围外再扩这么多（相对比例），免得边缘等高线贴着边界断开。
 local EDGE_MARGIN = 0.08
--- 每个 update 最多采样多少个点。getHeight 本身是 C++ 点查询很便宜（实测 0.016 ms/次），
--- 但 Lua 循环有成本，宁可多花几帧也不要掉帧。
-local BATCH = 400
+-- 每个 update 最多采样多少个点。
+-- ⚠️ 性能数字以**实测**为准：layer_terrain 自己的探针在存档2 上测到 **0.2656 ms/次**，
+--    而不是早前注释里写的 0.016 ms（那是另一个读法/环境下的数，差了 16 倍）。
+--    所以 BATCH 从 400 降到 150 —— 点数是原来的近 4 倍，靠多分帧摊掉，别让单帧卡住。
+--    getHeight 本身是 C++ 点查询，但 Lua 循环有成本，宁可多花几帧也不要掉帧。
+local BATCH = 150
 -- 高度量化：整数 = round(height * SCALE)，前端除回去。
 local SCALE = 10
 -- 缺失哨兵。JSON 数组不能有洞（json.encode 会跳过 nil 把数组截断），所以用哨兵值。

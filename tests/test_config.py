@@ -25,7 +25,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_lua_bridge_path_is_derived_without_machine_specific_override(self):
         config = (ROOT / "tpf2_mod/res/scripts/tpf2_mcp/config.lua").read_text(encoding="utf-8")
-        installer = (ROOT / "tools/install-mod.ps1").read_text(encoding="utf-8")
+        installer = (ROOT / "0_core_shared/build/install-mod.ps1").read_text(encoding="utf-8")
         runtime = (ROOT / "tpf2_mod/res/scripts/tpf2_mcp/runtime.lua").read_text(encoding="utf-8")
         self.assertIn('package.searchpath, "tpf2_mcp/config"', config)
         self.assertIn('debug.getinfo, 1, "S"', config)
@@ -42,7 +42,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_mod_description_documents_bundled_stdio_server(self):
         strings = (ROOT / "tpf2_mod/strings.lua").read_text(encoding="utf-8")
-        installer = (ROOT / "tools/install-mod.ps1").read_text(encoding="utf-8")
+        installer = (ROOT / "0_core_shared/build/install-mod.ps1").read_text(encoding="utf-8")
         launcher = (ROOT / "mcp_server/start_server.py").read_text(encoding="utf-8")
         ui_launcher = (ROOT / "mcp_server/start_ui.py").read_text(encoding="utf-8")
         requirements = ROOT / "mcp_server/requirements.txt"
@@ -57,14 +57,14 @@ class ConfigTests(unittest.TestCase):
         self.assertIn('SERVER_DIRECTORY / "src"', launcher)
         self.assertIn("sys.dont_write_bytecode = True", launcher)
         self.assertIn("python start_ui.py", strings)
-        self.assertIn("http://127.0.0.1:8765/?view=network", strings)
+        self.assertIn("http://127.0.0.1:8790/?view=network", strings)
         self.assertIn('MOD_DIRECTORY / "tools" / "serve-rail-map.py"', ui_launcher)
         self.assertIn("TPF2_MCP_MOD_DIR", ui_launcher)
 
     def test_workshop_metadata_and_clean_package_contract(self):
         mod = (ROOT / "tpf2_mod/mod.lua").read_text(encoding="utf-8")
         strings = (ROOT / "tpf2_mod/strings.lua").read_text(encoding="utf-8")
-        builder = (ROOT / "tools/build-workshop-package.ps1").read_text(encoding="utf-8")
+        builder = (ROOT / "0_core_shared/build/build-workshop-package.ps1").read_text(encoding="utf-8")
 
         self.assertIn('name = "BlackIce"', mod)
         self.assertEqual(2, strings.count('TPF2_MCP_NAME = "tpf2mcp"'))

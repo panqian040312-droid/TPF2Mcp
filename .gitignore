@@ -45,6 +45,11 @@ ui/rail-map/layers/
 _tmpdb/
 _backup/
 
+# Raw save dumps and build output copies — never commit (2.sav.raw alone is ~1.1 GB,
+# GitHub rejects pushes with files over 100 MB).
+_save/
+build_stage/
+
 # UI screenshots produced during acceptance
 ui/rail-map/*.png
 

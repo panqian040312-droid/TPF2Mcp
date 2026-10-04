@@ -25,6 +25,8 @@ local world_probe = require "tpf2_mcp/collectors/world_probe"
 local route_probe = require "tpf2_mcp/collectors/route_probe"
 local station_struct_probe = require "tpf2_mcp/collectors/station_struct_probe"
 local economy_probe = require "tpf2_mcp/collectors/economy_probe"
+local line_finance_probe = require "tpf2_mcp/collectors/line_finance_probe"
+local terminal_waiting_probe = require "tpf2_mcp/collectors/terminal_waiting_probe"
 
 local M = {}
 local cached_snapshot = nil
@@ -35,6 +37,7 @@ local cached_world_probe = nil
 local cached_route_probe = nil
 local cached_station_struct_probe = nil
 local cached_economy_probe = nil
+local cached_line_finance_probe = nil
 
 local function now()
     return os and os.time and os.time() or 0
@@ -77,7 +80,14 @@ function M.snapshot(sequence, force_refresh)
                 cargo_types = "api.res.cargoTypeRep.getAll",
                 ["vehicles[].capacity_total"] = "api.engine.component.TRANSPORT_VEHICLE.config.capacities",
                 ["lines[].frequency_seconds"] = "game.interface.getEntity(line_id).frequency (1 / raw value)",
-                ["lines[].throughput"] = "game.interface.getEntity(line_id).rate",
+                -- ⚠️ `rate` 的**语义官方没有任何定义**：`api.type.Line` 里根本没有这个字段，
+                --    它只出现在 `game.interface.getEntity(id)` 的聚合表里。
+                --    本项目把它叫 throughput 是**我们自己的命名**，不是引擎口径。
+                --    2026-10-03 实测：273 条线 Σ(rate × defaultPrice) = 5.5e6，
+                --    而账本 INCOME 累计 3.24e11 —— **差 5 个数量级** ⇒
+                --    它绝不是「件数 / 吨位」这类可以直接乘运价的量。
+                --    🔴 别拿它算收入或运量。要算运量得另找口径（`LINE.itemsTransported` 还没验证）。
+                ["lines[].throughput"] = "game.interface.getEntity(line_id).rate（⚠️ 语义未验证，勿当运量用）",
             },
             collector_status = { towns = town_status, industries = industry_status, stations = station_status, lines = line_status, vehicles = vehicle_status, company = company_status, cargo_types = cargo_status, simulation = simulation_status },
         },
@@ -174,6 +184,30 @@ function M.economy_probe()
     local ok, value = pcall(economy_probe.collect)
     cached_economy_probe = ok and value or { status = "ERROR", error = tostring(value) }
     return cached_economy_probe
+end
+
+-- 线路财务探针（只读）：用户 2026-10-02 问「游戏里能单独看每条线的盈亏，引擎给不给 mod 读」。
+-- 已排除 system 接口 / Line 组件两条路 / 玩家账本三个方向，只剩 `LOG_BOOK` 组件没验证过
+-- —— 本探针去问它，顺带把 `game.config` 里维护费周期（chargeMaintenanceInterval）读出来。
+-- 一次进程内不变 → 成功后缓存。
+function M.line_finance_probe()
+    if cached_line_finance_probe ~= nil then return cached_line_finance_probe end
+    local ok, value = pcall(line_finance_probe.collect)
+    cached_line_finance_probe = ok and value or { status = "ERROR", error = tostring(value) }
+    return cached_line_finance_probe
+end
+
+-- 站台候车人数 / 剩余位数探针。
+-- ⚠️ 极度克制（最多 6 次调用、只碰 1 个站 2 个站台）—— 车站侧接口有原生崩溃前科，
+--   见 collectors/terminal_waiting_probe.lua 顶部说明。
+-- 一次进程内结果不变 → 成功后缓存，所以挂在 get_game_state 上不会反复跑。
+local cached_terminal_waiting_probe = nil
+
+function M.terminal_waiting_probe()
+    if cached_terminal_waiting_probe ~= nil then return cached_terminal_waiting_probe end
+    local ok, value = pcall(terminal_waiting_probe.collect)
+    cached_terminal_waiting_probe = ok and value or { status = "ERROR", error = tostring(value) }
+    return cached_terminal_waiting_probe
 end
 
 function M.api_type_inventory() local ok, value = pcall(api_inventory.type_inventory); return ok and value or { error = tostring(value) } end

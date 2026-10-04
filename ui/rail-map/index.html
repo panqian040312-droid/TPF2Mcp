@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>TPF2 CTC 调度台原型</title>
-    <link rel="stylesheet" href="network.css?v=20260930-official-palette1">
+    <link rel="stylesheet" href="network.css?v=20261003-hubentry1">
 </head>
 <body>
     <header>
@@ -30,7 +30,7 @@
             <div class="track-tooltip" id="track-tooltip"></div>
             <div class="map-notice" id="map-notice" role="status" aria-live="polite"></div>
             <div class="map-controls">
-                <button class="view selected" id="local-view">局部</button>
+                <button class="view selected" id="local-view">枢纽</button>
                 <button class="view" id="network-view">全网</button>
                 <button id="zoom-out" title="缩小">−</button>
                 <span class="zoom-value" id="zoom-value">100%</span>
@@ -55,6 +55,9 @@
             </div>
             <div id="sidebar"></div>
         </aside>
+        <!-- 右侧栏宽度拖拽把手：做成 .workspace 的子元素（aside 是 overflow:auto 的滚动容器，
+             把手放进去会跟着内容滚）。收起右侧栏时由 CSS 隐藏。 -->
+        <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-orientation="vertical" title="左右拖动改右侧栏宽度"></div>
     </div>
     <footer>
         <span><i class="lamp amber" id="bridge-lamp"></i>Bridge</span>
@@ -71,16 +74,24 @@
     <script src="bridge-crossings.js?v=20260913-bridge-crossing21"></script>
     <script src="terrain-contour.js?v=20260930-official-palette1"></script>
     <script src="rail-graph.js?v=20260929-merge-nodes1"></script>
-    <script src="network-app.js?v=20260930-stationname1"></script>
+    <!-- 2026-10-02：面板勾选项的本地记忆（localStorage）+「重置勾选」按钮。
+         必须排在 network-app.js **之前** —— 它的 addOption 一建出来就要用到 TPF2UIState。 -->
+    <script src="ui-persist.js?v=20261002-uistate1"></script>
+    <!-- 2026-10-02：站台按 platform.cargo 分色（客运灰 / 货运黄褐）；addOption 接入勾选记忆 → 升版本号 -->
+    <script src="network-app.js?v=20261003-railgeom1"></script>
     <!-- 独立扩展图层：各自监听 window 的 'tpf2map:ready' 事件后再用 TPF2Map 接口，
          所以加载顺序不敏感，但必须排在 network-app.js 之后（它才是接口的定义方）。 -->
-    <script src="station-struct.js?v=20260930-stationshape3"></script>
+    <!-- 2026-10-02：车站结构改用 construction.transf 算真实世界坐标（格子终于铺满全场）；
+         同一版里**只画站房**，站台/轨道交回原作者那层（platformLayer / physical_overview），
+         不再重复画。改了 JS 就必须升版本号，否则浏览器还拿缓存里的旧逻辑。 -->
+    <script src="station-struct.js?v=20261002-arrowscope1"></script>
     <!-- 产业类型表（名字 → 类型 key）：图标层和产业链层共用一份，必须排在它俩前面 -->
     <script src="industry-kinds.js?v=20260930-kinds1"></script>
-    <script src="freight-flow.js?v=20260930-recipe1"></script>
-    <script src="industry-icons.js?v=20260930-kinds1"></script>
+    <!-- 2026-10-02：面板勾选记忆 + 地图上直接点产业图标即选中 → 升版本号 -->
+    <script src="freight-flow.js?v=20261003-railgeom1"></script>
+    <script src="industry-icons.js?v=20261003-idlegray1"></script>
     <script src="town-layer.js?v=20260930-town1"></script>
-    <script src="road-congestion.js?v=20260930-roadtraffic1"></script>
-    <script src="app.js?v=20260929-street-kind1"></script>
+    <script src="road-congestion.js?v=20261002-roadtraffic3"></script>
+    <script src="app.js?v=20261003-hubpage1"></script>
 </body>
 </html>

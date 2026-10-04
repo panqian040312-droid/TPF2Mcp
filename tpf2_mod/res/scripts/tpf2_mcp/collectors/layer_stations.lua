@@ -475,6 +475,12 @@ function M.collect()
                 construction_files = station.construction_files,
                 services = station.services,
                 platforms = station.platforms,
+                -- ⚠️ 2026-09-30 **又踩了一次同一个坑**：上面 `stations[group_id]` 加了容量合计，
+                --    忘了这里 —— 结果 `services[].capacity` 采到了、合计字段被静默裁掉
+                --    （sampled_at_update=161 证明本轮采过，产物里却一个 capacity_* 都没有）。
+                --    ⇒ 这个 `station_list` 才是**真正发出去的那一份**；给车站加字段必须**两处都加**。
+                capacity_passenger = station.capacity_passenger,
+                capacity_cargo = station.capacity_cargo,
                 cluster = common.entity_id(union_find.find(station.key_id or station.entity_id)),
             }
         end

@@ -267,6 +267,10 @@ local function collect_live_vehicles(errors)
         result[#result + 1] = {
             entity_id = id,
             name = common.name_from_component(common.safe_get_component(entity, "NAME", errors)),
+            -- 载具种类（ROAD/RAIL/AIR/WATER）。**服务端要靠它分出船和飞机** ——
+            -- 它们不挂在 BASE_EDGE_* 上（实测 current_edge_id 全为空），
+            -- 走不了铁路的轨道吸附，只能按包围盒位置单独给前端。
+            carrier = common.carrier_name(common.field(vehicle, "carrier")),
             line_id = entity_id(common.field(vehicle, "line")),
             raw_state = common.field(vehicle, "state"),
             stop_index = common.field(vehicle, "stopIndex"),

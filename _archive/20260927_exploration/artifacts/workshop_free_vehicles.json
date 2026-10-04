@@ -1,0 +1,79 @@
+[
+ {
+  "mod": "2571071795",
+  "model": "res/models/model/vehicle/train/Line3/menu_B2.mdl",
+  "price": 0.0,
+  "priceScale": null,
+  "runningCosts": 0.0,
+  "runningCostScale": null,
+  "lifespan": 0.0,
+  "free_buy": true,
+  "free_run": true
+ },
+ {
+  "mod": "2598046566",
+  "model": "res/models/model/vehicle/waggon/SuspendedMonorail/Sus_Mon_m.mdl",
+  "price": -1.0,
+  "priceScale": 1.0,
+  "runningCosts": -1.0,
+  "runningCostScale": 0.6,
+  "lifespan": 29930.0,
+  "free_buy": false,
+  "free_run": false
+ },
+ {
+  "mod": "2598046566",
+  "model": "res/models/model/vehicle/waggon/SuspendedMonorail/Sus_Mon_set.mdl",
+  "price": -1.0,
+  "priceScale": 1.0,
+  "runningCosts": -1.0,
+  "runningCostScale": 0.6,
+  "lifespan": 29930.0,
+  "free_buy": false,
+  "free_run": false
+ },
+ {
+  "mod": "2598046566",
+  "model": "res/models/model/vehicle/waggon/SuspendedMonorail/Sus_Mon_t.mdl",
+  "price": -1.0,
+  "priceScale": 0.6,
+  "runningCosts": -1.0,
+  "runningCostScale": 0.6,
+  "lifespan": 29930.0,
+  "free_buy": false,
+  "free_run": false
+ },
+ {
+  "mod": "2819774551",
+  "model": "res/models/model/vehicle/train/l3/Aw.mdl",
+  "price": 0.0,
+  "priceScale": 0.0,
+  "runningCosts": 1.0,
+  "runningCostScale": 1.0,
+  "lifespan": 36525.0,
+  "free_buy": true,
+  "free_run": false
+ },
+ {
+  "mod": "2819774551",
+  "model": "res/models/model/vehicle/train/l3/Bw.mdl",
+  "price": 0.0,
+  "priceScale": 0.0,
+  "runningCosts": 1.0,
+  "runningCostScale": 1.0,
+  "lifespan": 36525.0,
+  "free_buy": true,
+  "free_run": false
+ },
+ {
+  "mod": "2819774551",
+  "model": "res/models/model/vehicle/train/l3/Cw.mdl",
+  "price": 0.0,
+  "priceScale": 0.0,
+  "runningCosts": 1.0,
+  "runningCostScale": 1.0,
+  "lifespan": 36525.0,
+  "free_buy": true,
+  "free_run": false
+ }
+]

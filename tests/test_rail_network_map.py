@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 
-MODULE_PATH = Path(__file__).parents[1] / "tools" / "export-rail-network-map.py"
+MODULE_PATH = Path(__file__).parents[1] / "1_data_collection" / "exporters" / "export-rail-network-map.py"
 SPEC = importlib.util.spec_from_file_location("export_rail_network_map", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None

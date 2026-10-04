@@ -1,5 +1,6 @@
 function data()
     local runtime = require "tpf2_mcp/runtime"
+    local demand = require "tpf2_mcp/collectors/demand_probe"
     return {
         -- `load` is invoked repeatedly across UI and engine contexts. Starting
         -- file I/O here caused repeated Probe runs and log/CPU pressure.
@@ -33,12 +34,18 @@ function data()
             game.interface.sendScriptEvent("tpf2_mcp", "track_type_resources", { entries = entries })
         end,
         handleEvent = function(src, id, name, params)
+            -- 客流采集：监听 SimPersonSystem.OnCompletedLineUsage /
+            -- SimCargoSystem.OnToArriveAtDestination（只读，只写 bridge JSON）
+            pcall(demand.handle_event, src, id, name, params)
             if id == "tpf2_mcp" and name == "track_type_resources" then
                 runtime.set_track_resources(params and params.entries or {})
             end
         end,
         -- `update` is the engine callback; runtime.tick initializes once per
         -- engine script instance before polling the bridge.
-        update = function() runtime.tick() end,
+        update = function()
+            runtime.tick()
+            pcall(demand.tick)
+        end,
     }
 end

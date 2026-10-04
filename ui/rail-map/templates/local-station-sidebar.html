@@ -4,6 +4,24 @@
             <div class="kv"><span>车站</span><b data-field="station-name"></b></div>
             <div class="kv"><span>停站线路</span><b data-field="serving-lines"></b></div>
         </div>
+        <div class="panel-title">本站客货</div>
+        <div class="section">
+            <div class="kv"><span>候客</span><b data-field="pax-waiting"></b></div>
+            <div class="kv"><span>车上乘客</span><b data-field="pax-onboard"></b></div>
+            <div class="kv"><span>候货</span><b data-field="cargo-waiting"></b></div>
+            <div class="kv"><span>车上货物</span><b data-field="cargo-onboard"></b></div>
+            <div class="kv"><span>客运等待</span><b data-field="pax-wait-time"></b></div>
+            <div class="kv"><span>货运等待</span><b data-field="cargo-wait-time"></b></div>
+            <div class="event" data-field="demand-note"></div>
+        </div>
+        <div class="panel-title">附近交通枢纽</div>
+        <div class="section">
+            <table>
+                <thead><tr><th></th><th>类型</th><th>名称</th><th>距离</th></tr></thead>
+                <tbody data-slot="nearby-hub-rows"></tbody>
+            </table>
+            <div class="event" data-field="nearby-hub-note"></div>
+        </div>
         <div class="panel-title">站台长度与原生节点</div>
         <div class="section">
             <table>
@@ -37,5 +55,14 @@
         <td data-field="length"></td>
         <td data-field="terminal-faces"></td>
         <td data-field="node-id"></td>
+    </tr>
+</template>
+
+<template id="local-hub-row-template">
+    <tr>
+        <td class="hub-icon-cell" data-field="hub-icon"></td>
+        <td data-field="hub-kind"></td>
+        <td data-field="hub-name"></td>
+        <td data-field="hub-distance"></td>
     </tr>
 </template>

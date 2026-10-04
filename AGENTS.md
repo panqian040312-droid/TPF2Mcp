@@ -39,11 +39,61 @@ Workshop 订阅 Mod 根目录：D:\Steam\steamapps\workshop\content\1066780\<wor
 - 第一版以只读能力为主；写操作默认禁止，后续须遵循权限等级与 dry-run 约定。
 - 对尚未验证的 TPF2 Lua API 能力标记为 `UNKNOWN`，以最小实验和实际日志确认。
 
+## 代码 ↔ 官方文档索引（**新增代码必须登记**）
+
+- 本仓库每一份源码文件，都要能在 `docs/CODE_WIKI_INDEX.md` 里查到「它干什么、凭什么这么写、官方哪一页说的」。该文件由 `0_core_shared/index/build-code-wiki-index.py` 自动生成，**不要手改**。
+- 唯一的真相是映射表 `docs/code-wiki-map.json`。改代码 → 改映射表 → 重跑生成器。
+- **新增源码文件必须登记**，否则校验失败；改了函数的官方依据，必须同步改映射表里那条。
+- 官方出处必须写成代号（`GM:towns` / `MD:modularconstructions` / `API:type` / `DG:06` / `PN` 等，类别见索引第三节），**写错或编造代号会让校验失败** —— 这是故意的：宁可报错，也不要让出处变成随口一说。
+- 确实没有官方对应的（管道、序列化、界面外壳）必须**显式写 `SELF`**，表示「判定过、确实没有」，而不是漏标。依据游戏本体文件而非文档的写 `SRC`，依据存档实测的写 `SAVE`。
+- 提交前先跑：
+
+```bash
+python 0_core_shared/index/build-code-wiki-index.py --check     # 不通过就别提交
+python 0_core_shared/index/build-code-wiki-index.py             # 生成 docs/CODE_WIKI_INDEX.md
+```
+
+- 知识库目录默认从环境变量 `TPF2_REFS_DIR` 取，也可用 `--refs <目录>` 指定；找不到时出处校验会全部失败，属预期行为。
+
+## 数据资产总账（**写新采集/新探针之前必须先查**）
+
+- 「我手上到底有什么数据、从哪个接口拿、用了没」→ 看 `docs/DATA_INVENTORY.md`（由 `0_core_shared/index/build-data-inventory.py` 自动生成，**不要手改**）。
+- 🔴 **硬规矩（用户 2026-10-03 明确要求）**：**凡是为了拿某个数据而新写 collector / probe / 字段，
+  必须先查该文档第零节「我想要 → 现成接口」表。** 这条**不靠自觉**，有断言拦着：
+
+```bash
+python 0_core_shared/index/build-data-inventory.py --check    # ❌ 出现基线外的新接口调用 → 直接失败退出
+```
+
+  基线是 `docs/interface-baseline.json`（代码里允许出现的引擎接口白名单）。
+  确需新增接口时：**先把接口补进生成脚本的 `WISH_LIST`（写清「我想要什么」）→ 再 `--update-baseline`**
+  —— 这一步会出现在 git diff 里，等于把「新加了什么、为什么加」留痕。直接 `--update-baseline`
+  而不登记 `WISH_LIST` 等于绕过规矩。
+- 立这条的代价是有目共睹的：实测 **31 个 system / 116 个方法，项目历史上一度只用了 28 个**；
+  想要「每辆车装了什么货」时写了新探针，而现成接口 `getVehicle2Cargo2SimEntitesMap` 一直在；
+  想要「车上乘客」时也写了新探针，而 `line_demand.lua` 早在用 `getSimPersonsForLine`。
+- 提交前跑：
+
+```bash
+python 0_core_shared/index/build-data-inventory.py            # 生成 docs/DATA_INVENTORY.md
+python 0_core_shared/index/build-data-inventory.py --check    # 接口基线校验（新增接口必须留痕）
+python 0_core_shared/index/build-code-wiki-index.py --check   # 新增源码文件必须登记
+python 0_core_shared/build-fields-index.py      # 生成产物字段索引（新字段前先查它）
+```
+
 ## 仓库与发布包的边界
 
 - GitHub 仓库是源码仓库，不得为了匹配创意工坊目录而把仓库整体改造成 `tpf2mcp_1`。
-- 保持职责分离：`tpf2_mod/` 存放 Lua Mod 源码与发布图片，`mcp_server/` 存放 Python 服务，`ui/` 存放前端源码，`tools/` 存放开发和构建工具，`protocol/`、`tests/`、`docs/` 分别存放协议、测试和文档。
-- 创意工坊目录 `tpf2mcp_1/` 是从源码组装出的发布产物，只能由 `tools/build-workshop-package.ps1` 生成；不要把暂存目录中的文件反向复制回源码目录。
+- **源码按四层组织**（规约全文见 `0_core_shared/ARCHITECTURE.md`，**写新代码前先在那里确认归属**）：
+  `0_core_shared/`（契约与共享）｜`1_data_collection/`（只读采集）｜`2_brain_analysis/`（分析判据）｜
+  `3_dashboard_ui/`（表现与收指令）｜`4_execution_control/`（写操作与审计）。
+  层与层之间**只走文件、不走 import**；1 层禁止业务判据；4 层没有 `approved_actions.json` 不许执行。
+- **但下面这些是「发布 / 加载契约路径」，不随四层移动**（动了就断链，详见 ARCHITECTURE.md §二）：
+  `tpf2_mod/`（引擎只从 `res/` 加载 Lua）、`mcp_server/`（MCP 注册点 + 工坊包结构）、
+  `ui/rail-map/`（地图服务的 `UI_DIRECTORY`）、`protocol/`（bridge 协议）、`tests/`、`docs/`。
+  四层是**源码组织**；工坊包由 `0_core_shared/build/build-workshop-package.ps1` 把四层**打平组装**成玩家要的平铺形状。
+  搬迁进度与待改引用点见 ARCHITECTURE.md §六。
+- 创意工坊目录 `tpf2mcp_1/` 是从源码组装出的发布产物，只能由 `0_core_shared/build/build-workshop-package.ps1` 生成；不要把暂存目录中的文件反向复制回源码目录。
 - `tpf2_mod/image_00.tga` 和 `tpf2_mod/workshop_preview.jpg` 是发布资源，应纳入 Git。前者必须是 320×180、24 位、未压缩 TGA；后者必须为正方形且小于 1 MiB。
 - `mcp_server/requirements.txt`、`start_server.py`、`start_ui.py` 以及发布构建脚本属于源码，应纳入 Git。
 
@@ -61,7 +111,7 @@ Workshop 订阅 Mod 根目录：D:\Steam\steamapps\workshop\content\1066780\<wor
 - 使用以下脚本生成 Steam 暂存目录，优先让脚本自动发现 `staging_area`；发现失败时再显式传入路径：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\build-workshop-package.ps1
+powershell -ExecutionPolicy Bypass -File .\0_core_shared/build/build-workshop-package.ps1
 ```
 
 - 构建目标已存在时，脚本应停止而不是覆盖。重新构建前必须先确认目标确为本项目生成的 `tpf2mcp_1` 暂存目录，再以可恢复方式备份或清理；不得递归删除未核实的 Steam 目录。
@@ -76,7 +126,7 @@ python start_server.py
 
 查看前端时另行执行：
 python start_ui.py
-浏览器打开 http://127.0.0.1:8765/?view=network
+浏览器打开 http://127.0.0.1:8790/?view=network
 ```
 
 - 上述命令是面向最终用户的通用说明，不得写死本机盘符。对源码进行开发验证时使用项目目录内 `.venv` 的 Python；对 Mod 发布包进行测试时，工作目录和被执行脚本必须位于实际待测 Mod 根目录内。当前 `requirements.txt` 没有第三方运行时依赖，不应为了形式执行用户级或全局安装。
@@ -87,6 +137,6 @@ python start_ui.py
 - 运行打包脚本，确认图片规格、必需文件、只读默认值以及禁止文件检查全部通过。
 - 从最终暂存目录或最终 ZIP 重新检查目录层级；ZIP 的第一层必须是 `tpf2mcp_1/`，其下才是 Mod 文件。
 - 在游戏中加载暂存版本并重新进入存档，以实际日志确认 Lua Mod 已运行；不得仅凭目录存在判定加载成功。
-- 从发布包内的 `mcp_server` 启动 Bridge，验证 ping 和游戏状态读取；再启动 UI，验证 `http://127.0.0.1:8765/?view=network` 可访问且能读取当前数据。
+- 从发布包内的 `mcp_server` 启动 Bridge，验证 ping 和游戏状态读取；再启动 UI，验证 `http://127.0.0.1:8790/?view=network` 可访问且能读取当前数据。
 - 首次上传或试投默认使用隐藏／仅自己可见状态。公开发布、更新既有创意工坊条目或改变可见性前，必须得到用户明确确认。
 - 验证通过后再制作 release ZIP；ZIP、暂存区和本地安装副本仍不得提交到 GitHub。

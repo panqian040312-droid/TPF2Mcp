@@ -5,7 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>TPF2 线路运行图</title>
-    <link rel="stylesheet" href="timetable.css?v=20260912-ui-structure1">
+    <link rel="stylesheet" href="timetable.css?v=20260929-inline-map2">
+    <link rel="stylesheet" href="dispatch-pages.css?v=20260927-dispatch1">
 </head>
 
 <body>
@@ -18,11 +19,11 @@
     <div class="workspace">
         <nav>
             <button id="network-view">站场图</button>
-            <button class="active">运行图</button>
-            <button>线路</button>
-            <button>车辆</button>
-            <button>告警</button>
-            <button>设置</button>
+            <button id="nav-timetable" class="active">运行图</button>
+            <button id="nav-lines">线路</button>
+            <button id="nav-vehicles">车辆</button>
+            <button id="nav-alerts">告警</button>
+            <button id="nav-settings">设置</button>
         </nav>
         <section class="list">
             <div class="panel">
@@ -36,15 +37,24 @@
             <div class="line-list" id="lines"></div>
         </section>
         <main class="chart">
+            <div class="chart-switch">
+                <button id="view-diagram" class="active" type="button">运行图</button>
+                <button id="view-map" type="button">线路地图</button>
+            </div>
             <svg id="diagram" viewBox="0 0 1200 720"></svg>
+            <!-- 简化地图：只有路网 + 选中的这条线 + 站点，**不含地形/等高线/水深** -->
+            <svg id="linemap" viewBox="0 0 1200 720" style="display:none"></svg>
         </main>
+        <main class="aux" id="aux" hidden></main>
     </div>
     <footer id="footer">一条线路一套表；同线车辆仅占用不同相位。</footer>
     <div id="rail-map-templates" data-template-files="templates/timetable.html" hidden aria-hidden="true"></div>
     <script src="vendor/jquery-4.0.0.min.js"></script>
     <script src="template-runtime.js?v=20260912-template-extraction1"></script>
     <script src="timetable-page.js?v=20260912-ui-structure1"></script>
-    <script src="timetable.js?v=20260912-template-extraction1"></script>
+    <script src="rail-graph.js?v=20260929-merge-nodes1"></script>
+    <script src="timetable.js?v=20260929-ring-close1"></script>
+    <script src="dispatch-pages.js?v=20260927-freight1"></script>
 </body>
 
 </html>

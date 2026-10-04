@@ -76,13 +76,20 @@ local STOCK_ENTITY_COMPONENTS = {
 }
 local STOCK_PROBE_LIMIT = 4
 
--- 实时库存。**首选引擎自己的映射表**：`simEntityAtStockSystem.getStock2SimEntityMap()`
--- —— 一次调用给出「库存 → 件数」（经济探针 2026-09-30 首次实测：可用，value 是数字）。
+-- 实时库存。
 --
--- 上一版是"数 SIM_ENTITY_AT_STOCK 实体、按组件里的 `stock` 字段分组"，**实测全为 0**：
--- `component["stock"]` 走 getter 读不到（这游戏的字段经常只存在于 pairs 或 interface 聚合表）。
--- 所以这里改成两条路：① 系统映射表（首选）② 数实体（字段走 pairs 兜底）。
--- 返回 counts(库存id→件数), 总数, 是否成功, 用的哪条路。
+-- 🔴 2026-10-02 实测更正 —— 我上一轮判错过，而且连错两次，两次都错在"没看清手上的数据"：
+--   ① 老版「数 SIM_ENTITY_AT_STOCK 实体、按 `stock` 字段分组」**是有效的**：
+--      实测 215 个产业合计 **153,892 件**（非零 51 个；深圳制钢厂一家就 41,100）。
+--      我上一轮写它"全为 0"是误判 —— 当时看的是 `itemsProduced`/`itemsConsumed` 那几个数组，
+--      那是"生产/消耗记录表"，跟库存量不是一回事。
+--   ② 引擎的 `simEntityAtStockSystem.getStock2SimEntityMap()` 官方文档写明返回
+--      「stock → **cargo 实体列表**」——**不是件数**。我上一轮按数字去 `tonumber(value)`，
+--      3118 项里只认出 14 项，库存合计错成 14 件（比不用还差）。
+--   ⇒ 所以**主路改回"数实体"**（已验证），API 那条降级成**形状诊断**（`stock_api_shape`）：
+--      把它每项 value 的类型、以及"当数字 / 数元素"两种算法的总量都记下来，
+--      下次看数据就知道该怎么正确解析，不必再赌一轮。
+-- 返回 counts(库存id→件数), 遍历到的实体数, 是否成功, 用的哪条路
 local function pairs_flat(value)
     local out = {}
     if value == nil then return out end
@@ -90,39 +97,57 @@ local function pairs_flat(value)
     return out
 end
 
-local function by_stock_counts(errors)
-    -- ① 系统映射表
-    local ok_api, counts, total = pcall(function()
+-- 只看形状、**不用它算数**。任何失败都吞掉，绝不影响主路。
+local function stock_api_shape()
+    local probe = { ok = false, map_items = 0, numeric_total = 0, element_total = 0, samples = {} }
+    pcall(function()
         local map = api.engine.system.simEntityAtStockSystem.getStock2SimEntityMap()
-        local result, sum = {}, 0
-        if map ~= nil then
-            for stock, value in pairs(map) do
-                local key = tonumber(tostring(stock))
-                local amount = tonumber(tostring(value))
-                if key ~= nil and amount ~= nil then
-                    result[key] = (result[key] or 0) + amount
-                    sum = sum + amount
-                end
+        if map == nil then probe.error = "map is nil"; return end
+        probe.ok = true
+        for stock, value in pairs(map) do
+            probe.map_items = probe.map_items + 1
+            -- 算法 A：当成数字直接加（上一轮的错误做法，留着重现用）
+            local as_number = tonumber(tostring(value))
+            if as_number ~= nil then probe.numeric_total = probe.numeric_total + as_number end
+            -- 算法 B：当成"货实体集合"数元素个数（文档暗示的正确做法）
+            local by_array = common.array_count(value)
+            local by_pairs = nil
+            pcall(function()
+                local n = 0
+                for _ in pairs(value) do n = n + 1 end
+                by_pairs = n
+            end)
+            local best = by_array
+            if best == nil or best == 0 then best = by_pairs end
+            if best ~= nil then probe.element_total = probe.element_total + best end
+            if #probe.samples < 5 then
+                probe.samples[#probe.samples + 1] = {
+                    stock_id = tonumber(tostring(stock)),
+                    value_type = type(value),
+                    as_number = as_number,
+                    by_array = by_array,
+                    by_pairs = by_pairs,
+                    text = tostring(value):sub(1, 40),
+                }
             end
         end
-        return result, sum
     end)
-    if ok_api and counts ~= nil and next(counts) ~= nil then
-        return counts, total or 0, true, "system_map"
-    end
+    return probe
+end
 
-    -- ② 兜底：数实体（`stock` 字段必须读 pairs）
-    local fallback, seen = {}, 0
+local function by_stock_counts(errors)
+    -- **主路：数实体**（`stock` 字段必须走 pairs —— getter 路径拿不到）
+    local counts, seen = {}, 0
     local ok = common.safe_for_each_entity("SIM_ENTITY_AT_STOCK", function(entity)
         seen = seen + 1
         local component = common.safe_get_component(entity, "SIM_ENTITY_AT_STOCK", errors)
         local flat = pairs_flat(component)
         local stock = number_or_nil(flat.stock) or number_or_nil(common.field(component, "stock"))
         if stock ~= nil then
-            fallback[stock] = (fallback[stock] or 0) + 1
+            counts[stock] = (counts[stock] or 0) + 1
         end
     end, errors)
-    return fallback, seen, ok, "entity_count"
+    return counts, seen, ok, "entity_count"
 end
 
 local function probe_stock_entities(errors)
@@ -153,6 +178,8 @@ function M.collect()
     -- 放在产业循环**之前**：一遍数完建好表，循环里 O(1) 查。
     local stock_counts, stock_seen, stock_ok, stock_source = by_stock_counts(errors)
     local stock_probe = probe_stock_entities(errors)
+    -- 引擎映射表的形状诊断（**不用它算数**，只把"该怎么解析它"这件事查清楚）
+    local stock_api = stock_api_shape()
     -- 交叉核对：产业的 `stockList` 值能不能在库存表的键里找到？
     -- **这是"库存能不能挂到产业上"的唯一判据** —— 命中率低就说明两套 id 不是一套，别猜。
     local stock_ids = {}
@@ -240,6 +267,9 @@ function M.collect()
             -- 交叉核对：产业 stockList 值里有多少能在库存表里找到（**这是能否挂到产业的判据**）
             industry_stock_ids = stock_id_total,
             industry_stock_ids_hit = stock_id_hit,
+            -- 引擎映射表的形状（见 stock_api_shape 的说明）：map_items / numeric_total /
+            -- element_total 三个数一对比，就知道"件数"到底该怎么从它里面取。
+            api_shape = stock_api,
         },
         points = points,
         errors = errors,

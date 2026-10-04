@@ -7,7 +7,8 @@
  * 所以本层做三件事，其余一概不做：
  *   ① 从静态几何文件取路段的曲线（world 坐标），从动态路况文件取每段的等级；
  *   ② 按等级把路段合并成 ≤4 条 <path>，涂上高德那套颜色（绿/黄/橙/红）；
- *   ③ 面板里给一个总开关、一个"也画畅通段"、一个刷新按钮，外加最堵的几段清单。
+ *   ③ 面板里给一个总开关、一个"只看拥堵段"、一个刷新按钮，外加最堵的几段清单。
+ *      默认**全路着色**（绿=畅通、黄=缓行、橙=拥堵、红=严重）—— 和游戏自带的交通图层一样。
  *
  * 🔴 有意不做的事（都是踩过坑的）：
  *   · **不画任何车辆**（10,710 辆 NPC 车逐辆画既没必要，也会把 DOM 拖垮）；
@@ -35,7 +36,11 @@
   var LEVEL_ORDER = ["ALARM", "WARN", "SLOW", "OK"];
 
   var ZOOM_MIN = 2.5;             // 放大到这才显示（用户要求"放大才显示"）
-  var SLOW_AT = 0.12;             // 拥堵指数达到这才算"缓行"（Lua 侧只分 OK/WARN/ALARM）
+  // 拥堵指数达到这才算"缓行"。**这个值是 2026-10-02 实测后调的**：
+  // 原来拍的是 0.12，等于"比同型路的基准慢 12% 就标黄" —— 太敏感，把大量正常路段
+  // 涂成黄色（用户拿游戏自带的交通图层对照，发现"游戏说好、我们说堵"）。
+  // 城市路网里红绿灯、转弯、进出行人都会让单段速度掉一成多，那是正常的。
+  var SLOW_AT = 0.35;
   var REFRESH_MS = 5 * 60 * 1000; // 拉新数据的间隔：5 分钟，跟采样节奏对齐
   var MAX_ALARM_ROWS = 10;        // 面板里最多列几条最堵的
 
@@ -43,7 +48,7 @@
     ready: false,
     map: null,
     on: false,            // 总开关，默认关
-    includeClear: false,  // 是否把"有车但畅通"的段也画成绿
+    onlyCongested: false, // 只看拥堵段（默认关：全路着色，绿=畅通）
     group: null,          // 图层容器（挂 mapLayer 下）
     buckets: {},          // level → [path 片段]
     built: false,
@@ -92,8 +97,9 @@
       if (!shape) continue;
       var level = row.level || "OK";
       if (level === "OK" && row.congestion != null && row.congestion >= SLOW_AT) level = "SLOW";
-      // 有车但跑得顺：默认不画 —— 一屏绿没什么信息量，还白白拉长 SVG
-      if (level === "OK" && !state.includeClear) continue;
+      // **默认全画**（绿=畅通、黄=缓行、橙=拥堵、红=严重）—— 和游戏自带图层一样是全路着色。
+      // 勾上「只看拥堵段」则只留橙/红。
+      if (state.onlyCongested && level !== "WARN" && level !== "ALARM") continue;
       // 8 个数：起点、控制点1、控制点2、终点（世界坐标）→ 过 P() 变底图坐标
       var a = map.P({ x: shape[0], y: shape[1] });
       var c1 = map.P({ x: shape[2], y: shape[3] });
@@ -171,11 +177,12 @@
       }
     });
 
-    map.panel.addOption(group, "也画畅通段", {
+    map.panel.addOption(group, "只看拥堵段", {
       checked: false,
-      title: "勾上会把\u201c有车但跑得顺\u201d的路段也涂成绿色。默认不画 —— 一屏绿没什么信息量",
+      title: "默认全路着色：绿=畅通、黄=缓行、橙=拥堵、红=严重（和游戏自带的交通图层一样）。"
+        + "勾上就只留橙/红两档，其他不画 —— 想一眼看出哪几段有问题时用",
       onChange: function (checked) {
-        state.includeClear = checked;
+        state.onlyCongested = checked;
         ensureRendered(map);
       }
     });

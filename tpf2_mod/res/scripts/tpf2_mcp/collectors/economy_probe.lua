@@ -162,9 +162,12 @@ function M.collect()
     local journal_out = {
         available = journal ~= nil,
         source = "player.ACCOUNT.journal",
-        note = "账本条目**没有线路引用**，只能按 carrier 聚合；线路级亏盈要靠维护费+运价侧路估算",
+        note = "账本条目**没有线路引用**，只能按 carrier 聚合；线路级亏盈要靠维护费+运价侧路估算。"
+            .. "2026-10-03 加了 by_type_carrier 交叉 → 能拆出「按运输方式的纯收入」（如 INCOME|RAIL），"
+            .. "比只有净额的 by_carrier 有用。⚠️ 按**具体某条线**仍拆不出。",
         by_type = {},
         by_carrier = {},
+        by_type_carrier = {},
         by_maintenance = {},
         by_construction = {},
         read = 0,
@@ -173,6 +176,12 @@ function M.collect()
     }
 
     local type_acc, carrier_acc, maint_acc, construction_acc = {}, {}, {}, {}
+    -- 🔴 2026-10-03 新增：**类型 × 载体**交叉聚合。
+    --    原来 by_type 和 by_carrier 是两个独立的汇总，拿不到「铁路的**纯收入**」——
+    --    by_carrier.RAIL 是净额（INCOME 与 MAINTENANCE 混在一起），
+    --    而用户要判的是"这条客运线亏多少 / 铁路整体赚多少"。
+    --    `Account.journal` 每条都带 category.type + category.carrier，交叉一次就能拆开。
+    local type_carrier_acc = {}
     local first_time, last_time = nil, nil
 
     local function bump(store, key, amount)
@@ -206,9 +215,12 @@ function M.collect()
             local amount = common.field(entry, "amount")
             local category = common.field(entry, "category")
             local entry_type = common.field(category, "type")
-            bump(type_acc, TYPE_NAME[entry_type] or ("TYPE_" .. tostring(entry_type)), amount)
-            bump(carrier_acc, CARRIER_NAME[common.field(category, "carrier")]
-                or ("CARRIER_" .. tostring(common.field(category, "carrier"))), amount)
+            local type_name = TYPE_NAME[entry_type] or ("TYPE_" .. tostring(entry_type))
+            local carrier_name = CARRIER_NAME[common.field(category, "carrier")]
+                or ("CARRIER_" .. tostring(common.field(category, "carrier")))
+            bump(type_acc, type_name, amount)
+            bump(carrier_acc, carrier_name, amount)
+            bump(type_carrier_acc, type_name .. "|" .. carrier_name, amount)
             local maintenance_kind = common.field(category, "maintenance")
             if maintenance_kind ~= nil then
                 bump(maint_acc, MAINT_NAME[maintenance_kind] or ("MAINT_" .. tostring(maintenance_kind)), amount)
@@ -238,6 +250,7 @@ function M.collect()
 
     journal_out.by_type = flatten(type_acc)
     journal_out.by_carrier = flatten(carrier_acc)
+    journal_out.by_type_carrier = flatten(type_carrier_acc)
     journal_out.by_maintenance = flatten(maint_acc)
     journal_out.by_construction = flatten(construction_acc)
     out.journal = journal_out
@@ -269,6 +282,13 @@ function M.collect()
 
         local vehicles = call(function() return api.engine.system.transportVehicleSystem.getLineVehicles(entity) end)
         local cargos = call(function() return api.engine.system.simCargoSystem.getSimCargosForLine(entity) end)
+        -- 🔴 2026-10-03 补：**这条线上的乘客**。
+        --    原来只采了货（`getSimCargosForLine`），所以客运线的载量一律是 0
+        --    （乘客是 SIM_PERSON，不是 SIM_CARGO）—— 于是按收入公式算分摊时，
+        --    68 条客运线被整个排除，货运线数字整体偏高。
+        --    人跟货是**同构**的一对接口：`simPersonSystem.getSimPersonsForLine` ↔
+        --    `simCargoSystem.getSimCargosForLine`（项目里 `line_demand.lua:157` 早就在用人那条）。
+        local persons = call(function() return api.engine.system.simPersonSystem.getSimPersonsForLine(entity) end)
 
         lines_out[#lines_out + 1] = {
             entity_id = common.entity_id(entity),
@@ -279,6 +299,7 @@ function M.collect()
             transport_modes = common.probe_fields(vehicle_info, { "transportModes", "defaultPrice" }),
             vehicle_count = common.array_count(vehicles),
             cargo_count = common.array_count(cargos),
+            person_count = common.array_count(persons),
             stop_count = common.array_count(common.field(line_component, "stops")),
         }
 
@@ -291,7 +312,11 @@ function M.collect()
 
     out.lines = {
         available = #lines_out > 0,
-        note = "维护费的**周期未实测**；defaultPrice 是引擎给的运价原值",
+        note = "维护费的**周期未实测**（但 base_mod.lua:1027 写着基础设施 = 价格/120 每月）；"
+            .. "defaultPrice 是引擎给的运价原值（官方定义为「Default Ticket price for the line」）。"
+            .. "cargo_count 与 person_count 分别是「这条线上当前在途的货 / 人 实体数」——"
+            .. "两者是**同构**的一对接口（simCargoSystem / simPersonSystem 的 getSimXxxForLine）。"
+            .. "⚠️ 两个都是**瞬时快照**，不是累计运量。",
         diagnostics = line_diag,
         items = lines_out,
     }
@@ -308,6 +333,48 @@ function M.collect()
         push_error(errors, { stage = "systems", error = "api.engine.system 不可访问" })
     end
     out.systems = system_out
+
+    -- ===== 4. 有问题的线路（现成接口，2026-10-03 补）=====
+    -- 🔴 这一条是「先查总账再用接口」的直接产物：`lineSystem.getProblemLines(player)`
+    --    **一次调用就能拿到「哪些线路有问题 + 问题是什么」**，而我们一直是靠自己去算
+    --    （拥堵、净空、死锁诊断脚本）。它不能替代那些诊断，但能当**权威的问题清单**交叉验证。
+    --    出处：`bridge/DATA_INVENTORY.md` 第零节「我想要 → 现成接口」那张表。
+    --    ⚠️ `type.LineProblem` 的结构没验证过 —— 原样 dump 形状，不做解读。
+    local problem_lines = call(function()
+        return api.engine.system.lineSystem.getProblemLines(player)
+    end)
+    local problems_out = {
+        available = problem_lines ~= nil,
+        source = "api.engine.system.lineSystem.getProblemLines(player)",
+        note = "引擎自己认定的「有问题的线路 + 问题类型」。⚠️ type.LineProblem 的结构未验证，原样给形状。",
+        count = common.array_count(problem_lines),
+        samples = {},
+    }
+    if problem_lines ~= nil then
+        local seen = 0
+        pcall(function()
+            for key, item in pairs(problem_lines) do
+                if seen >= 12 then break end
+                seen = seen + 1
+                local row = { key = tostring(key), item_type = type(item) }
+                if type(item) == "table" then
+                    local fields = {}
+                    pcall(function()
+                        for k, v in pairs(item) do
+                            fields[tostring(k)] = type(v) == "number" or type(v) == "string"
+                                and v or type(v)
+                        end
+                    end)
+                    row.fields = fields
+                elseif type(item) == "number" then
+                    -- {Entity, type.LineProblem} 的二元组形式
+                    row.value = item
+                end
+                problems_out.samples[#problems_out.samples + 1] = row
+            end
+        end)
+    end
+    out.problem_lines = problems_out
 
     -- ===== 6. 库存（顺带把"实时原料数量"做准）=====
     -- `getStock2SimEntityMap()` = "stock → 等在那儿的货" 的映射，一次调用就拿到全部。

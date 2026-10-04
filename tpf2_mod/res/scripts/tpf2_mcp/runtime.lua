@@ -188,6 +188,8 @@ local function handle(command)
         write_json("operations-probe.json", state.operations_probe())
         write_json("ui-source-probe.json", state.ui_source_probe())
         write_json("context-probe.json", state.context_probe())
+        -- 站台候车人数探针（只读、极度克制；内部缓存 → 只真跑一次）
+        write_json("terminal-waiting-probe.json", state.terminal_waiting_probe())
         write_json("dynamic-transport-probe.json", state.dynamic_probe())
         write_json("write-api-probe.json", state.write_api_probe())
         write_json("vehicle-write-api-probe.json", state.vehicle_write_probe())
@@ -201,6 +203,8 @@ local function handle(command)
         -- 车站结构（模块网格）：四类站都是"一个 .con + 若干 .module 格子"，见 station_struct_probe.lua。
         write_json("station-struct-probe.json", state.station_struct_probe())
         write_json("economy-probe.json", state.economy_probe())
+        -- 线路财务：游戏 UI 那条「收入/维护费」曲线引擎给不给 mod 读（见 line_finance_probe.lua）。
+        write_json("line-finance-probe.json", state.line_finance_probe())
         write_json("station-geometry.json", state.station_geometry())
         return true, snapshot
     end

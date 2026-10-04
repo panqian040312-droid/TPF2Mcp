@@ -74,8 +74,12 @@ header {
 
 .workspace {
     display: grid;
-    grid-template-columns: 64px 1fr 310px;
-    height: calc(100vh - 94px)
+    /* 第三列＝右侧栏宽度。可拖：network-app.js 把值写在 `--sidebar-w` 上并记进 localStorage。
+       收起时由下面 `.sidebar-collapsed` 那条规则压成 0。 */
+    grid-template-columns: 64px 1fr var(--sidebar-w, 310px);
+    height: calc(100vh - 94px);
+    /* 右侧栏的拖拽把手是这一层的绝对定位子元素（见 .sidebar-resizer） */
+    position: relative
 }
 
 nav {
@@ -165,30 +169,148 @@ nav button.active {
     z-index: 2
 }
 
-/* 图层开关：内容由 network-app.js 异步填，填之前靠 :empty 藏起来，避免出现空框 */
+/* 图层开关：内容由 network-app.js 异步填，填之前靠 :empty 藏起来，避免出现空框。
+   🔴 2026-10-02 改成三层结构（用户：「侧边栏过宽，加一个可以拖动和收起的功能」）：
+       外框（这一层）＝ 标题条 .layer-panel-head ＋ 内容区 .layer-panel-body ＋ 右缘把手 .layer-panel-resizer。
+       宽度由 `--layer-panel-w` 决定，值由 network-app.js 写、并记进 localStorage。 */
 .layer-panel {
     position: absolute;
     left: 16px;
     bottom: 16px;
+    /* 默认宽度比原来的"按内容撑开"窄一点，长标签会换行/截断，不再把地图盖掉半边 */
+    width: var(--layer-panel-w, 232px);
+    min-width: 132px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 7px 10px;
+    /* 🔴 overflow 挂到内容区去了，这一层必须 hidden —— 把手是绝对定位的子元素，
+       留在滚动容器里会被卷着一起滚（原来 overflow-y:auto 就在这一层）。 */
+    overflow: hidden;
+    padding: 0;
+    gap: 0;
     background: #09131ee6;
     border: 1px solid #31495e;
     border-radius: 3px;
     box-shadow: 0 3px 12px #0008;
     z-index: 2;
-    /* 面板现在有「底图 / 路网 / 种类 / 职能 / 线路 / 设施」六组，线路那一组还可能
-       列出一百多条线，所以面板自身要能滚动，否则会把地图挤没 */
-    max-height: calc(100% - 32px);
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #31506a transparent
+    /* 面板有「底图 / 路网 / 种类 / 职能 / 线路 / 设施 / 车站结构 / 产业链」八组，
+       线路那一组还可能列出一百多条线，所以内容区要能滚动，否则会把地图挤没。
+       🔴 顶部必须留出让位空间：左上角还有两组控件 —— 缩放（top:14，高约 38px）和
+       朝向（top:62，高约 30px），两者占到约 92px。原来的 `calc(100% - 32px)`
+       让面板能一直长到 top:16px，内容一多就整个盖住这两组控件（2026-09-30 实测）。
+       现在顶部留 114px。 */
+    max-height: calc(100% - 130px)
 }
 
 .layer-panel:empty {
     display: none
+}
+
+/* 标题条：折叠按钮在这儿；按住空白处还能把面板拖到别处（双击复位）。
+   位置和宽度都记在 localStorage（`tpf2map.layerPanel.*`）。 */
+.layer-panel-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 10px;
+    background: #0d1b28;
+    border-bottom: 1px solid #1d3346;
+    color: #7ee6ff;
+    font: 11px Consolas;
+    cursor: move;
+    user-select: none;
+    touch-action: none
+}
+
+.layer-panel-head .layer-panel-title {
+    flex: 1;
+    letter-spacing: .5px
+}
+
+.layer-panel-head button {
+    flex: none;
+    width: 20px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid #3a6178;
+    background: #102535;
+    color: #7ee6ff;
+    border-radius: 2px;
+    font: 11px/1 Consolas;
+    cursor: pointer
+}
+
+.layer-panel-head button:hover {
+    background: #17384c
+}
+
+/* 内容区：所有分组与动作条都在这儿（自建的分组也走 addGroup → 这里） */
+.layer-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 10px;
+    /* 两个方向都要能滚：纵向是内容多，横向是"线路名很长、面板被拖窄了"——
+       只写 overflow-y 的话长名字会被 overflow:hidden 直接裁掉，用户看不到也点不到。 */
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #31506a transparent;
+    min-height: 0
+}
+
+/* 🔴 内容区是 flex 列 ⇒ 子元素默认会被**压缩**，面板一长就把每组挤成一条窄缝，
+   而不是让内容区滚起来。锁死不许压缩，「太长」一律交给内容区滚动处理。 */
+.layer-panel-body>* {
+    flex: none
+}
+
+/* 收起：只留标题条（宽度交给内容自适应，所以宽度变量在这里不生效） */
+.layer-panel.is-collapsed {
+    width: auto;
+    min-width: 0
+}
+
+.layer-panel.is-collapsed .layer-panel-body,
+.layer-panel.is-collapsed .layer-panel-resizer {
+    display: none
+}
+
+/* 右缘的拖拽把手：左右拖改宽度。绝对定位在**滚动区之外**，否则会跟着内容滚。 */
+.layer-panel-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 3;
+    touch-action: none
+}
+
+.layer-panel-resizer::after {
+    content: "";
+    position: absolute;
+    right: 2px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #2b4358
+}
+
+.layer-panel-resizer:hover::after {
+    background: #43c8ef
+}
+
+/* 拖动过程中整页统一光标，免得扫过别的元素时闪来闪去 */
+body.is-resizing {
+    cursor: col-resize;
+    user-select: none
+}
+
+body.is-moving-panel {
+    cursor: move;
+    user-select: none
 }
 
 /* 线路列表上方的一键全选 / 全不选 */
@@ -434,6 +556,40 @@ nav button.active {
 }
 
 .workspace.sidebar-collapsed aside {
+    display: none
+}
+
+/* 右侧栏左缘的拖拽把手。
+   🔴 做成 `.workspace` 的子元素，而**不是**放 aside 里面：aside 是 `overflow:auto`
+   的滚动容器，绝对定位的把手放进去会跟着内容一起滚（滚两下就找不到了）。
+   `right` 跟着宽度变量走，所以拖完之后把手自然停在新的栏边。 */
+.sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: var(--sidebar-w, 310px);
+    width: 7px;
+    margin-right: -4px;
+    cursor: col-resize;
+    z-index: 5;
+    touch-action: none
+}
+
+.sidebar-resizer::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #26384a
+}
+
+.sidebar-resizer:hover::after {
+    background: #43c8ef
+}
+
+.workspace.sidebar-collapsed .sidebar-resizer {
     display: none
 }
 
@@ -1065,4 +1221,36 @@ aside * {
    这就是游戏内建筑标记的观感。 */
 .hub-mark-icon {
     filter: brightness(0) invert(1)
+}
+
+/* 「查看整个枢纽」按钮（2026-10-03）—— 车站侧边栏里进枢纽页的正门。
+   原来进枢纽页只能靠**双击地图上的车站**，页面上没有任何可见入口。 */
+.hub-open {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 7px;
+    padding: 6px 9px;
+    border: 1px solid rgba(106, 199, 229, .42);
+    border-radius: 6px;
+    background: rgba(106, 199, 229, .08);
+    color: #cfe9f5;
+    cursor: pointer;
+    text-align: left
+}
+
+.hub-open em {
+    font-style: normal;
+    font-weight: 500
+}
+
+.hub-open span {
+    color: #7fa6bd;
+    font-size: 11px
+}
+
+.hub-open:hover {
+    border-color: rgba(106, 199, 229, .78);
+    background: rgba(106, 199, 229, .16)
 }

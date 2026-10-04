@@ -77,7 +77,7 @@ python tools\export-rail-network-map.py
 python tools\serve-rail-map.py
 ```
 
-然后访问 `http://127.0.0.1:8765/?view=network`。服务提供按需区域 JSON API
+然后访问 `http://127.0.0.1:8790/?view=network`。服务提供按需区域 JSON API
 和 SSE 状态流；页面会显示 Bridge 在线状态及 snapshot sequence。Bridge 中的
 `rail-network.json` 发生变化时，服务自动重建分片并通知页面刷新。服务不会
 自行周期性触发完整游戏铁路扫描，避免影响游戏帧率。

@@ -1,0 +1,2398 @@
+{
+ "vehicle/train/AntarzSimensA1/HC/car.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 2000.0,
+   "yearFrom": 1997.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "topSpeed": 25.333333969116,
+   "weight": 35.0,
+   "group": 11.0,
+   "capacity": 264.0,
+   "loadSpeed": 20.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/AntarzSimensA1/MC/car.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 2000.0,
+   "yearFrom": 1997.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "power": 760.0,
+   "tractiveEffort": 45.0,
+   "topSpeed": 25.0,
+   "weight": 35.0,
+   "group": 10.0,
+   "capacity": 264.0,
+   "loadSpeed": 20.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JCA.mdl": {
+  "variables": {
+   "visibleFrom": 690.29901123047,
+   "visibleTo": 2070.8969726563,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 5.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": -1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 40.0,
+   "group": 0.0,
+   "capacity": 88.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": -1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JCAC.mdl": {
+  "variables": {
+   "visibleFrom": 690.29901123047,
+   "visibleTo": 2070.8969726563,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 40.0,
+   "group": 0.0,
+   "capacity": 88.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JDL-fan.mdl": {
+  "variables": {
+   "visibleFrom": 664.32446289063,
+   "visibleTo": 1992.9733886719,
+   "yearFrom": 2018.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": 66.59642791748,
+   "powerEmission": 0.0,
+   "speedEmission": 0.80000001192093,
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 5720.0,
+   "tractiveEffort": 245.5,
+   "topSpeed": 44.444442749023,
+   "weight": 85.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JDL-fanC.mdl": {
+  "variables": {
+   "visibleFrom": 664.32446289063,
+   "visibleTo": 1992.9733886719,
+   "yearFrom": 2018.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": 66.59642791748,
+   "powerEmission": 0.0,
+   "speedEmission": 0.80000001192093,
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 5720.0,
+   "tractiveEffort": 245.5,
+   "topSpeed": 44.444442749023,
+   "weight": 25.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JDL.mdl": {
+  "variables": {
+   "visibleFrom": 664.32446289063,
+   "visibleTo": 1992.9733886719,
+   "yearFrom": 2018.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": 66.59642791748,
+   "powerEmission": 0.0,
+   "speedEmission": 0.80000001192093,
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 5720.0,
+   "tractiveEffort": 245.5,
+   "topSpeed": 44.444442749023,
+   "weight": 25.0,
+   "group": 1.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JDLC.mdl": {
+  "variables": {
+   "visibleFrom": 664.32446289063,
+   "visibleTo": 1992.9733886719,
+   "yearFrom": 2018.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": 66.59642791748,
+   "powerEmission": 0.0,
+   "speedEmission": 0.80000001192093,
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 5720.0,
+   "tractiveEffort": 245.5,
+   "topSpeed": 44.444442749023,
+   "weight": 25.0,
+   "group": 1.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 60000.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JRW.mdl": {
+  "variables": {
+   "time": 1100.0,
+   "visibleFrom": 685.54541015625,
+   "visibleTo": 2056.6362304688,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": -1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 5.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": -1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 20.0,
+   "group": 0.0,
+   "capacity": 80.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": -1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": -1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JRWC.mdl": {
+  "variables": {
+   "time": 1100.0,
+   "visibleFrom": 685.54541015625,
+   "visibleTo": 2056.6362304688,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 40.0,
+   "group": 0.0,
+   "capacity": 88.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JYW.mdl": {
+  "variables": {
+   "time": 1100.0,
+   "visibleFrom": 685.46795654297,
+   "visibleTo": 2056.4038085938,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 5.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": -1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 20.0,
+   "group": 0.0,
+   "capacity": 120.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": -1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JYWC.mdl": {
+  "variables": {
+   "time": 1100.0,
+   "visibleFrom": 685.46795654297,
+   "visibleTo": 2056.4038085938,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 10.0,
+   "group": 0.0,
+   "capacity": 160.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JZE.mdl": {
+  "variables": {
+   "time": 1100.0,
+   "visibleFrom": 699.54083251953,
+   "visibleTo": 2098.6225585938,
+   "yearFrom": 2018.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 40.0,
+   "group": 15.0,
+   "capacity": 120.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR200JZEC.mdl": {
+  "variables": {
+   "time": 1100.0,
+   "visibleFrom": 699.54083251953,
+   "visibleTo": 2098.6225585938,
+   "yearFrom": 2018.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 44.444442749023,
+   "weight": 40.0,
+   "group": 15.0,
+   "capacity": 120.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400AF_0208/HC/CR/hs/00.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 50.0,
+   "weight": 68.0,
+   "trainCapacity": 76.0,
+   "capacity": 76.0,
+   "trainLoadSpeed": 2.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 39.0,
+   "offset": 0.0,
+   "position": -8.710000038147,
+   "fov": 60.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/HC/CR/hs/01.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 50.0,
+   "weight": 68.0,
+   "trainCapacity": 76.0,
+   "capacity": 76.0,
+   "trainLoadSpeed": 2.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 39.0,
+   "offset": 0.0,
+   "position": -8.710000038147,
+   "fov": 60.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/00.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 76.0,
+   "capacity": 76.0,
+   "trainLoadSpeed": 2.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 39.0,
+   "offset": 0.0,
+   "position": -8.710000038147,
+   "fov": 60.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/01.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 76.0,
+   "capacity": 76.0,
+   "trainLoadSpeed": 2.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 39.0,
+   "offset": 0.0,
+   "position": -8.710000038147,
+   "fov": 60.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/WL/00.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 76.0,
+   "capacity": 76.0,
+   "trainLoadSpeed": 2.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 37.0,
+   "offset": 0.0,
+   "position": -8.710000038147,
+   "fov": 60.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/WL/01.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 76.0,
+   "capacity": 76.0,
+   "trainLoadSpeed": 2.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 37.0,
+   "offset": 0.0,
+   "position": -8.710000038147,
+   "fov": 60.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/02.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 2500.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 151.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/04.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 2500.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 151.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/05.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 2500.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 151.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/07.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 2500.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 151.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/02.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 3000.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 200.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 50.0,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/04.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 3000.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 200.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 50.0,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/05.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 3000.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 200.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 50.0,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/07.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 3000.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 200.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 50.0,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/03.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 356.0,
+   "capacity": 316.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -8.960000038147,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/04_T.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/05_T.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 360.0,
+   "capacity": 360.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -9.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/06.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 356.0,
+   "capacity": 316.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2021.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -8.960000038147,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/TC/hs/03.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 356.0,
+   "capacity": 316.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -8.960000038147,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400AF_0208/TC/hs/06.mdl": {
+  "variables": {
+   "trainCostPrice": 6142857.143,
+   "price": -1.0,
+   "trainRunningCosts": 6142.857143,
+   "runningCosts": -1.0,
+   "trainEnginePower": 0.0,
+   "power": 1300.0,
+   "trainTractiveEffort": 0.0,
+   "tractiveEffort": 80.0,
+   "trainTopSpeed": 83.330001831055,
+   "topSpeed": 83.330001831055,
+   "trainWeight": 53.475,
+   "weight": 68.0,
+   "trainCapacity": 356.0,
+   "capacity": 316.0,
+   "trainLoadSpeed": 4.0,
+   "loadSpeed": 1.0,
+   "lod0_visibleFrom": 0.0,
+   "lod0_visibleTo": 1000.0,
+   "lod1_visibleTo": 2000.0,
+   "lod2_visibleTo": 3000.0,
+   "yearFrom": 2015.0,
+   "yearTo": 0.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "blinkInterval": 500.0,
+   "group": 38.0,
+   "offset": 0.0,
+   "position": -8.960000038147,
+   "fov": 45.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 6142857.143,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 6142.857143
+  }
+ },
+ "vehicle/train/CR400BFC/00.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 2109.4931640625,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 60.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 44.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/01.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 2109.4931640625,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 60.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 32.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/02.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 1916.0476074219,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 60.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 2600.0,
+   "tractiveEffort": 75.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 92.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/03.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 1916.0476074219,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 45.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 92.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/04.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 1916.0476074219,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 45.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 2600.0,
+   "tractiveEffort": 75.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 76.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/05.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 1916.0476074219,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 45.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 2600.0,
+   "tractiveEffort": 75.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 64.0,
+   "loadSpeed": 2.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/06.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 1916.0476074219,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 45.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 92.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/CR400BFC/07.mdl": {
+  "variables": {
+   "visibleFrom": 100.0,
+   "visibleTo": 1916.0476074219,
+   "yearFrom": 2020.0,
+   "yearTo": 0.0,
+   "fov": 45.0,
+   "group": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "power": 2600.0,
+   "tractiveEffort": 75.0,
+   "topSpeed": 97.222221374512,
+   "weight": 55.599998474121,
+   "capacity": 92.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 999999.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD1D_C_00880089.mdl": {
+  "variables": {
+   "visibleFrom": 200.0,
+   "visibleTo": 1500.0,
+   "yearFrom": 2013.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -5.3730001449585,
+   "power": 14400.0,
+   "tractiveEffort": 648.0,
+   "topSpeed": 44.444442749023,
+   "weight": 126.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD1D_III_1898.mdl": {
+  "variables": {
+   "visibleFrom": 200.0,
+   "visibleTo": 1500.0,
+   "yearFrom": 2016.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -5.8499999046326,
+   "power": 7200.0,
+   "tractiveEffort": 324.0,
+   "topSpeed": 44.444442749023,
+   "weight": 126.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD1D_II_0364.mdl": {
+  "variables": {
+   "visibleFrom": 200.0,
+   "visibleTo": 1500.0,
+   "yearFrom": 2013.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -5.8499999046326,
+   "power": 7200.0,
+   "tractiveEffort": 324.0,
+   "topSpeed": 44.444442749023,
+   "weight": 126.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD1D_I_0001.mdl": {
+  "variables": {
+   "visibleFrom": 200.0,
+   "visibleTo": 1500.0,
+   "yearFrom": 2012.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -5.8499999046326,
+   "power": 7200.0,
+   "tractiveEffort": 324.0,
+   "topSpeed": 44.444442749023,
+   "weight": 126.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD3CA_I_8250.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2012.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 7200.0,
+   "tractiveEffort": 420.0,
+   "topSpeed": 33.333301544189,
+   "weight": 150.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD3C_III_0194.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2010.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 7200.0,
+   "tractiveEffort": 370.0,
+   "topSpeed": 33.333301544189,
+   "weight": 138.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/HXD3C_II_0121.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2010.0,
+   "yearTo": 9999.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 7200.0,
+   "tractiveEffort": 370.0,
+   "topSpeed": 33.333301544189,
+   "weight": 138.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/SS8_IIB_0033.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2006.0,
+   "yearTo": 2017.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 3600.0,
+   "tractiveEffort": 210.0,
+   "topSpeed": 47.222221374512,
+   "weight": 88.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/SS8_IIB_0072.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2006.0,
+   "yearTo": 2017.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 3600.0,
+   "tractiveEffort": 210.0,
+   "topSpeed": 47.222221374512,
+   "weight": 88.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/SS8_IIB_0114.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2006.0,
+   "yearTo": 2017.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 3600.0,
+   "tractiveEffort": 210.0,
+   "topSpeed": 47.222221374512,
+   "weight": 88.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/SS8_III_0191.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 1999.0,
+   "yearTo": 2007.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 3600.0,
+   "tractiveEffort": 210.0,
+   "topSpeed": 47.222221374512,
+   "weight": 88.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/SS8_II_0001.mdl": {
+  "variables": {
+   "visibleFrom": 1000.0,
+   "visibleTo": 1300.0,
+   "yearFrom": 2006.0,
+   "yearTo": 2017.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0,
+   "blinkInterval": 500.0,
+   "group": 1.0,
+   "offset": 0.0,
+   "position": -4.5,
+   "power": 3600.0,
+   "tractiveEffort": 210.0,
+   "topSpeed": 47.222221374512,
+   "weight": 88.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 21915.0,
+   "runningCostScale": 1.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/train/l3/Aw.mdl": {
+  "variables": {
+   "visibleFrom": 0.0,
+   "visibleTo": 680.82775878906,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": 0.0,
+   "priceScale": 0.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 1.0,
+   "blinkInterval": 500.0,
+   "power": 920.0,
+   "tractiveEffort": 50.0,
+   "topSpeed": 33.330001831055,
+   "weight": 36.0,
+   "group": 2.0,
+   "capacity": 160.0,
+   "loadSpeed": 16.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 0.0,
+   "priceScale": 0.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 1.0
+  }
+ },
+ "vehicle/train/l3/Bw.mdl": {
+  "variables": {
+   "visibleFrom": 0.0,
+   "visibleTo": 680.82775878906,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": 0.0,
+   "priceScale": 0.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 1.0,
+   "blinkInterval": 500.0,
+   "power": 920.0,
+   "tractiveEffort": 50.0,
+   "topSpeed": 33.0,
+   "weight": 36.0,
+   "group": 2.0,
+   "capacity": 160.0,
+   "loadSpeed": 16.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 0.0,
+   "priceScale": 0.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 1.0
+  }
+ },
+ "vehicle/train/l3/Cw.mdl": {
+  "variables": {
+   "visibleFrom": 0.0,
+   "visibleTo": 680.82775878906,
+   "yearFrom": 2003.0,
+   "yearTo": 0.0,
+   "price": 0.0,
+   "priceScale": 0.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 1.0,
+   "blinkInterval": 500.0,
+   "power": 920.0,
+   "tractiveEffort": 50.0,
+   "topSpeed": 33.0,
+   "weight": 36.0,
+   "group": 2.0,
+   "capacity": 160.0,
+   "loadSpeed": 16.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 0.0,
+   "priceScale": 0.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 1.0
+  }
+ },
+ "vehicle/train/qingguiCO.mdl": {
+  "variables": {
+   "visibleFrom": 0.0,
+   "visibleTo": 2000.0,
+   "yearFrom": 1894.0,
+   "yearTo": 0.0,
+   "price": 2030000.0,
+   "priceScale": 1.0,
+   "idleEmission": 36.018185424805,
+   "powerEmission": 0.0,
+   "speedEmission": 0.10000001192093,
+   "lifespan": 37313.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 21600.0,
+   "blinkInterval": 500.0,
+   "power": 620.0,
+   "tractiveEffort": 36.0,
+   "topSpeed": 22.222223,
+   "weight": 18.0,
+   "group": 0.0,
+   "randomId": 15.0,
+   "capacity": 152.0,
+   "loadSpeed": 6.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": 2030000.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 37313.0,
+   "runningCostScale": 1.0,
+   "runningCosts": 21600.0
+  }
+ },
+ "vehicle/train/ss9g/china_ss9g.mdl": {
+  "variables": {
+   "visibleFrom": 400.0,
+   "visibleTo": 1600.0,
+   "yearFrom": 1998.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "idleEmission": 65.361663818359,
+   "powerEmission": 0.0,
+   "speedEmission": 0.80000001192093,
+   "lifespan": 36525.0,
+   "runningCosts": -1.0,
+   "power": 4800.0,
+   "tractiveEffort": 169.0,
+   "topSpeed": 47.222221374512,
+   "weight": 126.0,
+   "group": 17.0,
+   "loadSpeed": 1.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0
+  },
+  "maintenance": {
+   "lifespan": 36525.0,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/waggon/SuspendedMonorail/Sus_Mon_m.mdl": {
+  "variables": {
+   "visibleFrom": 0.0,
+   "visibleTo": 2000.0,
+   "yearFrom": 1894.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 1.0,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "group": 1.0,
+   "fov": 90.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 29930.0,
+   "runningCostScale": 0.6,
+   "runningCosts": -1.0,
+   "offset": -0.15,
+   "position": 0.0,
+   "power": 750.0,
+   "tractiveEffort": 60.0,
+   "topSpeed": 22.222222,
+   "weight": 30.0,
+   "capacity": 216.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 1.0
+  },
+  "maintenance": {
+   "lifespan": 29930.0,
+   "runningCostScale": 0.6,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/waggon/SuspendedMonorail/Sus_Mon_t.mdl": {
+  "variables": {
+   "visibleFrom": 0.0,
+   "visibleTo": 2000.0,
+   "yearFrom": 1894.0,
+   "yearTo": 0.0,
+   "price": -1.0,
+   "priceScale": 0.6,
+   "idleEmission": -1.0,
+   "powerEmission": -1.0,
+   "speedEmission": -1.0,
+   "alpha": 1.0,
+   "nLines": 1.0,
+   "lifespan": 29930.0,
+   "runningCostScale": 0.6,
+   "runningCosts": -1.0,
+   "group": 1.0,
+   "offset": -0.15,
+   "position": 0.0,
+   "topSpeed": 22.222222,
+   "weight": 26.0,
+   "capacity": 192.0,
+   "loadSpeed": 4.0,
+   "version": 1.0
+  },
+  "cost": {
+   "price": -1.0,
+   "priceScale": 0.6
+  },
+  "maintenance": {
+   "lifespan": 29930.0,
+   "runningCostScale": 0.6,
+   "runningCosts": -1.0
+  }
+ },
+ "vehicle/waggon/boxcar_2000.mdl": {
+  "missing": true
+ },
+ "vehicle/waggon/gondola_2000.mdl": {
+  "missing": true
+ },
+ "vehicle/waggon/stake_car_2000.mdl": {
+  "missing": true
+ },
+ "vehicle/waggon/tankcar_2000.mdl": {
+  "missing": true
+ }
+}

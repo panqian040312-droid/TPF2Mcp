@@ -32,7 +32,7 @@ python -m pip install -e .\mcp_server
 python -m unittest discover -s tests -v
 ```
 
-本机开发安装使用 `tools/install-mod.ps1`。该脚本用于已确认的游戏 Mod 根目录测试，
+本机开发安装使用 `0_core_shared/build/install-mod.ps1`。该脚本用于已确认的游戏 Mod 根目录测试，
 不是 Workshop 发布构建方式。运行真实游戏前，需要在游戏内启用 Mod 并重新进入存档，
 再验证 Bridge ping 和游戏状态读取。
 
@@ -66,7 +66,7 @@ Agent 工具入口见 [agent-mcp-tools.md](agent-mcp-tools.md)。
 创意工坊发布文件夹由源码白名单组装，默认目录名为 `tpf2mcp_1`：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\build-workshop-package.ps1
+powershell -ExecutionPolicy Bypass -File .\0_core_shared/build/build-workshop-package.ps1
 ```
 
 构建目标已存在时，脚本会停止而不是覆盖。发布前应完成自动化测试、构建脚本校验、
@@ -81,7 +81,7 @@ python start_server.py
 python start_ui.py
 ```
 
-然后打开 `http://127.0.0.1:8765/?view=network`。
+然后打开 `http://127.0.0.1:8790/?view=network`。
 
 ## 延伸文档
 

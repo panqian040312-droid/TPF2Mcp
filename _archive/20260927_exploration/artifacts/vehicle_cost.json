@@ -1,0 +1,1018 @@
+{
+ "models": {
+  "vehicle/train/AntarzSimensA1/HC/car.mdl": {
+   "model": "vehicle/train/AntarzSimensA1/HC/car.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2805877314\\res\\models\\model\\vehicle\\train\\AntarzSimensA1\\HC\\car.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/AntarzSimensA1/MC/car.mdl": {
+   "model": "vehicle/train/AntarzSimensA1/MC/car.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2805877314\\res\\models\\model\\vehicle\\train\\AntarzSimensA1\\MC\\car.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JCA.mdl": {
+   "model": "vehicle/train/CR200JCA.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JCA.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JCAC.mdl": {
+   "model": "vehicle/train/CR200JCAC.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JCAC.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JDL-fan.mdl": {
+   "model": "vehicle/train/CR200JDL-fan.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDL-fan.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 60000.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JDL-fanC.mdl": {
+   "model": "vehicle/train/CR200JDL-fanC.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDL-fanC.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 60000.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JDL.mdl": {
+   "model": "vehicle/train/CR200JDL.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDL.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 60000.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JDLC.mdl": {
+   "model": "vehicle/train/CR200JDLC.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDLC.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 60000.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JRW.mdl": {
+   "model": "vehicle/train/CR200JRW.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JRW.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JRWC.mdl": {
+   "model": "vehicle/train/CR200JRWC.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JRWC.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JYW.mdl": {
+   "model": "vehicle/train/CR200JYW.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JYW.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JYWC.mdl": {
+   "model": "vehicle/train/CR200JYWC.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JYWC.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JZE.mdl": {
+   "model": "vehicle/train/CR200JZE.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JZE.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR200JZEC.mdl": {
+   "model": "vehicle/train/CR200JZEC.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JZEC.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/HC/CR/hs/00.mdl": {
+   "model": "vehicle/train/CR400AF_0208/HC/CR/hs/00.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\CR\\hs\\00.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/HC/CR/hs/01.mdl": {
+   "model": "vehicle/train/CR400AF_0208/HC/CR/hs/01.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\CR\\hs\\01.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/HC/MP/00.mdl": {
+   "model": "vehicle/train/CR400AF_0208/HC/MP/00.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\00.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/HC/MP/01.mdl": {
+   "model": "vehicle/train/CR400AF_0208/HC/MP/01.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\01.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/HC/MP/WL/00.mdl": {
+   "model": "vehicle/train/CR400AF_0208/HC/MP/WL/00.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\WL\\00.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/HC/MP/WL/01.mdl": {
+   "model": "vehicle/train/CR400AF_0208/HC/MP/WL/01.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\WL\\01.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/MP/02.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/MP/02.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\02.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/MP/04.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/MP/04.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\04.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/MP/05.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/MP/05.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\05.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/MP/07.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/MP/07.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\07.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/hs/02.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/hs/02.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\02.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/hs/04.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/hs/04.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\04.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/hs/05.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/hs/05.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\05.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/MC/hs/07.mdl": {
+   "model": "vehicle/train/CR400AF_0208/MC/hs/07.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\07.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/TC/MP/03.mdl": {
+   "model": "vehicle/train/CR400AF_0208/TC/MP/03.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\03.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/TC/MP/04_T.mdl": {
+   "model": "vehicle/train/CR400AF_0208/TC/MP/04_T.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\04_T.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/TC/MP/05_T.mdl": {
+   "model": "vehicle/train/CR400AF_0208/TC/MP/05_T.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\05_T.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/TC/MP/06.mdl": {
+   "model": "vehicle/train/CR400AF_0208/TC/MP/06.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\06.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/TC/hs/03.mdl": {
+   "model": "vehicle/train/CR400AF_0208/TC/hs/03.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\hs\\03.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400AF_0208/TC/hs/06.mdl": {
+   "model": "vehicle/train/CR400AF_0208/TC/hs/06.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\hs\\06.mdl",
+   "price": null,
+   "priceScale": 1.0,
+   "runningCosts": null,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/00.mdl": {
+   "model": "vehicle/train/CR400BFC/00.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\00.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/01.mdl": {
+   "model": "vehicle/train/CR400BFC/01.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\01.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/02.mdl": {
+   "model": "vehicle/train/CR400BFC/02.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\02.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/03.mdl": {
+   "model": "vehicle/train/CR400BFC/03.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\03.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/04.mdl": {
+   "model": "vehicle/train/CR400BFC/04.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\04.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/05.mdl": {
+   "model": "vehicle/train/CR400BFC/05.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\05.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/06.mdl": {
+   "model": "vehicle/train/CR400BFC/06.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\06.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/CR400BFC/07.mdl": {
+   "model": "vehicle/train/CR400BFC/07.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\07.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 999999.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD1D_C_00880089.mdl": {
+   "model": "vehicle/train/HXD1D_C_00880089.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_C_00880089.mdl",
+   "price": null,
+   "priceScale": null,
+   "runningCosts": null,
+   "runningCostScale": null,
+   "lifespan": null,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD1D_III_1898.mdl": {
+   "model": "vehicle/train/HXD1D_III_1898.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_III_1898.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD1D_II_0364.mdl": {
+   "model": "vehicle/train/HXD1D_II_0364.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_II_0364.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD1D_I_0001.mdl": {
+   "model": "vehicle/train/HXD1D_I_0001.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_I_0001.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD3CA_I_8250.mdl": {
+   "model": "vehicle/train/HXD3CA_I_8250.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3144149334\\res\\models\\model\\vehicle\\train\\HXD3CA_I_8250.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD3C_III_0194.mdl": {
+   "model": "vehicle/train/HXD3C_III_0194.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3144149334\\res\\models\\model\\vehicle\\train\\HXD3C_III_0194.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/HXD3C_II_0121.mdl": {
+   "model": "vehicle/train/HXD3C_II_0121.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3144149334\\res\\models\\model\\vehicle\\train\\HXD3C_II_0121.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/SS8_IIB_0033.mdl": {
+   "model": "vehicle/train/SS8_IIB_0033.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_IIB_0033.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/SS8_IIB_0072.mdl": {
+   "model": "vehicle/train/SS8_IIB_0072.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_IIB_0072.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/SS8_IIB_0114.mdl": {
+   "model": "vehicle/train/SS8_IIB_0114.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_IIB_0114.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/SS8_III_0191.mdl": {
+   "model": "vehicle/train/SS8_III_0191.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_III_0191.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/SS8_II_0001.mdl": {
+   "model": "vehicle/train/SS8_II_0001.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_II_0001.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 21915.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/l3/Aw.mdl": {
+   "model": "vehicle/train/l3/Aw.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2819774551\\res\\models\\model\\vehicle\\train\\l3\\Aw.mdl",
+   "price": 0.0,
+   "priceScale": 0.0,
+   "runningCosts": 1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "free_purchase"
+  },
+  "vehicle/train/l3/Bw.mdl": {
+   "model": "vehicle/train/l3/Bw.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2819774551\\res\\models\\model\\vehicle\\train\\l3\\Bw.mdl",
+   "price": 0.0,
+   "priceScale": 0.0,
+   "runningCosts": 1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "free_purchase"
+  },
+  "vehicle/train/l3/Cw.mdl": {
+   "model": "vehicle/train/l3/Cw.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2819774551\\res\\models\\model\\vehicle\\train\\l3\\Cw.mdl",
+   "price": 0.0,
+   "priceScale": 0.0,
+   "runningCosts": 1.0,
+   "runningCostScale": 1.0,
+   "lifespan": 36525.0,
+   "verdict": "free_purchase"
+  },
+  "vehicle/train/qingguiCO.mdl": {
+   "model": "vehicle/train/qingguiCO.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2606263685\\res\\models\\model\\vehicle\\train\\qingguiCO.mdl",
+   "price": 2030000.0,
+   "priceScale": 1.0,
+   "runningCosts": 21600.0,
+   "runningCostScale": 1.0,
+   "lifespan": 37313.0,
+   "verdict": "costly"
+  },
+  "vehicle/train/ss9g/china_ss9g.mdl": {
+   "model": "vehicle/train/ss9g/china_ss9g.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2815641173\\res\\models\\model\\vehicle\\train\\ss9g\\china_ss9g.mdl",
+   "price": -1.0,
+   "priceScale": null,
+   "runningCosts": -1.0,
+   "runningCostScale": null,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/waggon/SuspendedMonorail/Sus_Mon_m.mdl": {
+   "model": "vehicle/waggon/SuspendedMonorail/Sus_Mon_m.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2598046566\\res\\models\\model\\vehicle\\waggon\\SuspendedMonorail\\Sus_Mon_m.mdl",
+   "price": -1.0,
+   "priceScale": 1.0,
+   "runningCosts": -1.0,
+   "runningCostScale": 0.6,
+   "lifespan": 29930.0,
+   "verdict": "costly"
+  },
+  "vehicle/waggon/SuspendedMonorail/Sus_Mon_t.mdl": {
+   "model": "vehicle/waggon/SuspendedMonorail/Sus_Mon_t.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2598046566\\res\\models\\model\\vehicle\\waggon\\SuspendedMonorail\\Sus_Mon_t.mdl",
+   "price": -1.0,
+   "priceScale": 0.6,
+   "runningCosts": -1.0,
+   "runningCostScale": 0.6,
+   "lifespan": 29930.0,
+   "verdict": "costly"
+  },
+  "vehicle/waggon/boxcar_2000.mdl": {
+   "model": "vehicle/waggon/boxcar_2000.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+   "price": -1.0,
+   "priceScale": null,
+   "runningCosts": -1.0,
+   "runningCostScale": null,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/waggon/gondola_2000.mdl": {
+   "model": "vehicle/waggon/gondola_2000.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+   "price": -1.0,
+   "priceScale": null,
+   "runningCosts": -1.0,
+   "runningCostScale": null,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/waggon/stake_car_2000.mdl": {
+   "model": "vehicle/waggon/stake_car_2000.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+   "price": -1.0,
+   "priceScale": null,
+   "runningCosts": -1.0,
+   "runningCostScale": null,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  },
+  "vehicle/waggon/tankcar_2000.mdl": {
+   "model": "vehicle/waggon/tankcar_2000.mdl",
+   "path": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+   "price": -1.0,
+   "priceScale": null,
+   "runningCosts": -1.0,
+   "runningCostScale": null,
+   "lifespan": 36525.0,
+   "verdict": "costly"
+  }
+ },
+ "per_vehicle": {
+  "18611": "costly",
+  "36264": "costly",
+  "43524": "costly",
+  "67548": "costly",
+  "100835": "costly",
+  "103601": "costly",
+  "118898": "costly",
+  "119198": "costly",
+  "127593": "costly",
+  "132485": "costly",
+  "134839": "costly",
+  "149650": "costly",
+  "156974": "costly",
+  "159365": "costly",
+  "169711": "costly",
+  "199103": "costly",
+  "199651": "costly",
+  "200106": "costly",
+  "210997": "costly",
+  "215084": "costly",
+  "228028": "costly",
+  "234337": "costly",
+  "236247": "costly",
+  "246401": "costly",
+  "253726": "costly",
+  "322387": "costly",
+  "329942": "costly",
+  "333683": "costly",
+  "335598": "costly",
+  "344868": "costly",
+  "346181": "costly",
+  "346182": "costly",
+  "346183": "costly",
+  "346186": "costly",
+  "357235": "costly",
+  "363127": "costly",
+  "390115": "costly",
+  "395372": "costly",
+  "400568": "costly",
+  "402358": "costly",
+  "411403": "costly",
+  "416195": "costly",
+  "416218": "costly",
+  "418885": "costly",
+  "423326": "costly",
+  "425113": "costly",
+  "425117": "costly",
+  "427583": "costly",
+  "430200": "costly",
+  "430261": "costly",
+  "437817": "costly",
+  "439848": "costly",
+  "450258": "costly",
+  "456630": "costly",
+  "462956": "costly",
+  "465251": "costly",
+  "465307": "costly",
+  "465650": "costly",
+  "483631": "costly",
+  "484693": "costly",
+  "493559": "costly",
+  "494417": "costly",
+  "497324": "costly",
+  "499993": "costly",
+  "500671": "costly",
+  "502875": "costly",
+  "502883": "costly",
+  "502931": "costly",
+  "502936": "costly",
+  "517210": "costly",
+  "532280": "costly",
+  "550682": "costly"
+ },
+ "lines": [
+  {
+   "line_id": 391014,
+   "name": "Han石化",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 200419,
+   "name": "Han石化铁路",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 462963,
+   "name": "IS炼钢",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 182710,
+   "name": "IS货物发送",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 119656,
+   "name": "IS钢铁",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 90194,
+   "name": "JI线路",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 98983,
+   "name": "JY客运",
+   "vehicles": 4,
+   "free": 0,
+   "mixed": 0,
+   "costly": 4
+  },
+  {
+   "line_id": 169721,
+   "name": "Jed石化",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 33536,
+   "name": "LZ石化",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 418173,
+   "name": "YZ客运",
+   "vehicles": 6,
+   "free": 0,
+   "mixed": 0,
+   "costly": 6
+  },
+  {
+   "line_id": 427889,
+   "name": "Yo木材",
+   "vehicles": 5,
+   "free": 0,
+   "mixed": 0,
+   "costly": 5
+  },
+  {
+   "line_id": 81388,
+   "name": "中山原油2",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 352504,
+   "name": "中山货物铁路",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 224503,
+   "name": "京广客运",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 464320,
+   "name": "咸阳原油1",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 403963,
+   "name": "咸阳塑料铁路",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 373816,
+   "name": "咸阳扳手铁路",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 267602,
+   "name": "咸阳煤炭空中轨道",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 357388,
+   "name": "咸阳石化",
+   "vehicles": 4,
+   "free": 0,
+   "mixed": 0,
+   "costly": 4
+  },
+  {
+   "line_id": 556429,
+   "name": "咸阳矿物空中轨道",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 276329,
+   "name": "天津燃料",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 311838,
+   "name": "天津面包铁路",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 440964,
+   "name": "威海石化铁路",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 175444,
+   "name": "广州木材铁路",
+   "vehicles": 2,
+   "free": 0,
+   "mixed": 0,
+   "costly": 2
+  },
+  {
+   "line_id": 295932,
+   "name": "广州燃料铁路",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 115957,
+   "name": "广钢原料",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 503020,
+   "name": "成郑云轨内环",
+   "vehicles": 4,
+   "free": 0,
+   "mixed": 0,
+   "costly": 4
+  },
+  {
+   "line_id": 503027,
+   "name": "成郑云轨外环",
+   "vehicles": 4,
+   "free": 0,
+   "mixed": 0,
+   "costly": 4
+  },
+  {
+   "line_id": 445360,
+   "name": "泉州钢铁、",
+   "vehicles": 3,
+   "free": 0,
+   "mixed": 0,
+   "costly": 3
+  },
+  {
+   "line_id": 296079,
+   "name": "津京空轨内环",
+   "vehicles": 4,
+   "free": 0,
+   "mixed": 0,
+   "costly": 4
+  },
+  {
+   "line_id": 138648,
+   "name": "津京空轨外环",
+   "vehicles": 4,
+   "free": 0,
+   "mixed": 0,
+   "costly": 4
+  },
+  {
+   "line_id": 432650,
+   "name": "线路 11",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 456629,
+   "name": "线路 12",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 103500,
+   "name": "线路 9",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 371204,
+   "name": "郑州石材铁路",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  },
+  {
+   "line_id": 455111,
+   "name": "长沙板材",
+   "vehicles": 1,
+   "free": 0,
+   "mixed": 0,
+   "costly": 1
+  }
+ ]
+}

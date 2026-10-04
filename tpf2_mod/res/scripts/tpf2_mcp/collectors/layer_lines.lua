@@ -153,7 +153,7 @@ function M.collect()
             line_color = vec(common.field(component_access.get(entity, "COLOR"), "color"))
         end
 
-        local points, cargo_true, cargo_false = {}, 0, 0
+        local points, stops_out, cargo_true, cargo_false = {}, {}, 0, 0
         local kind_tally = {}
         for _, stop in ipairs(common.sequence_values(common.field(component, "stops"))) do
             local group_entity = common.field(stop, "stationGroup")
@@ -182,8 +182,27 @@ function M.collect()
                 position = position or false
                 terminal_cache[key] = position
             end
-            if position ~= false and position ~= nil and #points < STOP_LIMIT then
+            local pos_ok = position ~= false and position ~= nil
+            if pos_ok and #points < STOP_LIMIT then
                 points[#points + 1] = position
+            end
+
+            -- ★ 站点序列（严格对齐，2026-09-30 新增）：坐标有没有取到都按**真实下标**记一条。
+            -- 为什么必须另开一份：上面的 points 会**跳过**取不到坐标的站，下标因此错位；
+            -- 而 cargo 侧的 lineStop0 / lineStop1 是 Line.stops 的真实下标 —— 拿错位的 points
+            -- 去索引，会把货画到隔壁站上去。所以这里 index 就是真实下标（0 起）。
+            -- （0 起还是 1 起：本文件里 Stop.station 是按 `stations[station_index + 1]` 用的，
+            --   即 0 起；lineStopN 同源的可能性大，部署后用实测取值范围再确认一次。）
+            if #stops_out < STOP_LIMIT then
+                stops_out[#stops_out + 1] = {
+                    index = #stops_out,
+                    group_id = group_id,
+                    station_index = station_index,
+                    terminal_index = terminal_index,
+                    x = pos_ok and position.x or nil,
+                    y = pos_ok and position.y or nil,
+                    z = pos_ok and position.z or nil,
+                }
             end
 
             local kind = station_kind[group_id]
@@ -212,6 +231,10 @@ function M.collect()
             vehicle_count = entry ~= nil and entry.count or 0,
             stop_count = #points,
             points = points,
+            -- 站点序列：真实下标对齐 + 带车站 id（group_id / station_index / terminal_index）。
+            -- ⚠️ points 只有坐标且会跳站，**不要**拿它去索引 cargo 侧的 lineStopN，用 stops。
+            stop_total = #stops_out,
+            stops = stops_out,
         }
         diagnostics.lines_kept = diagnostics.lines_kept + 1
         count_up(carrier_tally, carrier)

@@ -1,0 +1,1524 @@
+{
+  "files": {
+    "make_shortcut [top]": {
+      "kind": "py",
+      "raw_lines": 39,
+      "code_lines": 30,
+      "bytes": 1349
+    },
+    "tools/analyze-line-economics.py": {
+      "kind": "py",
+      "raw_lines": 289,
+      "code_lines": 224,
+      "bytes": 16011
+    },
+    "tools/analyze-operational-telemetry.py": {
+      "kind": "py",
+      "raw_lines": 74,
+      "code_lines": 61,
+      "bytes": 3894
+    },
+    "tools/apply-dwell-optimization.py": {
+      "kind": "py",
+      "raw_lines": 118,
+      "code_lines": 101,
+      "bytes": 7003
+    },
+    "tools/apply-line-timetable.py": {
+      "kind": "py",
+      "raw_lines": 44,
+      "code_lines": 38,
+      "bytes": 2203
+    },
+    "tools/build-cargo-types.py": {
+      "kind": "py",
+      "raw_lines": 104,
+      "code_lines": 85,
+      "bytes": 3850
+    },
+    "tools/build-code-wiki-index.py": {
+      "kind": "py",
+      "raw_lines": 615,
+      "code_lines": 517,
+      "bytes": 27932
+    },
+    "tools/build-data-inventory.py": {
+      "kind": "py",
+      "raw_lines": 471,
+      "code_lines": 386,
+      "bytes": 24690
+    },
+    "tools/build-line-timetable-plan.py": {
+      "kind": "py",
+      "raw_lines": 66,
+      "code_lines": 57,
+      "bytes": 3495
+    },
+    "tools/build-release-package.py": {
+      "kind": "py",
+      "raw_lines": 36,
+      "code_lines": 29,
+      "bytes": 1357
+    },
+    "tools/build-road-geometry.py": {
+      "kind": "py",
+      "raw_lines": 149,
+      "code_lines": 127,
+      "bytes": 6490
+    },
+    "tools/build-station-structures.py": {
+      "kind": "py",
+      "raw_lines": 1326,
+      "code_lines": 1000,
+      "bytes": 67757
+    },
+    "tools/collect-line-demand.py": {
+      "kind": "py",
+      "raw_lines": 48,
+      "code_lines": 41,
+      "bytes": 2266
+    },
+    "tools/diagnose-industries.py": {
+      "kind": "py",
+      "raw_lines": 317,
+      "code_lines": 257,
+      "bytes": 16693
+    },
+    "tools/export-layer-map.py": {
+      "kind": "py",
+      "raw_lines": 448,
+      "code_lines": 346,
+      "bytes": 23417
+    },
+    "tools/export-physical-station-map.py": {
+      "kind": "py",
+      "raw_lines": 238,
+      "code_lines": 219,
+      "bytes": 12052
+    },
+    "tools/export-rail-network-map.py": {
+      "kind": "py",
+      "raw_lines": 1123,
+      "code_lines": 1002,
+      "bytes": 61360
+    },
+    "tools/export-static-station-map.py": {
+      "kind": "py",
+      "raw_lines": 92,
+      "code_lines": 81,
+      "bytes": 5180
+    },
+    "tools/extract-industry-icons.py": {
+      "kind": "py",
+      "raw_lines": 178,
+      "code_lines": 136,
+      "bytes": 8026
+    },
+    "tools/extract-industry-recipes.py": {
+      "kind": "py",
+      "raw_lines": 238,
+      "code_lines": 191,
+      "bytes": 10641
+    },
+    "tools/find_deadlock_risks.py": {
+      "kind": "py",
+      "raw_lines": 654,
+      "code_lines": 527,
+      "bytes": 30617
+    },
+    "tools/index-tpf2-lua-sources.py": {
+      "kind": "py",
+      "raw_lines": 61,
+      "code_lines": 49,
+      "bytes": 2740
+    },
+    "tools/operate-assign-vehicle.py": {
+      "kind": "py",
+      "raw_lines": 50,
+      "code_lines": 42,
+      "bytes": 2263
+    },
+    "tools/operate-expand-line.py": {
+      "kind": "py",
+      "raw_lines": 106,
+      "code_lines": 93,
+      "bytes": 4935
+    },
+    "tools/operate-sell-vehicle.py": {
+      "kind": "py",
+      "raw_lines": 47,
+      "code_lines": 39,
+      "bytes": 2055
+    },
+    "tools/record-and-optimize-dwell.py": {
+      "kind": "py",
+      "raw_lines": 66,
+      "code_lines": 55,
+      "bytes": 3113
+    },
+    "tools/replace-line-fleet.py": {
+      "kind": "py",
+      "raw_lines": 90,
+      "code_lines": 76,
+      "bytes": 4717
+    },
+    "tools/run-operational-telemetry.py": {
+      "kind": "py",
+      "raw_lines": 69,
+      "code_lines": 58,
+      "bytes": 2867
+    },
+    "tools/serve-rail-map.py": {
+      "kind": "py",
+      "raw_lines": 1272,
+      "code_lines": 1152,
+      "bytes": 70302
+    },
+    "tools/test-dispatch-hold-live.py": {
+      "kind": "py",
+      "raw_lines": 89,
+      "code_lines": 76,
+      "bytes": 5505
+    },
+    "tools/test-dispatch-task-live.py": {
+      "kind": "py",
+      "raw_lines": 79,
+      "code_lines": 64,
+      "bytes": 4249
+    },
+    "tools/test-final-planner-live.py": {
+      "kind": "py",
+      "raw_lines": 28,
+      "code_lines": 22,
+      "bytes": 1176
+    },
+    "tools/test-final-task-gate-live.py": {
+      "kind": "py",
+      "raw_lines": 94,
+      "code_lines": 79,
+      "bytes": 4503
+    },
+    "tools/test-phase11-live.py": {
+      "kind": "py",
+      "raw_lines": 65,
+      "code_lines": 55,
+      "bytes": 3382
+    },
+    "tools/test-phase12-live.py": {
+      "kind": "py",
+      "raw_lines": 55,
+      "code_lines": 45,
+      "bytes": 2870
+    },
+    "tools/test-phase13-assign-live.py": {
+      "kind": "py",
+      "raw_lines": 21,
+      "code_lines": 21,
+      "bytes": 2483
+    },
+    "tools/test-phase13-buy-live.py": {
+      "kind": "py",
+      "raw_lines": 30,
+      "code_lines": 28,
+      "bytes": 2411
+    },
+    "tools/test-phase20-configure-goal-live.py": {
+      "kind": "py",
+      "raw_lines": 78,
+      "code_lines": 67,
+      "bytes": 3464
+    },
+    "tools/test-phase20-scheduling-live.py": {
+      "kind": "py",
+      "raw_lines": 60,
+      "code_lines": 48,
+      "bytes": 3078
+    },
+    "tools/test-phase20-sell-live.py": {
+      "kind": "py",
+      "raw_lines": 67,
+      "code_lines": 54,
+      "bytes": 2738
+    },
+    "tools/validate-snapshot.py": {
+      "kind": "py",
+      "raw_lines": 54,
+      "code_lines": 50,
+      "bytes": 4831
+    },
+    "tools/verify-network-semantics.py": {
+      "kind": "py",
+      "raw_lines": 29,
+      "code_lines": 26,
+      "bytes": 2542
+    },
+    "tools/verify-release-package.py": {
+      "kind": "py",
+      "raw_lines": 36,
+      "code_lines": 29,
+      "bytes": 1537
+    },
+    "tools/verify-ui-ground-truth.py": {
+      "kind": "py",
+      "raw_lines": 37,
+      "code_lines": 34,
+      "bytes": 3434
+    },
+    "tools/watch-operations-until.py": {
+      "kind": "py",
+      "raw_lines": 179,
+      "code_lines": 156,
+      "bytes": 9020
+    },
+    "mcp/__init__.py": {
+      "kind": "py",
+      "raw_lines": 5,
+      "code_lines": 3,
+      "bytes": 157
+    },
+    "mcp/analytics/__init__.py": {
+      "kind": "py",
+      "raw_lines": 5,
+      "code_lines": 3,
+      "bytes": 173
+    },
+    "mcp/analytics/evidence.py": {
+      "kind": "py",
+      "raw_lines": 22,
+      "code_lines": 15,
+      "bytes": 983
+    },
+    "mcp/analytics/network_index.py": {
+      "kind": "py",
+      "raw_lines": 148,
+      "code_lines": 129,
+      "bytes": 15959
+    },
+    "mcp/bridge.py": {
+      "kind": "py",
+      "raw_lines": 193,
+      "code_lines": 157,
+      "bytes": 8627
+    },
+    "mcp/cargo.py": {
+      "kind": "py",
+      "raw_lines": 29,
+      "code_lines": 20,
+      "bytes": 1022
+    },
+    "mcp/cli.py": {
+      "kind": "py",
+      "raw_lines": 25,
+      "code_lines": 19,
+      "bytes": 892
+    },
+    "mcp/config.py": {
+      "kind": "py",
+      "raw_lines": 135,
+      "code_lines": 110,
+      "bytes": 5059
+    },
+    "mcp/demand_history.py": {
+      "kind": "py",
+      "raw_lines": 71,
+      "code_lines": 63,
+      "bytes": 3462
+    },
+    "mcp/dispatch.py": {
+      "kind": "py",
+      "raw_lines": 86,
+      "code_lines": 77,
+      "bytes": 4758
+    },
+    "mcp/dwell_optimizer.py": {
+      "kind": "py",
+      "raw_lines": 202,
+      "code_lines": 183,
+      "bytes": 12414
+    },
+    "mcp/fleet_policy.py": {
+      "kind": "py",
+      "raw_lines": 46,
+      "code_lines": 41,
+      "bytes": 3040
+    },
+    "mcp/graph.py": {
+      "kind": "py",
+      "raw_lines": 97,
+      "code_lines": 86,
+      "bytes": 4805
+    },
+    "mcp/journal.py": {
+      "kind": "py",
+      "raw_lines": 33,
+      "code_lines": 28,
+      "bytes": 1230
+    },
+    "mcp/lines/__init__.py": {
+      "kind": "py",
+      "raw_lines": 4,
+      "code_lines": 3,
+      "bytes": 137
+    },
+    "mcp/lines/models.py": {
+      "kind": "py",
+      "raw_lines": 13,
+      "code_lines": 10,
+      "bytes": 399
+    },
+    "mcp/lines/stop_resolver.py": {
+      "kind": "py",
+      "raw_lines": 21,
+      "code_lines": 18,
+      "bytes": 1990
+    },
+    "mcp/operations/__init__.py": {
+      "kind": "py",
+      "raw_lines": 10,
+      "code_lines": 7,
+      "bytes": 328
+    },
+    "mcp/operations/capabilities.py": {
+      "kind": "py",
+      "raw_lines": 164,
+      "code_lines": 156,
+      "bytes": 11737
+    },
+    "mcp/operations/controller.py": {
+      "kind": "py",
+      "raw_lines": 318,
+      "code_lines": 298,
+      "bytes": 25027
+    },
+    "mcp/operations/diff.py": {
+      "kind": "py",
+      "raw_lines": 10,
+      "code_lines": 7,
+      "bytes": 642
+    },
+    "mcp/operations/handlers/__init__.py": {
+      "kind": "py",
+      "raw_lines": 5,
+      "code_lines": 4,
+      "bytes": 184
+    },
+    "mcp/operations/handlers/assign_vehicle.py": {
+      "kind": "py",
+      "raw_lines": 16,
+      "code_lines": 15,
+      "bytes": 1328
+    },
+    "mcp/operations/handlers/base.py": {
+      "kind": "py",
+      "raw_lines": 13,
+      "code_lines": 12,
+      "bytes": 618
+    },
+    "mcp/operations/handlers/buy_vehicle.py": {
+      "kind": "py",
+      "raw_lines": 13,
+      "code_lines": 12,
+      "bytes": 1142
+    },
+    "mcp/operations/handlers/create_line.py": {
+      "kind": "py",
+      "raw_lines": 73,
+      "code_lines": 62,
+      "bytes": 5548
+    },
+    "mcp/operations/handlers/registry.py": {
+      "kind": "py",
+      "raw_lines": 12,
+      "code_lines": 10,
+      "bytes": 863
+    },
+    "mcp/operations/handlers/sell_vehicle.py": {
+      "kind": "py",
+      "raw_lines": 30,
+      "code_lines": 23,
+      "bytes": 1321
+    },
+    "mcp/operations/handlers/set_line_stop_policy.py": {
+      "kind": "py",
+      "raw_lines": 36,
+      "code_lines": 28,
+      "bytes": 2110
+    },
+    "mcp/operations/handlers/set_line_stops.py": {
+      "kind": "py",
+      "raw_lines": 24,
+      "code_lines": 23,
+      "bytes": 2264
+    },
+    "mcp/operations/handlers/vehicle_departure.py": {
+      "kind": "py",
+      "raw_lines": 41,
+      "code_lines": 29,
+      "bytes": 2828
+    },
+    "mcp/operations/models.py": {
+      "kind": "py",
+      "raw_lines": 18,
+      "code_lines": 14,
+      "bytes": 450
+    },
+    "mcp/overtake_planner.py": {
+      "kind": "py",
+      "raw_lines": 75,
+      "code_lines": 70,
+      "bytes": 5448
+    },
+    "mcp/planning/__init__.py": {
+      "kind": "py",
+      "raw_lines": 4,
+      "code_lines": 3,
+      "bytes": 141
+    },
+    "mcp/planning/decision_support.py": {
+      "kind": "py",
+      "raw_lines": 267,
+      "code_lines": 241,
+      "bytes": 24135
+    },
+    "mcp/protocol.py": {
+      "kind": "py",
+      "raw_lines": 19,
+      "code_lines": 13,
+      "bytes": 912
+    },
+    "mcp/rail_crossings.py": {
+      "kind": "py",
+      "raw_lines": 170,
+      "code_lines": 153,
+      "bytes": 8270
+    },
+    "mcp/rail_live.py": {
+      "kind": "py",
+      "raw_lines": 355,
+      "code_lines": 321,
+      "bytes": 23546
+    },
+    "mcp/save_scope.py": {
+      "kind": "py",
+      "raw_lines": 30,
+      "code_lines": 24,
+      "bytes": 1312
+    },
+    "mcp/server.py": {
+      "kind": "py",
+      "raw_lines": 590,
+      "code_lines": 551,
+      "bytes": 66679
+    },
+    "mcp/snapshot.py": {
+      "kind": "py",
+      "raw_lines": 311,
+      "code_lines": 263,
+      "bytes": 28647
+    },
+    "mcp/station_log.py": {
+      "kind": "py",
+      "raw_lines": 152,
+      "code_lines": 135,
+      "bytes": 8199
+    },
+    "mcp/station_preview.py": {
+      "kind": "py",
+      "raw_lines": 725,
+      "code_lines": 650,
+      "bytes": 33588
+    },
+    "mcp/tasks/__init__.py": {
+      "kind": "py",
+      "raw_lines": 5,
+      "code_lines": 4,
+      "bytes": 188
+    },
+    "mcp/tasks/goals.py": {
+      "kind": "py",
+      "raw_lines": 186,
+      "code_lines": 172,
+      "bytes": 21299
+    },
+    "mcp/tasks/orchestrator.py": {
+      "kind": "py",
+      "raw_lines": 217,
+      "code_lines": 194,
+      "bytes": 20706
+    },
+    "mcp/tasks/policy.py": {
+      "kind": "py",
+      "raw_lines": 10,
+      "code_lines": 5,
+      "bytes": 464
+    },
+    "mcp/timetable_planner.py": {
+      "kind": "py",
+      "raw_lines": 489,
+      "code_lines": 446,
+      "bytes": 31968
+    },
+    "mcp/vehicle_length.py": {
+      "kind": "py",
+      "raw_lines": 82,
+      "code_lines": 74,
+      "bytes": 4332
+    },
+    "mcp/work_log.py": {
+      "kind": "py",
+      "raw_lines": 154,
+      "code_lines": 143,
+      "bytes": 8361
+    },
+    "ui/app.js": {
+      "kind": "js",
+      "raw_lines": 825,
+      "code_lines": 712,
+      "bytes": 45985
+    },
+    "ui/bridge-crossings.js": {
+      "kind": "js",
+      "raw_lines": 839,
+      "code_lines": 799,
+      "bytes": 45160
+    },
+    "ui/dispatch-pages.js": {
+      "kind": "js",
+      "raw_lines": 780,
+      "code_lines": 733,
+      "bytes": 46814
+    },
+    "ui/freight-flow.js": {
+      "kind": "js",
+      "raw_lines": 762,
+      "code_lines": 579,
+      "bytes": 37903
+    },
+    "ui/industry-icons.js": {
+      "kind": "js",
+      "raw_lines": 463,
+      "code_lines": 284,
+      "bytes": 24369
+    },
+    "ui/industry-kinds.js": {
+      "kind": "js",
+      "raw_lines": 58,
+      "code_lines": 39,
+      "bytes": 2929
+    },
+    "ui/network-app.js": {
+      "kind": "js",
+      "raw_lines": 2489,
+      "code_lines": 2028,
+      "bytes": 168218
+    },
+    "ui/network-page.js": {
+      "kind": "js",
+      "raw_lines": 83,
+      "code_lines": 79,
+      "bytes": 3517
+    },
+    "ui/rail-graph.js": {
+      "kind": "js",
+      "raw_lines": 127,
+      "code_lines": 97,
+      "bytes": 5186
+    },
+    "ui/rail-network-data.js": {
+      "kind": "js",
+      "raw_lines": 1,
+      "code_lines": 1,
+      "bytes": 6442637
+    },
+    "ui/rail-network-manifest.js": {
+      "kind": "js",
+      "raw_lines": 1,
+      "code_lines": 1,
+      "bytes": 1523119
+    },
+    "ui/road-congestion.js": {
+      "kind": "js",
+      "raw_lines": 335,
+      "code_lines": 252,
+      "bytes": 15014
+    },
+    "ui/station-struct.js": {
+      "kind": "js",
+      "raw_lines": 752,
+      "code_lines": 504,
+      "bytes": 40637
+    },
+    "ui/template-runtime.js": {
+      "kind": "js",
+      "raw_lines": 48,
+      "code_lines": 44,
+      "bytes": 2097
+    },
+    "ui/terrain-contour.js": {
+      "kind": "js",
+      "raw_lines": 111,
+      "code_lines": 73,
+      "bytes": 5689
+    },
+    "ui/timetable-page.js": {
+      "kind": "js",
+      "raw_lines": 3,
+      "code_lines": 3,
+      "bytes": 118
+    },
+    "ui/timetable.js": {
+      "kind": "js",
+      "raw_lines": 262,
+      "code_lines": 229,
+      "bytes": 16120
+    },
+    "ui/town-layer.js": {
+      "kind": "js",
+      "raw_lines": 215,
+      "code_lines": 154,
+      "bytes": 9449
+    },
+    "ui/ui-persist.js": {
+      "kind": "js",
+      "raw_lines": 121,
+      "code_lines": 87,
+      "bytes": 4157
+    },
+    "lua/api_inventory.lua": {
+      "kind": "lua",
+      "raw_lines": 21,
+      "code_lines": 17,
+      "bytes": 984
+    },
+    "lua/bridge_io.lua": {
+      "kind": "lua",
+      "raw_lines": 53,
+      "code_lines": 33,
+      "bytes": 2208
+    },
+    "lua/cargo.lua": {
+      "kind": "lua",
+      "raw_lines": 30,
+      "code_lines": 27,
+      "bytes": 1220
+    },
+    "lua/common.lua": {
+      "kind": "lua",
+      "raw_lines": 239,
+      "code_lines": 167,
+      "bytes": 11348
+    },
+    "lua/company.lua": {
+      "kind": "lua",
+      "raw_lines": 50,
+      "code_lines": 43,
+      "bytes": 2159
+    },
+    "lua/component_access.lua": {
+      "kind": "lua",
+      "raw_lines": 41,
+      "code_lines": 20,
+      "bytes": 1533
+    },
+    "lua/context_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 89,
+      "code_lines": 81,
+      "bytes": 4666
+    },
+    "lua/demand_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 234,
+      "code_lines": 185,
+      "bytes": 7938
+    },
+    "lua/dynamic_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 130,
+      "code_lines": 114,
+      "bytes": 6842
+    },
+    "lua/economy_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 456,
+      "code_lines": 335,
+      "bytes": 23305
+    },
+    "lua/field_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 70,
+      "code_lines": 43,
+      "bytes": 3513
+    },
+    "lua/industry.lua": {
+      "kind": "lua",
+      "raw_lines": 32,
+      "code_lines": 30,
+      "bytes": 1621
+    },
+    "lua/layer_freight.lua": {
+      "kind": "lua",
+      "raw_lines": 375,
+      "code_lines": 253,
+      "bytes": 19381
+    },
+    "lua/layer_industry.lua": {
+      "kind": "lua",
+      "raw_lines": 279,
+      "code_lines": 196,
+      "bytes": 13387
+    },
+    "lua/layer_lines.lua": {
+      "kind": "lua",
+      "raw_lines": 266,
+      "code_lines": 196,
+      "bytes": 13814
+    },
+    "lua/layer_registry.lua": {
+      "kind": "lua",
+      "raw_lines": 178,
+      "code_lines": 100,
+      "bytes": 9763
+    },
+    "lua/layer_road.lua": {
+      "kind": "lua",
+      "raw_lines": 172,
+      "code_lines": 138,
+      "bytes": 6952
+    },
+    "lua/layer_road_traffic.lua": {
+      "kind": "lua",
+      "raw_lines": 714,
+      "code_lines": 568,
+      "bytes": 32688
+    },
+    "lua/layer_stations.lua": {
+      "kind": "lua",
+      "raw_lines": 562,
+      "code_lines": 437,
+      "bytes": 28834
+    },
+    "lua/layer_terrain.lua": {
+      "kind": "lua",
+      "raw_lines": 345,
+      "code_lines": 253,
+      "bytes": 14814
+    },
+    "lua/layer_town.lua": {
+      "kind": "lua",
+      "raw_lines": 313,
+      "code_lines": 216,
+      "bytes": 14717
+    },
+    "lua/layer_vehicles.lua": {
+      "kind": "lua",
+      "raw_lines": 158,
+      "code_lines": 119,
+      "bytes": 6060
+    },
+    "lua/line.lua": {
+      "kind": "lua",
+      "raw_lines": 102,
+      "code_lines": 94,
+      "bytes": 5244
+    },
+    "lua/line_creation_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 149,
+      "code_lines": 133,
+      "bytes": 9318
+    },
+    "lua/line_demand.lua": {
+      "kind": "lua",
+      "raw_lines": 168,
+      "code_lines": 158,
+      "bytes": 9454
+    },
+    "lua/line_finance_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 469,
+      "code_lines": 340,
+      "bytes": 22406
+    },
+    "lua/line_raw_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 31,
+      "code_lines": 28,
+      "bytes": 1465
+    },
+    "lua/operational_telemetry.lua": {
+      "kind": "lua",
+      "raw_lines": 393,
+      "code_lines": 351,
+      "bytes": 23693
+    },
+    "lua/operations_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 88,
+      "code_lines": 78,
+      "bytes": 4464
+    },
+    "lua/rail_network.lua": {
+      "kind": "lua",
+      "raw_lines": 584,
+      "code_lines": 478,
+      "bytes": 33489
+    },
+    "lua/route_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 508,
+      "code_lines": 406,
+      "bytes": 23240
+    },
+    "lua/simulation.lua": {
+      "kind": "lua",
+      "raw_lines": 30,
+      "code_lines": 27,
+      "bytes": 1226
+    },
+    "lua/station.lua": {
+      "kind": "lua",
+      "raw_lines": 21,
+      "code_lines": 19,
+      "bytes": 1060
+    },
+    "lua/station_geometry.lua": {
+      "kind": "lua",
+      "raw_lines": 290,
+      "code_lines": 263,
+      "bytes": 13903
+    },
+    "lua/station_struct_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 812,
+      "code_lines": 643,
+      "bytes": 39662
+    },
+    "lua/town.lua": {
+      "kind": "lua",
+      "raw_lines": 26,
+      "code_lines": 20,
+      "bytes": 1142
+    },
+    "lua/ui_source_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 44,
+      "code_lines": 41,
+      "bytes": 2251
+    },
+    "lua/vehicle.lua": {
+      "kind": "lua",
+      "raw_lines": 166,
+      "code_lines": 147,
+      "bytes": 9066
+    },
+    "lua/vehicle_write_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 94,
+      "code_lines": 84,
+      "bytes": 5430
+    },
+    "lua/world_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 468,
+      "code_lines": 370,
+      "bytes": 21590
+    },
+    "lua/write_api_probe.lua": {
+      "kind": "lua",
+      "raw_lines": 23,
+      "code_lines": 19,
+      "bytes": 830
+    },
+    "lua/config.lua": {
+      "kind": "lua",
+      "raw_lines": 45,
+      "code_lines": 35,
+      "bytes": 1963
+    },
+    "lua/json.lua": {
+      "kind": "lua",
+      "raw_lines": 100,
+      "code_lines": 93,
+      "bytes": 4349
+    },
+    "lua/dispatcher.lua": {
+      "kind": "lua",
+      "raw_lines": 225,
+      "code_lines": 214,
+      "bytes": 18554
+    },
+    "lua/line_stop_builder.lua": {
+      "kind": "lua",
+      "raw_lines": 109,
+      "code_lines": 89,
+      "bytes": 6229
+    },
+    "lua/timetable_controller.lua": {
+      "kind": "lua",
+      "raw_lines": 234,
+      "code_lines": 213,
+      "bytes": 11297
+    },
+    "lua/runtime.lua": {
+      "kind": "lua",
+      "raw_lines": 325,
+      "code_lines": 288,
+      "bytes": 17863
+    },
+    "lua/state.lua": {
+      "kind": "lua",
+      "raw_lines": 253,
+      "code_lines": 204,
+      "bytes": 12852
+    }
+  },
+  "near_duplicates": [
+    {
+      "a": "tools/operate-assign-vehicle.py",
+      "b": "tools/operate-sell-vehicle.py",
+      "ratio": 0.741,
+      "lines_a": 42,
+      "lines_b": 39
+    },
+    {
+      "a": "lua/industry.lua",
+      "b": "lua/station.lua",
+      "ratio": 0.531,
+      "lines_a": 30,
+      "lines_b": 19
+    },
+    {
+      "a": "tools/test-phase20-scheduling-live.py",
+      "b": "tools/test-phase20-sell-live.py",
+      "ratio": 0.529,
+      "lines_a": 48,
+      "lines_b": 54
+    },
+    {
+      "a": "tools/test-phase11-live.py",
+      "b": "tools/test-phase20-sell-live.py",
+      "ratio": 0.514,
+      "lines_a": 55,
+      "lines_b": 54
+    },
+    {
+      "a": "tools/test-phase11-live.py",
+      "b": "tools/test-phase20-scheduling-live.py",
+      "ratio": 0.505,
+      "lines_a": 55,
+      "lines_b": 48
+    },
+    {
+      "a": "tools/test-final-task-gate-live.py",
+      "b": "tools/test-phase20-configure-goal-live.py",
+      "ratio": 0.479,
+      "lines_a": 79,
+      "lines_b": 67
+    },
+    {
+      "a": "tools/test-phase20-configure-goal-live.py",
+      "b": "tools/test-phase20-scheduling-live.py",
+      "ratio": 0.47,
+      "lines_a": 67,
+      "lines_b": 48
+    },
+    {
+      "a": "lua/station.lua",
+      "b": "lua/town.lua",
+      "ratio": 0.462,
+      "lines_a": 19,
+      "lines_b": 20
+    },
+    {
+      "a": "tools/test-dispatch-hold-live.py",
+      "b": "tools/test-dispatch-task-live.py",
+      "ratio": 0.457,
+      "lines_a": 76,
+      "lines_b": 64
+    },
+    {
+      "a": "lua/layer_industry.lua",
+      "b": "lua/layer_vehicles.lua",
+      "ratio": 0.457,
+      "lines_a": 196,
+      "lines_b": 119
+    },
+    {
+      "a": "mcp/operations/handlers/assign_vehicle.py",
+      "b": "mcp/operations/handlers/buy_vehicle.py",
+      "ratio": 0.444,
+      "lines_a": 15,
+      "lines_b": 12
+    },
+    {
+      "a": "tools/operate-expand-line.py",
+      "b": "tools/test-phase20-configure-goal-live.py",
+      "ratio": 0.438,
+      "lines_a": 93,
+      "lines_b": 67
+    },
+    {
+      "a": "tools/operate-sell-vehicle.py",
+      "b": "tools/test-phase20-scheduling-live.py",
+      "ratio": 0.437,
+      "lines_a": 39,
+      "lines_b": 48
+    },
+    {
+      "a": "tools/operate-sell-vehicle.py",
+      "b": "tools/test-phase20-configure-goal-live.py",
+      "ratio": 0.434,
+      "lines_a": 39,
+      "lines_b": 67
+    },
+    {
+      "a": "tools/test-phase20-configure-goal-live.py",
+      "b": "tools/test-phase20-sell-live.py",
+      "ratio": 0.43,
+      "lines_a": 67,
+      "lines_b": 54
+    },
+    {
+      "a": "tools/operate-sell-vehicle.py",
+      "b": "tools/test-final-planner-live.py",
+      "ratio": 0.426,
+      "lines_a": 39,
+      "lines_b": 22
+    },
+    {
+      "a": "tools/operate-assign-vehicle.py",
+      "b": "tools/test-phase20-configure-goal-live.py",
+      "ratio": 0.422,
+      "lines_a": 42,
+      "lines_b": 67
+    },
+    {
+      "a": "tools/operate-assign-vehicle.py",
+      "b": "tools/test-phase20-scheduling-live.py",
+      "ratio": 0.422,
+      "lines_a": 42,
+      "lines_b": 48
+    },
+    {
+      "a": "tools/operate-sell-vehicle.py",
+      "b": "tools/replace-line-fleet.py",
+      "ratio": 0.417,
+      "lines_a": 39,
+      "lines_b": 76
+    },
+    {
+      "a": "tools/operate-sell-vehicle.py",
+      "b": "tools/test-phase20-sell-live.py",
+      "ratio": 0.409,
+      "lines_a": 39,
+      "lines_b": 54
+    },
+    {
+      "a": "tools/operate-assign-vehicle.py",
+      "b": "tools/replace-line-fleet.py",
+      "ratio": 0.407,
+      "lines_a": 42,
+      "lines_b": 76
+    },
+    {
+      "a": "tools/operate-sell-vehicle.py",
+      "b": "tools/test-final-task-gate-live.py",
+      "ratio": 0.407,
+      "lines_a": 39,
+      "lines_b": 79
+    },
+    {
+      "a": "tools/operate-assign-vehicle.py",
+      "b": "tools/test-final-planner-live.py",
+      "ratio": 0.406,
+      "lines_a": 42,
+      "lines_b": 22
+    }
+  ],
+  "dup_function_names": {
+    "main": [
+      "mcp/cli.py",
+      "mcp/station_preview.py",
+      "tools/analyze-line-economics.py",
+      "tools/analyze-operational-telemetry.py",
+      "tools/apply-dwell-optimization.py",
+      "tools/apply-line-timetable.py",
+      "tools/build-cargo-types.py",
+      "tools/build-code-wiki-index.py",
+      "tools/build-data-inventory.py",
+      "tools/build-line-timetable-plan.py",
+      "tools/build-release-package.py",
+      "tools/build-road-geometry.py",
+      "tools/build-station-structures.py",
+      "tools/collect-line-demand.py",
+      "tools/diagnose-industries.py",
+      "tools/export-layer-map.py",
+      "tools/export-physical-station-map.py",
+      "tools/export-rail-network-map.py",
+      "tools/export-static-station-map.py",
+      "tools/extract-industry-icons.py",
+      "tools/extract-industry-recipes.py",
+      "tools/find_deadlock_risks.py",
+      "tools/index-tpf2-lua-sources.py",
+      "tools/operate-assign-vehicle.py",
+      "tools/operate-expand-line.py",
+      "tools/operate-sell-vehicle.py",
+      "tools/record-and-optimize-dwell.py",
+      "tools/replace-line-fleet.py",
+      "tools/run-operational-telemetry.py",
+      "tools/serve-rail-map.py",
+      "tools/test-dispatch-hold-live.py",
+      "tools/test-dispatch-task-live.py",
+      "tools/test-final-planner-live.py",
+      "tools/test-final-task-gate-live.py",
+      "tools/test-phase11-live.py",
+      "tools/test-phase12-live.py",
+      "tools/test-phase13-assign-live.py",
+      "tools/test-phase13-buy-live.py",
+      "tools/test-phase20-configure-goal-live.py",
+      "tools/test-phase20-scheduling-live.py",
+      "tools/test-phase20-sell-live.py",
+      "tools/validate-snapshot.py",
+      "tools/verify-network-semantics.py",
+      "tools/verify-release-package.py",
+      "tools/verify-ui-ground-truth.py",
+      "tools/watch-operations-until.py"
+    ],
+    "render": [
+      "tools/build-code-wiki-index.py",
+      "ui/road-congestion.js"
+    ],
+    "curve_length": [
+      "tools/export-physical-station-map.py",
+      "tools/export-rail-network-map.py"
+    ],
+    "__init__": [
+      "mcp/analytics/network_index.py",
+      "mcp/operations/controller.py",
+      "mcp/planning/decision_support.py",
+      "mcp/station_log.py",
+      "mcp/vehicle_length.py",
+      "tools/serve-rail-map.py"
+    ],
+    "run": [
+      "lua/state.lua",
+      "tools/test-final-task-gate-live.py",
+      "ui/dispatch-pages.js"
+    ],
+    "_connect": [
+      "mcp/demand_history.py",
+      "mcp/station_log.py",
+      "mcp/work_log.py"
+    ],
+    "_percentile": [
+      "mcp/dwell_optimizer.py",
+      "mcp/timetable_planner.py"
+    ],
+    "route": [
+      "mcp/graph.py",
+      "mcp/planning/decision_support.py"
+    ],
+    "validate": [
+      "lua/timetable_controller.lua",
+      "mcp/operations/controller.py"
+    ],
+    "validate_parameters": [
+      "mcp/operations/handlers/create_line.py",
+      "mcp/operations/handlers/set_line_stops.py"
+    ],
+    "verify_postcondition": [
+      "mcp/operations/handlers/create_line.py",
+      "mcp/operations/handlers/set_line_stop_policy.py"
+    ],
+    "handle": [
+      "lua/runtime.lua",
+      "mcp/server.py"
+    ],
+    "S": [
+      "ui/app.js",
+      "ui/network-app.js",
+      "ui/timetable.js"
+    ],
+    "text": [
+      "lua/layer_road.lua",
+      "ui/app.js",
+      "ui/road-congestion.js"
+    ],
+    "sideOfPolyline": [
+      "ui/app.js",
+      "ui/network-app.js"
+    ],
+    "distance": [
+      "ui/app.js",
+      "ui/bridge-crossings.js"
+    ],
+    "baseX": [
+      "ui/app.js",
+      "ui/network-app.js"
+    ],
+    "faceForPointer": [
+      "ui/app.js",
+      "ui/network-app.js"
+    ],
+    "updateViewport": [
+      "ui/app.js",
+      "ui/network-app.js"
+    ],
+    "setZoom": [
+      "ui/app.js",
+      "ui/network-app.js"
+    ],
+    "describe": [
+      "lua/demand_probe.lua",
+      "lua/layer_stations.lua",
+      "lua/layer_town.lua",
+      "lua/line_finance_probe.lua",
+      "lua/station_struct_probe.lua",
+      "ui/app.js"
+    ],
+    "source": [
+      "ui/bridge-crossings.js",
+      "ui/network-app.js"
+    ],
+    "ratio": [
+      "ui/bridge-crossings.js",
+      "ui/terrain-contour.js"
+    ],
+    "worldPoint": [
+      "ui/bridge-crossings.js",
+      "ui/network-app.js"
+    ],
+    "el": [
+      "ui/dispatch-pages.js",
+      "ui/freight-flow.js"
+    ],
+    "renderLines": [
+      "ui/dispatch-pages.js",
+      "ui/freight-flow.js"
+    ],
+    "boot": [
+      "ui/freight-flow.js",
+      "ui/industry-icons.js",
+      "ui/town-layer.js"
+    ],
+    "buildPanel": [
+      "ui/freight-flow.js",
+      "ui/industry-icons.js",
+      "ui/road-congestion.js",
+      "ui/station-struct.js",
+      "ui/town-layer.js"
+    ],
+    "vehicleCount": [
+      "ui/freight-flow.js",
+      "ui/network-app.js"
+    ],
+    "updatePositions": [
+      "ui/industry-icons.js",
+      "ui/station-struct.js",
+      "ui/town-layer.js"
+    ],
+    "applyVisibility": [
+      "ui/industry-icons.js",
+      "ui/station-struct.js",
+      "ui/town-layer.js"
+    ],
+    "rot": [
+      "ui/network-app.js",
+      "ui/timetable.js"
+    ],
+    "edgeIds": [
+      "ui/network-app.js",
+      "ui/timetable.js"
+    ],
+    "add": [
+      "lua/world_probe.lua",
+      "ui/network-app.js"
+    ],
+    "at": [
+      "ui/network-app.js",
+      "ui/terrain-contour.js"
+    ],
+    "buildContours": [
+      "ui/network-app.js",
+      "ui/terrain-contour.js"
+    ],
+    "hint": [
+      "ui/road-congestion.js",
+      "ui/station-struct.js"
+    ],
+    "start": [
+      "ui/road-congestion.js",
+      "ui/station-struct.js"
+    ],
+    "build": [
+      "ui/station-struct.js",
+      "ui/town-layer.js"
+    ],
+    "call": [
+      "lua/cargo.lua",
+      "lua/context_probe.lua",
+      "lua/economy_probe.lua",
+      "lua/layer_road_traffic.lua"
+    ],
+    "M.collect": [
+      "lua/cargo.lua",
+      "lua/company.lua",
+      "lua/context_probe.lua",
+      "lua/economy_probe.lua",
+      "lua/industry.lua",
+      "lua/layer_freight.lua",
+      "lua/layer_industry.lua",
+      "lua/layer_lines.lua",
+      "lua/layer_road.lua",
+      "lua/layer_road_traffic.lua",
+      "lua/layer_stations.lua",
+      "lua/layer_town.lua",
+      "lua/layer_vehicles.lua",
+      "lua/line.lua",
+      "lua/line_creation_probe.lua",
+      "lua/line_demand.lua",
+      "lua/line_finance_probe.lua",
+      "lua/line_raw_probe.lua",
+      "lua/operational_telemetry.lua",
+      "lua/rail_network.lua",
+      "lua/route_probe.lua",
+      "lua/simulation.lua",
+      "lua/station.lua",
+      "lua/station_geometry.lua",
+      "lua/station_struct_probe.lua",
+      "lua/town.lua",
+      "lua/ui_source_probe.lua",
+      "lua/vehicle.lua"
+    ],
+    "M.probe": [
+      "lua/company.lua",
+      "lua/industry.lua",
+      "lua/line.lua",
+      "lua/vehicle.lua",
+      "lua/vehicle_write_probe.lua",
+      "lua/world_probe.lua",
+      "lua/write_api_probe.lua"
+    ],
+    "write_json": [
+      "lua/demand_probe.lua",
+      "lua/runtime.lua"
+    ],
+    "M.tick": [
+      "lua/demand_probe.lua",
+      "lua/dispatcher.lua",
+      "lua/layer_registry.lua",
+      "lua/runtime.lua",
+      "lua/timetable_controller.lua"
+    ],
+    "M.all": [
+      "lua/dynamic_probe.lua",
+      "lua/operations_probe.lua"
+    ],
+    "push_error": [
+      "lua/economy_probe.lua",
+      "lua/layer_road_traffic.lua"
+    ],
+    "each_index": [
+      "lua/economy_probe.lua",
+      "lua/layer_road_traffic.lua"
+    ],
+    "present_components": [
+      "lua/economy_probe.lua",
+      "lua/layer_road_traffic.lua"
+    ],
+    "vec": [
+      "lua/layer_industry.lua",
+      "lua/layer_lines.lua",
+      "lua/layer_road.lua",
+      "lua/layer_road_traffic.lua",
+      "lua/layer_stations.lua",
+      "lua/layer_terrain.lua",
+      "lua/layer_vehicles.lua",
+      "lua/operational_telemetry.lua",
+      "lua/rail_network.lua",
+      "lua/station_geometry.lua",
+      "lua/station_struct_probe.lua"
+    ],
+    "bounds_for": [
+      "lua/layer_industry.lua",
+      "lua/layer_vehicles.lua",
+      "lua/operational_telemetry.lua",
+      "lua/rail_network.lua"
+    ],
+    "number_or_nil": [
+      "lua/layer_industry.lua",
+      "lua/layer_vehicles.lua"
+    ],
+    "bounds_center": [
+      "lua/layer_lines.lua",
+      "lua/layer_stations.lua"
+    ],
+    "M.status": [
+      "lua/layer_registry.lua",
+      "lua/timetable_controller.lua"
+    ],
+    "sample_height": [
+      "lua/layer_stations.lua",
+      "lua/layer_terrain.lua",
+      "lua/rail_network.lua"
+    ],
+    "get_height_function": [
+      "lua/layer_stations.lua",
+      "lua/layer_terrain.lua",
+      "lua/rail_network.lua"
+    ],
+    "alternative_terminals": [
+      "lua/line.lua",
+      "lua/rail_network.lua"
+    ],
+    "entity_number": [
+      "lua/line_demand.lua",
+      "lua/timetable_controller.lua"
+    ],
+    "entity_id": [
+      "lua/operational_telemetry.lua",
+      "lua/rail_network.lua",
+      "lua/station_geometry.lua"
+    ],
+    "model_name": [
+      "lua/operational_telemetry.lua",
+      "lua/vehicle.lua"
+    ],
+    "M.set_track_resources": [
+      "lua/rail_network.lua",
+      "lua/runtime.lua",
+      "lua/state.lua"
+    ],
+    "number": [
+      "lua/rail_network.lua",
+      "lua/station_geometry.lua"
+    ],
+    "position_from_node": [
+      "lua/rail_network.lua",
+      "lua/station_geometry.lua"
+    ],
+    "base_node": [
+      "lua/rail_network.lua",
+      "lua/station_geometry.lua"
+    ],
+    "safe_members": [
+      "lua/route_probe.lua",
+      "lua/world_probe.lua"
+    ],
+    "now": [
+      "lua/dispatcher.lua",
+      "lua/runtime.lua",
+      "lua/state.lua"
+    ],
+    "M.save": [
+      "lua/runtime.lua",
+      "lua/timetable_controller.lua"
+    ],
+    "M.load": [
+      "lua/runtime.lua",
+      "lua/timetable_controller.lua"
+    ]
+  },
+  "dup_bodies": {}
+}

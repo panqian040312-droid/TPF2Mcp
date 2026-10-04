@@ -197,8 +197,144 @@ local function edge_map_for(network_entity)
     return report
 end
 
--- 一辆车当前在哪条 BASE_EDGE 上。返回 base_edge_id, 网络实体, 下标, 失败原因
-local function locate_vehicle(entity)
+-- 读实体的**聚合表**：`game.interface.getEntity(id)`。这是唯一能读到车辆运行字段的路 ——
+-- 组件本体（api.engine.getComponent）是 userdata，同一辆车的可读字段数是 **0**。
+local function aggregate_of(entity)
+    if entity == nil then return nil end
+    local id = common.entity_id(entity)
+    if id == nil then return nil end
+    local ok, value = pcall(function() return game.interface.getEntity(id) end)
+    if not ok then return nil end
+    return value
+end
+
+local GRID_SIZE = 500        -- 空间网格边长（米）。地图约 1.5 万米见方 → 30×30 格
+local MAX_MATCH_M = 90       -- 匹配半径（米）：城市路网够密，90 米内必有所属路段
+
+local function vec(value)
+    if value == nil then return nil end
+    local x, y, z = common.field(value, "x"), common.field(value, "y"), common.field(value, "z")
+    if type(x) ~= "number" or type(y) ~= "number" then return nil end
+    return { x = x, y = y, z = type(z) == "number" and z or 0 }
+end
+
+-- 车辆的世界坐标：BOUNDING_VOLUME 的 bbox 中心。读法照抄 layer_vehicles（已验证可行）。
+local function vehicle_center(entity)
+    local volume = component_access.get(entity, "BOUNDING_VOLUME")
+    local bbox = common.field(volume, "bbox")
+    local mn = vec(common.field(bbox, "min")) or vec(common.field(bbox, "bbMin"))
+    local mx = vec(common.field(bbox, "max")) or vec(common.field(bbox, "bbMax"))
+    if mn == nil or mx == nil then return nil end
+    return { x = (mn.x + mx.x) / 2, y = (mn.y + mx.y) / 2 }
+end
+
+local function point_segment_distance(px, py, x0, y0, x1, y1)
+    local dx, dy = x1 - x0, y1 - y0
+    local length_sq = dx * dx + dy * dy
+    if length_sq <= 0 then
+        local ex, ey = px - x0, py - y0
+        return math.sqrt(ex * ex + ey * ey)
+    end
+    local t = ((px - x0) * dx + (py - y0) * dy) / length_sq
+    if t < 0 then t = 0 elseif t > 1 then t = 1 end
+    local qx, qy = x0 + t * dx, y0 + t * dy
+    local ex, ey = px - qx, py - qy
+    return math.sqrt(ex * ex + ey * ey)
+end
+
+-- 全部路段的几何 + 空间网格索引。返回 { edges, skipped, nearest=fn }
+-- 几何读法照抄 layer_road：遍历 BASE_EDGE_STREET → BASE_EDGE(node0/node1) → BASE_NODE.position
+local function build_street_index(errors)
+    local node_cache, edges, grid = {}, {}, {}
+    local skipped, node_reported = 0, false
+
+    local function node_position(raw)
+        local id = common.entity_id(raw)
+        if id == nil then return nil end
+        local cached = node_cache[id]
+        if cached ~= nil then
+            if cached == false then return nil end
+            return cached
+        end
+        local node = component_access.get(raw, "BASE_NODE")
+        if node == nil and not node_reported then
+            node_reported = true
+            errors[#errors + 1] = { component = "BASE_NODE", note = "unavailable; counted in skipped" }
+        end
+        local position = vec(common.field(node, "position")) or vec(common.field(node, "pos"))
+        node_cache[id] = position or false
+        return position
+    end
+
+    common.safe_for_each_entity("BASE_EDGE_STREET", function(edge_entity)
+        local base = component_access.get(edge_entity, "BASE_EDGE")
+        if base == nil then skipped = skipped + 1 return end
+        local a = node_position(common.field(base, "node0"))
+        local b = node_position(common.field(base, "node1"))
+        if a == nil or b == nil then skipped = skipped + 1 return end
+
+        local index = #edges + 1
+        edges[index] = { id = common.entity_id(edge_entity), x0 = a.x, y0 = a.y, x1 = b.x, y1 = b.y }
+
+        -- 长边会跨格，两端和中点都要挂 —— 只挂中点会让贴着格子边界的车找不到它
+        local seen = {}
+        local function attach(x, y)
+            local key = math.floor(x / GRID_SIZE) .. "_" .. math.floor(y / GRID_SIZE)
+            if seen[key] then return end
+            seen[key] = true
+            local cell = grid[key]
+            if cell == nil then cell = {}; grid[key] = cell end
+            cell[#cell + 1] = index
+        end
+        attach(a.x, a.y)
+        attach(b.x, b.y)
+        attach((a.x + b.x) / 2, (a.y + b.y) / 2)
+    end, errors)
+
+    -- 最近路段：查所在格 + 8 个邻格（车贴着格子边界时，属边在隔壁）
+    local function nearest(x, y)
+        local cx, cy = math.floor(x / GRID_SIZE), math.floor(y / GRID_SIZE)
+        local best_id, best_dist = nil, nil
+        for ox = -1, 1 do
+            for oy = -1, 1 do
+                local cell = grid[(cx + ox) .. "_" .. (cy + oy)]
+                if cell ~= nil then
+                    for i = 1, #cell do
+                        local edge = edges[cell[i]]
+                        local dist = point_segment_distance(x, y, edge.x0, edge.y0, edge.x1, edge.y1)
+                        if best_dist == nil or dist < best_dist then best_id, best_dist = edge.id, dist end
+                    end
+                end
+            end
+        end
+        if best_id == nil then return nil, nil, "no_edge_in_cell" end
+        if best_dist ~= nil and best_dist > MAX_MATCH_M then return nil, best_dist, "too_far" end
+        return best_id, best_dist, nil
+    end
+
+    return { edges = edges, skipped = skipped, nearest = nearest }
+end
+
+-- 车辆定位：**坐标匹配**（2026-10-02 换的方案）。
+--
+-- 原来走「传输网边下标 → BASE_EDGE 实体」的映射，但那条链的形状始终没探明：
+--   `pick(network, "edges")` 只读出 4~26 条（真实路网近万条）、边元素本身 keys 全空
+--   （userdata，pairs 枚举不出）、官方文档里也没有这个映射 —— 再挖是拿轮次换运气。
+-- 改用几何法：**车辆包围盒中心 ↔ 最近的路段线段**。坐标来源与 layer_vehicles 一致
+-- （BOUNDING_VOLUME → bbox 中心），那条路已验证可行。半径外的车丢弃并计数，宁可漏不可错配。
+--
+-- 返回 base_edge_id, 匹配距离(米), 网络实体(旧路才有), 失败原因
+local function locate_vehicle(entity, street_index)
+    -- 新路：坐标匹配
+    if street_index ~= nil then
+        local center = vehicle_center(entity)
+        if center == nil then return nil, nil, nil, "no_position" end
+        local found, distance, fail = street_index.nearest(center.x, center.y)
+        if found ~= nil then return found, distance, nil, nil end
+        if fail ~= nil then return nil, distance, nil, fail end
+    end
+
+    -- 旧路（id 映射）保留在后面当对照：目前一条都定位不到，但不删 —— 哪天把 edges 的形状摸清了还能回来用
     local move_path = component_access.get(entity, "MOVE_PATH")
     if move_path == nil then return nil, nil, nil, "no_move_path" end
     local edges = pick(pick(move_path, "path"), "edges")
@@ -333,22 +469,25 @@ local function sample()
     local fail_reasons = {}
     local traffic = {}      -- base_edge → { n, sum_speed, stopped, moving }
     local first_entity = nil
+    -- 路段几何 + 空间网格（每次采样建一次。路是静态的，但采集器本身无状态）
+    local street_index = build_street_index(errors)
+    local match_distances = {}   -- 匹配距离直方（10 米一档）：看 90 米这个阈值合不合适
 
     common.safe_for_each_entity("ROAD_VEHICLE", function(entity)
         if seen >= VEHICLE_LIMIT then return end
         seen = seen + 1
         if first_entity == nil then first_entity = entity end
 
-        local vehicle = component_access.get(entity, "ROAD_VEHICLE")
-        -- 🔴 字段一律从**摊平表**读：首次实测里 getter 路径对 ROAD_VEHICLE **全 nil**
-        --    （speed / lastMoveMode / moveModes …），只有 pairs 路能拿到真值。
-        local flat = flatten(vehicle)
-        local speed = flat.speed
+        -- 🔴 字段从**聚合表**读（2026-10-02 定论）：组件本体是 userdata —— getter 给 nil、
+        --    pairs 也枚举不出键（同一辆车可读字段数 = 0）；而 game.interface.getEntity 给的
+        --    聚合表是普通 table，同一辆车有 17 个字段（speed=2.07 / lastMoveMode=1 / moveModes len=3 …）。
+        local vehicle_view = aggregate_of(entity)
+        local speed = pick(vehicle_view, "speed")
 
-        local mode = flat.lastMoveMode
+        local mode = pick(vehicle_view, "lastMoveMode")
         local mode_key = TRANSPORT_MODE_NAME[mode] or ("MODE_" .. tostring(mode))
         move_mode_tally[mode_key] = (move_mode_tally[mode_key] or 0) + 1
-        each_index(flat.moveModes, 3, function(value)
+        each_index(pick(vehicle_view, "moveModes"), 3, function(value)
             local each_key = TRANSPORT_MODE_NAME[value] or ("MODE_" .. tostring(value))
             sub_mode_tally[each_key] = (sub_mode_tally[each_key] or 0) + 1
         end)
@@ -366,9 +505,13 @@ local function sample()
             discovery = { vehicle_example = probe_vehicle_structure(entity) }
         end
 
-        local base_edge, network_entity, index, reason = locate_vehicle(entity)
+        local base_edge, match_distance, network_entity, reason = locate_vehicle(entity, street_index)
         if base_edge ~= nil then
             located = located + 1
+            if type(match_distance) == "number" then
+                local bucket = math.floor(match_distance / 10) * 10
+                match_distances[bucket] = (match_distances[bucket] or 0) + 1
+            end
             local entry = traffic[base_edge]
             if entry == nil then entry = { n = 0, sum = 0, stopped = 0, moving = 0 }; traffic[base_edge] = entry end
             entry.n = entry.n + 1
@@ -382,7 +525,7 @@ local function sample()
             if out.first_unlocated == nil then
                 out.first_unlocated = {
                     entity_id = common.entity_id(entity), reason = reason,
-                    network_entity = network_entity, edge_index = index,
+                    match_distance = match_distance, network_entity = network_entity,
                 }
             end
         end
@@ -503,6 +646,13 @@ local function sample()
             .. "定位失败的分布见 vehicles.fail_reasons",
         edge_index_map = map_report,
         vehicle_components = discovery and discovery.vehicle_example or nil,
+        -- 新方案（坐标匹配）的自检：路段索引建了多少条、车与路的匹配距离分布
+        -- —— 阈值 90 米合不合适，看这张直方图就知道（大量落在 80~90 说明该放宽）。
+        street_index = {
+            edges = #street_index.edges,
+            skipped = street_index.skipped,
+            match_distance_histogram = match_distances,
+        },
     }
     out.segments = { truncated = truncated, items = rows }
     out.summary = {

@@ -26,6 +26,7 @@ local layer_terrain = require "tpf2_mcp/collectors/layer_terrain"
 local layer_freight = require "tpf2_mcp/collectors/layer_freight"
 local layer_town = require "tpf2_mcp/collectors/layer_town"
 local layer_road_traffic = require "tpf2_mcp/collectors/layer_road_traffic"
+local layer_passenger = require "tpf2_mcp/collectors/layer_passenger"
 
 local M = {}
 
@@ -78,6 +79,13 @@ local LAYERS = {
     -- delay=260 避开各层相位（road 76 / lines 100 / industry 121 / stations 160 /
     -- freight 200 / town 216 / vehicles 每 15 的 46+15k 序列 —— 260-46=214 不是 15 的倍数）。
     { name = "road-traffic", kind = "dynamic", every = 3000, delay = 260, collect = layer_road_traffic.collect },
+    -- 客流层（用户 2026-10-03 指出：客流本该自动，不该靠手动跑脚本）。
+    -- 原先只有两条路：MCP 工具 get_line_demand（一次一条线）＋ 手动脚本 collect-line-demand.py，
+    -- 后者走的正是本文件顶部点名要淘汰的"外部主动发命令"模式。本层改成 mod 自驱。
+    -- 流式（advance）：一条线要遍历它车上+候车的全部乘客/货物实体，273 条线一次做完会卡帧。
+    -- delay=340 避开其余各层的相位（terrain 300 / road-traffic 260 / town 216 / freight 200 /
+    --   stations 160 / industry 121 / lines 100 / road 76 / vehicles 46+15k）—— 340-46=294 不是 15 的倍数。
+    { name = "passenger", kind = "static", every = 12000, delay = 340, advance = layer_passenger.advance },
 }
 
 local counters = {}

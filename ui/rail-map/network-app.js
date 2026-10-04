@@ -210,12 +210,21 @@ window.renderRailNetwork = function renderRailNetwork() {
     physicalPlatforms(station).forEach(platform=>{
       const platformLine=platform.platform_centerline||[],hitLine=platformLine;
       if(hitLine.length>=2){
-        const widthUnits=platform.platform_width_units||(platform.platform_kind==='ISLAND'?2:1);
+        // 🔴 **货运站台一律按"宽"画**（2 → 12 px，对应 10 米宽的 perron_10）。
+        //    引擎给的 platform_width_units 会把某些货运站台（侧式那几条）报成 1，
+        //    于是同一个站的两条货运站台一条粗一条细 —— 跟游戏里"货运站台都是 10 米宽、
+        //    且比客运的宽"对不上（用户 2026-10-02 指出）。
+        //    客运仍按引擎值：岛式 2 / 侧式 1。
+        const widthUnits=platform.cargo?2:(platform.platform_width_units||(platform.platform_kind==='ISLAND'?2:1));
         const makePath=line=>line.map((point,index)=>{const q=P({x:point[0],y:point[1]});return `${index?'L':'M'}${q.x.toFixed(5)},${q.y.toFixed(5)}`;}).join('');
         const platformPath=platformLine.length>=2?makePath(platformLine):'';
         const hitPath=makePath(hitLine);
+        // 站台按**客运 / 货运**上不同底色（用户 2026-10-02 要求区分）。
+        // 判据就是 platform.cargo —— 跟下面 tooltip 里"N站台（货/客）"用的是同一个字段。
+        // 客运沿用原来的灰 #96a2a8，货运用暖黄褐 #c9a15f：跟灰拉得开，又不至于抢眼。
+        const platformColor=platform.cargo?'#c9a15f':'#96a2a8';
         const outline=platformPath?S('path',{d:platformPath,fill:'none',stroke:'#26343d','stroke-width':6*widthUnits+2,'vector-effect':'non-scaling-stroke','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'},'',platformLayer):null;
-        const surface=platformPath?S('path',{d:platformPath,fill:'none',stroke:'#96a2a8','stroke-width':6*widthUnits,'vector-effect':'non-scaling-stroke','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'},'',platformLayer):null;
+        const surface=platformPath?S('path',{d:platformPath,fill:'none',stroke:platformColor,'stroke-width':6*widthUnits,'vector-effect':'non-scaling-stroke','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'},'',platformLayer):null;
         const divider=platform.platform_kind==='ISLAND'?S('path',{d:platformPath,fill:'none',stroke:'#58656d','stroke-width':1,'stroke-dasharray':'4 3','vector-effect':'non-scaling-stroke','pointer-events':'none',display:'none'},'',platformLayer):null;
         const hit=S('path',{d:hitPath,fill:'none',stroke:'transparent','stroke-width':6*widthUnits+4,'vector-effect':'non-scaling-stroke','stroke-linecap':'round','pointer-events':'stroke',cursor:'pointer'},'',platformLayer);
         const show=event=>{if(divider)divider.style.display='block';const face=faceForPointer(station,platform,event),kind=platform.cargo?'货':'客';tooltip.textContent=`${Number(face?.terminal_index??platform.platform_index)+1}站台（${kind}）`;tooltip.style.display='block';};
@@ -305,9 +314,10 @@ window.renderRailNetwork = function renderRailNetwork() {
     hit.addEventListener('pointerenter',show);hit.addEventListener('pointermove',event=>{show();moveTooltip(event);});hit.addEventListener('pointerleave',()=>{tooltip.style.display='none';dot.setAttribute('fill','#08141e');updateStations();});
     group.addEventListener('pointerdown',event=>{if(event.button===0)event.stopPropagation();});
     group.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();selectedVehicleId=null;vehicleDetail=null;selectedStation=station;stationLogRows=[];renderStationSidebar();loadStationLogs();updateStations();});
-    // 双击车站 = 直接进入该站的局部视图（原来只是原地放大，看不出附近的枢纽/客流）。
-    // 局部视图由 app.js 处理（URL 带 ?view=local&station=<id>），那边会显示站台、
-    // 附近交通枢纽和本站客货。
+    // 双击车站 = 直接进入该站的枢纽页（原来只是原地放大，看不出整个枢纽）。
+    // 枢纽页由 app.js 处理（URL 带 ?view=local&station=<id>）：以本站为基准，把同一
+    // 换乘片（cluster）里的**全部车站**画出来 —— 铁路/公交/水运/航空一起看。
+    // ⚠️ 侧边栏的「查看整个枢纽」按钮才是正门，双击只是快捷方式（2026-10-03 补）。
     hit.addEventListener('dblclick',()=>{
       const target=new URL(location.href);
       target.search='';
@@ -838,7 +848,7 @@ window.renderRailNetwork = function renderRailNetwork() {
   const renderStationSidebar=()=>{
     if(!selectedStation){renderOverviewSidebar();return;}
     setSidebarBackVisible(true);
-    const station=selectedStation,{routes,vehicles,summary,servingVehicles}=stationSidebarData(station);
+    const station=selectedStation,{routes,vehicles,summary,servingVehicles,cluster,groups}=stationSidebarData(station);
     const sidebar=templates.instantiate('station-sidebar-template');
     templates.setText(sidebar,'station-name',stationTitle(station));
     templates.setText(sidebar,'station-summary',summary);
@@ -847,6 +857,22 @@ window.renderRailNetwork = function renderRailNetwork() {
     sidebar.dataset.dwellSpeed=currentSimulationSpeedLabel();
     fillStationLiveVehicles(templates.slot(sidebar,'live-vehicles'),vehicles);
     fillStationLogs(templates.slot(sidebar,'logs'));
+    // 「查看整个枢纽」——原来进枢纽页**只能靠双击地图上的车站**（`app.js:317` 那段），
+    // 没有任何可见入口，等于藏起来了。这里给一个明摆着的按钮（2026-10-03）。
+    const hubButton=sidebar.querySelector('[data-action="open-hub"]');
+    if(hubButton){
+      const members=(groups&&groups.length)||(cluster&&cluster.memberCount)||1;
+      templates.setText(sidebar,'hub-open-note',members>1
+        ? `${members} 座站 · 铁路/公交/水运/航空`
+        : '这一片只有本站');
+      hubButton.addEventListener('click',()=>{
+        const target=new URL(location.href);
+        target.search='';
+        target.searchParams.set('view','local');
+        target.searchParams.set('station',String(station.entity_id));
+        location.assign(target.href);
+      });
+    }
     document.querySelector('#sidebar').replaceChildren(sidebar);
     document.querySelector('#station-name').textContent=stationTitle(station);
   };
@@ -1091,19 +1117,80 @@ window.renderRailNetwork = function renderRailNetwork() {
   if(headingCcw)headingCcw.onclick=()=>applyHeading(headingValue-90);
   const headingCw=document.querySelector('#heading-cw');
   if(headingCw)headingCw.onclick=()=>applyHeading(headingValue+90);
-  // 侧边栏折叠：状态记在 localStorage，收起后地图占满宽度（grid 第三列归零）
+  // ---- 侧栏宽度 / 折叠 / 拖拽（用户 2026-10-02：「侧边栏过宽，加一个可以拖动和收起的功能」）----
+  // 三个偏好都记在本机：右侧栏宽度、右侧栏是否收起、图层面板（宽度/位置/是否收起，见下面面板骨架那节）。
+  const uiPref={
+    get(key,fallback){try{const value=localStorage.getItem(key);return value==null?fallback:value;}catch(error){return fallback;}},
+    set(key,value){try{localStorage.setItem(key,String(value));}catch(error){}}
+  };
+  const clampNumber=(value,min,max)=>Math.min(Math.max(value,min),max);
+  // 通用的「按住一条边左右拖 → 改宽度」。两处共用：
+  //   ① 右侧栏：宽度是 .workspace 的 grid 第三列 ⇒ 改 `--sidebar-w`
+  //   ② 地图上的图层面板：宽度是它自己的 ⇒ 改 `--layer-panel-w`
+  // 🔴 不用 CSS 的 `resize:horizontal`：那个把手只是右下角一个小三角，而且只改得到
+  //    元素自身的 width —— 右侧栏的宽度是 grid 列，CSS 的 resize 根本改不动它。
+  // 🔴 拖动期间必须 `setPointerCapture`：不然指针一离开把手，move 事件就改派给别人
+  //    （地图的 svg 自己也在监听 pointermove 做平移），拖到一半就断。
+  const installColResize=(handle,{onStart,onMove,onEnd})=>{
+    let pointerId=null,startX=0,startValue=0;
+    const active=()=>pointerId!==null;
+    handle.addEventListener('pointerdown',event=>{
+      if(!event.isPrimary||event.button!==0)return;
+      event.preventDefault();
+      pointerId=event.pointerId;startX=event.clientX;startValue=onStart();
+      handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener('pointermove',event=>{
+      if(!active()||event.pointerId!==pointerId)return;
+      event.preventDefault();
+      onMove(event.clientX-startX,startValue);
+    });
+    const finish=event=>{
+      if(!active())return;
+      if(event&&event.pointerId!==undefined&&event.pointerId!==pointerId)return;
+      pointerId=null;
+      if(onEnd)onEnd();
+    };
+    handle.addEventListener('pointerup',finish);
+    handle.addEventListener('pointercancel',finish);
+    handle.addEventListener('lostpointercapture',()=>finish());
+  };
+
   const sidebarToggle=document.querySelector('#sidebar-toggle');
   const workspaceEl=document.querySelector('.workspace');
+  const SIDEBAR_MIN=190;
+  const sidebarMaxWidth=()=>Math.max(240,window.innerWidth-420);
+  const applySidebarWidth=width=>{
+    if(!workspaceEl)return width;
+    const value=Math.round(clampNumber(width,SIDEBAR_MIN,sidebarMaxWidth()));
+    workspaceEl.style.setProperty('--sidebar-w',value+'px');
+    return value;
+  };
+  if(workspaceEl){
+    // 宽度：拖左缘（把手在左缘 ⇒ 往左拖是变宽，所以取 -dx）
+    const savedWidth=Number(uiPref.get('tpf2map.sidebar.width',0));
+    if(savedWidth>=SIDEBAR_MIN)applySidebarWidth(savedWidth);
+    const sidebarHandle=document.querySelector('#sidebar-resizer');
+    if(sidebarHandle)installColResize(sidebarHandle,{
+      onStart(){document.body.classList.add('is-resizing');return workspaceEl.getBoundingClientRect().width;},
+      onMove(dx,start){applySidebarWidth(start-dx);updateViewport(true);},
+      onEnd(){
+        document.body.classList.remove('is-resizing');
+        uiPref.set('tpf2map.sidebar.width',Math.round(workspaceEl.getBoundingClientRect().width));
+        updateViewport();
+      }
+    });
+  }
   if(sidebarToggle&&workspaceEl){
-    const storedCollapsed=(()=>{try{return localStorage.getItem('railMapSidebarCollapsed');}catch(error){return null;}})();
+    // 键名沿用原来那个（`railMapSidebarCollapsed`）—— 换了键，用户现在的收起状态就白丢了
     const setCollapsed=collapsed=>{
       workspaceEl.classList.toggle('sidebar-collapsed',collapsed);
       sidebarToggle.textContent=collapsed?'«':'»';
       sidebarToggle.title=collapsed?'展开右侧栏':'收起右侧栏';
-      try{localStorage.setItem('railMapSidebarCollapsed',collapsed?'1':'0');}catch(error){}
+      uiPref.set('railMapSidebarCollapsed',collapsed?'1':'0');
       updateViewport();
     };
-    setCollapsed(storedCollapsed==='1');
+    setCollapsed(uiPref.get('railMapSidebarCollapsed','0')==='1');
     sidebarToggle.onclick=()=>setCollapsed(!workspaceEl.classList.contains('sidebar-collapsed'));
   }
   svg.addEventListener('wheel',event=>{event.preventDefault();const rect=svg.getBoundingClientRect(),focusX=(event.clientX-rect.left)*1200/rect.width,focusY=(event.clientY-rect.top)*720/rect.height;setZoom(zoom*(event.deltaY<0?1.35:1/1.35),focusX,focusY);},{passive:false});
@@ -1388,6 +1475,40 @@ window.renderRailNetwork = function renderRailNetwork() {
     console.log(`[map] 线路高亮 ${wanted}：${drawn} 条边 / ${lineStopMarks.length} 站`);
     renderLineSidebar();
     return {edges:drawn,stops:lineStopMarks.length};
+  };
+
+  // ===== 供扩展层复用：把线路的**真实轨道几何**交出去 ==========================
+  // 产业链流向图（freight-flow.js）要"沿着铁轨"画货流线，而不是产业→车站的直线。
+  // 它需要的正是这里已经算好的东西：`route_edge_ids` → 逐边贝塞尔。
+  // 所以不重复实现，直接把这套几何交出去 —— 复用 `ensureLineRouteData` 的内存缓存
+  //（那 6.4 MB 只拉一次，与本文件自己高亮线路共用）。
+  // 返回 Map<线路id, {spans, points}>：
+  //   · spans  —— 每条轨道边的 path 字符串片段，直接拼进 <path d="...">
+  //   · points —— 每条轨道边的**中点世界坐标**，供调用方按站点位置**切分区间**
+  //               （这就是"找出货真走的那一段"的依据）
+  const railRoutePaths = async lineIds => {
+    const wanted = Array.from(new Set((lineIds || []).map(Number).filter(Number.isFinite)));
+    if (!wanted.length) return new Map();
+    const data = await ensureLineRouteData();
+    if (!data) return new Map();
+    const edgeById = new Map((data.edges || []).map(edge => [Number(edge.entity_id), edge]));
+    const nodeById = new Map((data.nodes || []).map(node => [Number(node.entity_id), node.position]));
+    const out = new Map();
+    wanted.forEach(id => {
+      const line = (data.lines || []).find(item => Number(item.entity_id) === id);
+      const edgeIds = (line && line.route_edge_ids) || [];
+      const spans = [], points = [];
+      edgeIds.forEach(rawEdgeId => {
+        const edge = edgeById.get(Number(rawEdgeId));
+        if (!edge) return;
+        const a = nodeById.get(Number(edge.node0)), b = nodeById.get(Number(edge.node1));
+        if (!a || !b) return;
+        spans.push(edgePath(edge, nodeById));
+        points.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      });
+      if (spans.length) out.set(id, { spans: spans, points: points });
+    });
+    return out;
   };
 
   const requestedStationId=Number(new URLSearchParams(window.location.search).get('station'));
@@ -1806,37 +1927,177 @@ window.renderRailNetwork = function renderRailNetwork() {
   };
   const onlyFilter=(dim,values)=>{
     const f=FILTER[dim];f.restricted=true;f.set.clear();values.forEach(v=>f.set.add(v));
-    syncFilterBoxes();applyFilters();
+    syncFilterBoxes();applyFilters();persistAllBoxes();
   };
   const clearFilters=()=>{
     ['carrier','cargo','lines'].forEach(dim=>{FILTER[dim].restricted=false;FILTER[dim].set.clear();});
-    syncFilterBoxes();applyFilters();
+    syncFilterBoxes();applyFilters();persistAllBoxes();
   };
 
   // ---- 面板骨架 ----
+  // 结构：外框 `#layer-panel` ＝ 标题条 ＋ 内容区（自己滚）＋ 右缘拖宽把手。
+  // 🔴 内容区单独一层是**必须的**：原来 `overflow-y:auto` 挂在面板自己身上，
+  //    而把手是绝对定位的子元素 ⇒ 会被卷进滚动内容里跟着跑。
+  //    所有分组与动作条都进内容区（扩展调 addGroup 建的组也走这里）。
   const layerPanel=document.querySelector('#layer-panel');
+  const layerPanelBody=document.createElement('div');
+  layerPanelBody.className='layer-panel-body';
+  const LAYER_PANEL_MIN_W=140;
+  const layerPanelMaxWidth=()=>Math.max(200,Math.min(560,window.innerWidth-80));
+
   const addGroup=title=>{
     const box=document.createElement('div');box.className='layer-group';
+    // 记下分组名 —— 勾选记忆的键是「分组名/条目名」，靠它取
+    box.dataset.uiGroup=title;
     const head=document.createElement('div');head.className='layer-group-title';head.textContent=title;
     box.appendChild(head);
-    if(layerPanel)layerPanel.appendChild(box);
+    layerPanelBody.appendChild(box);
     return box;
   };
+
+  if(layerPanel){
+    const head=document.createElement('div');head.className='layer-panel-head';
+    const headTitle=document.createElement('span');headTitle.className='layer-panel-title';
+    headTitle.textContent='图层 · 可拖宽';
+    head.appendChild(headTitle);
+
+    // 收起 / 展开（状态记本机）
+    const collapseKey='tpf2map.layerPanel.collapsed';
+    const collapseButton=document.createElement('button');
+    collapseButton.type='button';
+    const applyCollapsed=collapsed=>{
+      layerPanel.classList.toggle('is-collapsed',collapsed);
+      collapseButton.textContent=collapsed?'▸':'▾';
+      collapseButton.title=collapsed?'展开图层面板（也可拖右缘改宽、拖本条换位置）':'收起图层面板';
+      collapseButton.setAttribute('aria-expanded',String(!collapsed));
+      uiPref.set(collapseKey,collapsed?'1':'0');
+    };
+    collapseButton.addEventListener('click',()=>applyCollapsed(!layerPanel.classList.contains('is-collapsed')));
+    head.appendChild(collapseButton);
+    layerPanel.appendChild(head);
+    layerPanel.appendChild(layerPanelBody);
+    applyCollapsed(uiPref.get(collapseKey,'0')==='1');
+
+    // 宽度：拖右缘（值记本机）
+    const widthKey='tpf2map.layerPanel.width';
+    const savedWidth=Number(uiPref.get(widthKey,0));
+    if(savedWidth>=LAYER_PANEL_MIN_W)layerPanel.style.setProperty('--layer-panel-w',savedWidth+'px');
+    const resizer=document.createElement('div');
+    resizer.className='layer-panel-resizer';resizer.title='左右拖动改面板宽度';
+    layerPanel.appendChild(resizer);
+    installColResize(resizer,{
+      onStart(){document.body.classList.add('is-resizing');return layerPanel.getBoundingClientRect().width;},
+      onMove(dx,start){
+        // 把手在**右缘** ⇒ 往右拖是变宽
+        layerPanel.style.setProperty('--layer-panel-w',
+          Math.round(clampNumber(start+dx,LAYER_PANEL_MIN_W,layerPanelMaxWidth()))+'px');
+      },
+      onEnd(){
+        document.body.classList.remove('is-resizing');
+        uiPref.set(widthKey,Math.round(layerPanel.getBoundingClientRect().width));
+      }
+    });
+
+    // 位置：拖标题条搬走（记本机）。默认是 CSS 的贴左下角；一旦拖过就改写成 left/top。
+    const posKey='tpf2map.layerPanel.pos';
+    const applyPos=pos=>{
+      if(!pos)return;
+      layerPanel.style.left=pos.left+'px';
+      layerPanel.style.top=pos.top+'px';
+      layerPanel.style.bottom='auto';
+    };
+    const readPos=()=>{
+      const parts=String(uiPref.get(posKey,'')).split(',');
+      if(parts.length!==2)return null;
+      const left=Number(parts[0]),top=Number(parts[1]);
+      return isFinite(left)&&isFinite(top)?{left,top}:null;
+    };
+    applyPos(readPos());
+    // offsetParent 就是 #board-wrap（position:relative），偏移都以它为准
+    const wrapEl=layerPanel.offsetParent||layerPanel.parentElement;
+    let movePointer=null;
+    head.addEventListener('pointerdown',event=>{
+      if(!event.isPrimary||event.button!==0)return;
+      if(event.target.closest('button'))return;      // 点折叠按钮不算拖面板
+      event.preventDefault();
+      movePointer={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,
+                   baseLeft:layerPanel.offsetLeft,baseTop:layerPanel.offsetTop};
+      head.setPointerCapture(event.pointerId);
+      document.body.classList.add('is-moving-panel');
+    });
+    head.addEventListener('pointermove',event=>{
+      if(!movePointer||event.pointerId!==movePointer.pointerId)return;
+      event.preventDefault();
+      const wrapW=(wrapEl&&wrapEl.clientWidth)||window.innerWidth;
+      const wrapH=(wrapEl&&wrapEl.clientHeight)||window.innerHeight;
+      const left=clampNumber(movePointer.baseLeft+(event.clientX-movePointer.startX),4,
+                             Math.max(4,wrapW-layerPanel.offsetWidth-4));
+      const top=clampNumber(movePointer.baseTop+(event.clientY-movePointer.startY),4,
+                            Math.max(4,wrapH-layerPanel.offsetHeight-4));
+      layerPanel.style.left=left+'px';layerPanel.style.top=top+'px';layerPanel.style.bottom='auto';
+    });
+    const stopMove=event=>{
+      if(!movePointer)return;
+      if(event&&event.pointerId!==undefined&&event.pointerId!==movePointer.pointerId)return;
+      movePointer=null;
+      document.body.classList.remove('is-moving-panel');
+      uiPref.set(posKey,Math.round(layerPanel.offsetLeft)+','+Math.round(layerPanel.offsetTop));
+    };
+    head.addEventListener('pointerup',stopMove);
+    head.addEventListener('pointercancel',stopMove);
+    head.addEventListener('lostpointercapture',()=>stopMove());
+    // 双击标题条复位回左下角 —— 拖歪了不用去翻控制台
+    head.addEventListener('dblclick',event=>{
+      if(event.target.closest('button'))return;
+      layerPanel.style.left='';layerPanel.style.top='';layerPanel.style.bottom='';
+      uiPref.set(posKey,'');
+    });
+  }
+  // 勾选状态的本地记忆（`ui-persist.js`）。键 = 「面板上显式的分组名 / 条目名」，
+  // 所以**改了面板文案等于换了键**：旧值被忽略、退回默认 —— 文案都改了还拿旧状态套才怪。
+  const uiState=window.TPF2UIState||null;
   const addOption=(group,label,options={})=>{
-    const{checked=true,onChange,count,title,scroll,swatch}=options;
+    const{checked=true,onChange,count,title,scroll,swatch,persist=true}=options;
     const wrap=document.createElement('label');
     if(title)wrap.title=title;
     // 线路色块：游戏里这条线是什么颜色，列表里就显示什么颜色（官方 `Line.color` / `Color` 组件）。
     // 采不到就不画色块 —— 不用自造颜色冒充。
     if(swatch){const dot=document.createElement('i');dot.className='line-swatch';dot.style.background=swatch;wrap.appendChild(dot);}
-    const box=document.createElement('input');box.type='checkbox';box.checked=checked;
-    box.addEventListener('change',()=>{if(onChange)onChange(box.checked);});
+    const storeKey=(uiState&&persist)?uiState.key(group&&group.dataset.uiGroup,label):null;
+    const saved=storeKey?uiState.get(storeKey,null):null;
+    const initial=(typeof saved==='boolean')?saved:checked;
+    const box=document.createElement('input');box.type='checkbox';box.checked=initial;
+    // 把"这条记忆叫什么"挂在元素上 —— 动作按钮改完勾选后要按同一套键写回记忆，
+    // 有了 dataset 就不必再自己拼一遍（拼错了就是两份键、记忆静默失效）。
+    box.dataset.uiLabel=label;
+    box.dataset.uiGroup=(group&&group.dataset.uiGroup)||'';
+    box.addEventListener('change',()=>{
+      if(storeKey)uiState.set(storeKey,box.checked);
+      if(onChange)onChange(box.checked);
+    });
     const text=document.createElement('span');
     text.textContent=count==null?label:`${label} · ${count}`;
     wrap.appendChild(box);wrap.appendChild(text);
     if(group)group.appendChild(wrap);
     if(scroll&&group){group.classList.add('is-scroll');}
+    // 存过、且跟默认**不一样** → 等这一轮面板（含各扩展自建的分组）全建完再应用一次。
+    // 用 defer 而不是立刻调：有的 onChange 依赖别的分组/数据先就位。
+    if(storeKey&&typeof saved==='boolean'&&initial!==checked&&onChange){
+      uiState.defer(()=>onChange(initial));
+    }
     return box;
+  };
+
+  // 动作按钮（只看客运 / 只看货运 / 只看列车 / 还原）走的不是 change 事件，
+  // 它们直接改筛选状态、再由 syncFilterBoxes 反写勾选框。所以按钮点完要**手工补写记忆**，
+  // 否则"点了还原 → 刷新 → 老筛选又回来了"。
+  // 键从勾选框自己的 dataset 取，不另拼一份 —— 免得和 addOption 那边对不上。
+  const persistAllBoxes=()=>{
+    if(!uiState||!layerPanel)return;
+    layerPanelBody.querySelectorAll('input[type=checkbox]').forEach(box=>{
+      if(!box.dataset.uiLabel)return;
+      uiState.set(uiState.key(box.dataset.uiGroup,box.dataset.uiLabel),box.checked);
+    });
   };
 
   const baseGroup=addGroup('底图');
@@ -1857,7 +2118,10 @@ window.renderRailNetwork = function renderRailNetwork() {
   addAction('只看货运','只保留货运与客货混运',()=>onlyFilter('cargo',['FREIGHT','MIXED']));
   addAction('只看列车','只保留铁路',()=>onlyFilter('carrier',['RAIL']));
   addAction('还原','取消所有筛选（注意：车辆"种类"会变成全选 = 全部显示）',clearFilters);
-  if(layerPanel)layerPanel.appendChild(actionBar);
+  addAction('重置勾选','把面板里所有勾选项恢复成默认值，并清掉本机记住的选择（会刷新页面）',()=>{
+    if(window.TPF2UIState)window.TPF2UIState.reset();
+  });
+  if(layerPanel)layerPanelBody.appendChild(actionBar);
 
   // ---- 路网（铁路 / 公路 / 线路）----
   addOption(netGroup,'铁路',{onChange:v=>railLayer.setVisible(v),count:p.tiles.length});
@@ -2256,6 +2520,10 @@ window.renderRailNetwork = function renderRailNetwork() {
     },
     worldPerMeter: ()=>baseScale,
     currentZoom: ()=>zoom,
+    // 线路的**真实轨道几何**（route_edge_ids → 逐边贝塞尔 path 片段）。
+    // 产业链流向图（freight-flow.js）用它把货流线画在铁轨上，而不是画站点之间的直线。
+    // 缓存与线路高亮共用（那 6.4 MB 只拉一次）。详见 railRoutePaths 的注释。
+    railRoutePaths,
     // 车站结构数据（layer-stations 整车版）。扩展文件直接读，不必自己再 fetch 一遍。
     stationData: ()=>STATION_CLUSTERS.data,
     // 图层面板：addGroup 让扩展**自建分组**（各占一块，别都挤进 facility）；

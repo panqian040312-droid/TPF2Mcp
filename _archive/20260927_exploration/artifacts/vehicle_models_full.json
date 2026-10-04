@@ -1,0 +1,1252 @@
+{
+ "vehicle/train/AntarzSimensA1/HC/car.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2805877314\\res\\models\\model\\vehicle\\train\\AntarzSimensA1\\HC\\car.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 92316
+ },
+ "vehicle/train/AntarzSimensA1/MC/car.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2805877314\\res\\models\\model\\vehicle\\train\\AntarzSimensA1\\MC\\car.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 94881
+ },
+ "vehicle/train/CR200JCA.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JCA.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": -1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 90722
+ },
+ "vehicle/train/CR200JCAC.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JCAC.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 84863
+ },
+ "vehicle/train/CR200JDL-fan.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDL-fan.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 60000.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": 66.59642791748,
+    "powerEmission": 0.0,
+    "speedEmission": 0.80000001192093
+   }
+  },
+  "size": 14253
+ },
+ "vehicle/train/CR200JDL-fanC.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDL-fanC.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 60000.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": 66.59642791748,
+    "powerEmission": 0.0,
+    "speedEmission": 0.80000001192093
+   }
+  },
+  "size": 13716
+ },
+ "vehicle/train/CR200JDL.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDL.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 60000.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": 66.59642791748,
+    "powerEmission": 0.0,
+    "speedEmission": 0.80000001192093
+   }
+  },
+  "size": 15498
+ },
+ "vehicle/train/CR200JDLC.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JDLC.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 60000.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": 66.59642791748,
+    "powerEmission": 0.0,
+    "speedEmission": 0.80000001192093
+   }
+  },
+  "size": 15829
+ },
+ "vehicle/train/CR200JRW.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JRW.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": -1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": -1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 102351
+ },
+ "vehicle/train/CR200JRWC.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JRWC.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 96502
+ },
+ "vehicle/train/CR200JYW.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JYW.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": -1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 102988
+ },
+ "vehicle/train/CR200JYWC.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JYWC.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 97142
+ },
+ "vehicle/train/CR200JZE.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JZE.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 66832
+ },
+ "vehicle/train/CR200JZEC.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3037553623\\res\\models\\model\\vehicle\\train\\CR200JZEC.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 66877
+ },
+ "vehicle/train/CR400AF_0208/HC/CR/hs/00.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\CR\\hs\\00.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 38234
+ },
+ "vehicle/train/CR400AF_0208/HC/CR/hs/01.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\CR\\hs\\01.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 38234
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/00.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\00.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 38251
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/01.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\01.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 38251
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/WL/00.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\WL\\00.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 38259
+ },
+ "vehicle/train/CR400AF_0208/HC/MP/WL/01.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\HC\\MP\\WL\\01.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 38259
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/02.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\02.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52844
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/04.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\04.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52263
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/05.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\05.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 50509
+ },
+ "vehicle/train/CR400AF_0208/MC/MP/07.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\MP\\07.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52844
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/02.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\02.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52746
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/04.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\04.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52159
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/05.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\05.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 50333
+ },
+ "vehicle/train/CR400AF_0208/MC/hs/07.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\MC\\hs\\07.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52746
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/03.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\03.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 53353
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/04_T.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\04_T.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 52282
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/05_T.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\05_T.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 50528
+ },
+ "vehicle/train/CR400AF_0208/TC/MP/06.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\MP\\06.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 53353
+ },
+ "vehicle/train/CR400AF_0208/TC/hs/03.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\hs\\03.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 53260
+ },
+ "vehicle/train/CR400AF_0208/TC/hs/06.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3374213837\\res\\models\\model\\vehicle\\train\\CR400AF_0208\\TC\\hs\\06.mdl",
+  "blocks": {
+   "cost": {
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 53260
+ },
+ "vehicle/train/CR400BFC/00.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\00.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 33700
+ },
+ "vehicle/train/CR400BFC/01.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\01.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 31916
+ },
+ "vehicle/train/CR400BFC/02.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\02.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 47334
+ },
+ "vehicle/train/CR400BFC/03.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\03.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 50012
+ },
+ "vehicle/train/CR400BFC/04.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\04.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 44161
+ },
+ "vehicle/train/CR400BFC/05.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\05.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 36624
+ },
+ "vehicle/train/CR400BFC/06.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\06.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 48284
+ },
+ "vehicle/train/CR400BFC/07.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3015141575\\res\\models\\model\\vehicle\\train\\CR400BFC\\07.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 999999.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 46304
+ },
+ "vehicle/train/HXD1D_C_00880089.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_C_00880089.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 46137
+ },
+ "vehicle/train/HXD1D_III_1898.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_III_1898.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 24189
+ },
+ "vehicle/train/HXD1D_II_0364.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_II_0364.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 23708
+ },
+ "vehicle/train/HXD1D_I_0001.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3547422462\\res\\models\\model\\vehicle\\train\\HXD1D_I_0001.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 23456
+ },
+ "vehicle/train/HXD3CA_I_8250.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3144149334\\res\\models\\model\\vehicle\\train\\HXD3CA_I_8250.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 18123
+ },
+ "vehicle/train/HXD3C_III_0194.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3144149334\\res\\models\\model\\vehicle\\train\\HXD3C_III_0194.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 17744
+ },
+ "vehicle/train/HXD3C_II_0121.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\3144149334\\res\\models\\model\\vehicle\\train\\HXD3C_II_0121.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 17725
+ },
+ "vehicle/train/SS8_IIB_0033.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_IIB_0033.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 16080
+ },
+ "vehicle/train/SS8_IIB_0072.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_IIB_0072.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 16080
+ },
+ "vehicle/train/SS8_IIB_0114.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_IIB_0114.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 16080
+ },
+ "vehicle/train/SS8_III_0191.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_III_0191.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 16104
+ },
+ "vehicle/train/SS8_II_0001.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2876884499\\res\\models\\model\\vehicle\\train\\SS8_II_0001.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 21915.0,
+    "runningCostScale": 1.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 16055
+ },
+ "vehicle/train/l3/Aw.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2819774551\\res\\models\\model\\vehicle\\train\\l3\\Aw.mdl",
+  "blocks": {
+   "cost": {
+    "price": 0.0,
+    "priceScale": 0.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 24678
+ },
+ "vehicle/train/l3/Bw.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2819774551\\res\\models\\model\\vehicle\\train\\l3\\Bw.mdl",
+  "blocks": {
+   "cost": {
+    "price": 0.0,
+    "priceScale": 0.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 20712
+ },
+ "vehicle/train/l3/Cw.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2819774551\\res\\models\\model\\vehicle\\train\\l3\\Cw.mdl",
+  "blocks": {
+   "cost": {
+    "price": 0.0,
+    "priceScale": 0.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCostScale": 1.0,
+    "runningCosts": 1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 24408
+ },
+ "vehicle/train/qingguiCO.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2606263685\\res\\models\\model\\vehicle\\train\\qingguiCO.mdl",
+  "blocks": {
+   "cost": {
+    "price": 2030000.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 37313.0,
+    "runningCostScale": 1.0,
+    "runningCosts": 21600.0
+   },
+   "emission": {
+    "idleEmission": 36.018185424805,
+    "powerEmission": 0.0,
+    "speedEmission": 0.10000001192093
+   }
+  },
+  "size": 13685
+ },
+ "vehicle/train/ss9g/china_ss9g.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2815641173\\res\\models\\model\\vehicle\\train\\ss9g\\china_ss9g.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": 65.361663818359,
+    "powerEmission": 0.0,
+    "speedEmission": 0.80000001192093
+   }
+  },
+  "size": 12470
+ },
+ "vehicle/waggon/SuspendedMonorail/Sus_Mon_m.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2598046566\\res\\models\\model\\vehicle\\waggon\\SuspendedMonorail\\Sus_Mon_m.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 1.0
+   },
+   "maintenance": {
+    "lifespan": 29930.0,
+    "runningCostScale": 0.6,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 22535
+ },
+ "vehicle/waggon/SuspendedMonorail/Sus_Mon_t.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\workshop\\content\\1066780\\2598046566\\res\\models\\model\\vehicle\\waggon\\SuspendedMonorail\\Sus_Mon_t.mdl",
+  "blocks": {
+   "cost": {
+    "price": -1.0,
+    "priceScale": 0.6
+   },
+   "maintenance": {
+    "lifespan": 29930.0,
+    "runningCostScale": 0.6,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 21322
+ },
+ "vehicle/waggon/boxcar_2000.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+  "blocks": {
+   "cost": {
+    "price": -1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 14792
+ },
+ "vehicle/waggon/gondola_2000.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+  "blocks": {
+   "cost": {
+    "price": -1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 10526
+ },
+ "vehicle/waggon/stake_car_2000.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+  "blocks": {
+   "cost": {
+    "price": -1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 9669
+ },
+ "vehicle/waggon/tankcar_2000.mdl": {
+  "location": "E:\\SteamLibrary\\steamapps\\common\\Transport Fever 2\\res\\models\\model.zip",
+  "blocks": {
+   "cost": {
+    "price": -1.0
+   },
+   "maintenance": {
+    "lifespan": 36525.0,
+    "runningCosts": -1.0
+   },
+   "emission": {
+    "idleEmission": -1.0,
+    "powerEmission": -1.0,
+    "speedEmission": -1.0
+   }
+  },
+  "size": 8274
+ }
+}

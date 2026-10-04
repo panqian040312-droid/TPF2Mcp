@@ -44,15 +44,89 @@
   // 模块格子按"这格是什么"上色 —— 生成工具已经按模块文件名归好类（cell.k）。
   // 车站不是一坨，是这些格子拼出来的；分色才能一眼看出站台在哪、站房在哪。
   const CELL_COLOR = {
-    platform: "#7fd4ff",   // 站台 / 月台
-    building: "#ffcf7a",   // 站房 / 候车楼
+    platform: "#7fd4ff",   // 站台 / 月台 / 泊位（货运站台也走这个色）
+    building: "#e8e2d6",   // 站房 / 候车楼（暖白，画在最上层；货运版用 BUILDING_CARGO_FILL）
     track: "#8fa3b8",      // 轨道
+    roof: "#8b7fd4",       // 站台顶棚：跟站台**同格**，排在最下层当轮廓
     stairs: "#c9a0ff",     // 楼梯 / 地道 / 天桥
-    pier: "#d9a441",       // 栈桥 / 码头泊位
+    pier: "#6fc3a8",       // 栈桥 / 码头平台（水路，跟陆上站台分色）
     entrance: "#7fe3a0",   // 出入口
-    terminal: "#ff9ec4",   // 航站楼
+    apron: "#48565f",      // 机场场坪 / 停机坪（垫底）
+    runway: "#39454e",     // 跑道（垫底）
+    taxiway: "#5a6871",    // 滑行道
     other: "#9fb0bf",
   };
+
+  // 出入口按 **进 / 出 / 双向** 分色，并在格子里画一个**道路交通箭头**。
+  // 方向判据来自**模块文件名**（游戏里这是三个不同的文件，不是同一个的变体）：
+  //   entrance.module → 进 ｜ exit.module → 出 ｜ entrance_exit.module → 双向
+  // 生成端把它写在 `cell.dir` 上；箭头指向写在 `cell.arrow`（世界坐标单位向量）。
+  // ⚠️ 码头的 `pedestrian_entrance` 只有一个模块、没有分进出 ⇒ 一律标双向。
+  // ⚠️ 箭头的**指向**是几何推的（出入口都在站场端头，外侧就是站场外），
+  //    不是游戏数据里现成的字段 —— 这一条属推断，别当权威口径用。
+  const ENTRANCE_FILL = { in: "#5fd08a", out: "#5fa8ff", both: "#4fc9c0" };
+  const ENTRANCE_ARROW = "#0b1117";
+
+  // 箭头轮廓（在"顺着箭头方向"的局部坐标里定义，再按 cell.arrow 转到世界）。
+  // 画法跟道路箭头一样：一条短杆 + 三角头；双向的两头都有头。
+  const ARROW_SINGLE = [[-1, -0.42], [0.42, -0.42], [0.42, -1.0], [1, 0],
+                        [0.42, 1.0], [0.42, 0.42], [-1, 0.42]];
+  const ARROW_DOUBLE = [[-1, 0], [-0.42, -1.0], [-0.42, -0.42], [0.42, -0.42],
+                        [0.42, -1.0], [1, 0], [0.42, 1.0], [0.42, 0.42],
+                        [-0.42, 0.42], [-0.42, 1.0]];
+
+  // 🔴 `map` **必须当参数传进来**，不能在这里裸用 —— 这个函数是模块级的，
+  //    作用域里没有 `map`（`const map = state.map` 只在 `buildShapes` 里面）。
+  //    2026-10-02 就栽在这里：引用了一个不存在的 `map`，第一个出入口格直接抛
+  //    `ReferenceError`，异常把 `buildShapes` 的整个站点循环打断 ——
+  //    表现是「铁路有结构、码头/汽车站/机场完全没有」（JSON 里铁路站在前）。
+  function arrowPath(map, cell) {
+    const dir = cell.arrow;
+    if (!dir || (!dir[0] && !dir[1])) return "";
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    cell.poly.forEach(function (pt) {
+      if (pt[0] < x0) x0 = pt[0];
+      if (pt[0] > x1) x1 = pt[0];
+      if (pt[1] < y0) y0 = pt[1];
+      if (pt[1] > y1) y1 = pt[1];
+    });
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const half = Math.min(x1 - x0, y1 - y0) * 0.31;      // 箭头总长的一半
+    if (!(half > 0.4)) return "";
+    const ux = dir[0], uy = dir[1];
+    const px = -uy, py = ux;                              // 垂直于箭头方向
+    const shape = cell.dir === "both" ? ARROW_DOUBLE : ARROW_SINGLE;
+    return shape.map(function (pt) {
+      const lx = pt[0] * half, ly = pt[1] * half * 0.62;
+      const q = map.P({ x: cx + ux * lx + px * ly, y: cy + uy * lx + py * ly });
+      return q.x.toFixed(1) + "," + q.y.toFixed(1);
+    }).join(" ");
+  }
+
+  // 哪些站型要**画全部格子**。
+  // 🔴 火车站不在此列 —— 它的站台/轨道已经由原作者那层（network-app.js 的
+  //    `platform_centerline`）画了，我们再画一遍就是两套线互相压（2026-10-02 的教训）。
+  //    另外三类站**作者那层没有数据**（他的 station-previews 只覆盖铁路），
+  //    所以整座站场都得我们自己画。
+  const FULL_CELL_KINDS = { street: true, water: true, air: true };
+
+  // 站房底色 / 描边。
+  // 🔴 描边刻意跟原作者画站台时的 outline 同色（network-app.js 里是 #26343d），
+  //    这样两个图层的线看着是一套东西。
+  // 🔴 底色**不能用偏黄的暖色**：站台现在按客/货分色了（客运 #96a2a8 灰蓝、
+  //    货运 #c9a15f 黄褐），站房再用暖黄就会跟货运站台糊成一片（2026-10-02 试过
+  //    #d9b877，图上分不出来）。改成**暖白**——无色系，跟两种站台都不撞。
+  const BUILDING_FILL = "#e8e2d6";
+  const BUILDING_STROKE = "#26343d";
+  // 🔴 货运站房底色：砖红 —— 跟客运的暖白一眼分得开（用户 2026-10-02 要求区分）。
+  //    判据是模块名里有没有 `_cargo`（游戏里 `main_building_2_era_c.module` 与
+  //    `main_building_2_cargo.module` 就这一处差别），生成端把它写在 `cell.cargo` 上。
+  //    选砖红而不是黄：货运**站台**已经占了黄褐 `#c9a15f`，站房再用黄会糊成一片。
+  const BUILDING_CARGO_FILL = "#c0704a";
+  // 站房带的宽度（**屏幕像素**，不随缩放变）。
+  // 原作者画站台是 6*widthUnits px（侧式 6 / 岛式 12），站房取 9 —— 夹在中间，
+  // 一眼能分出"这是房子、那是站台"，又是同一个量级。
+  const BUILDING_WIDTH = 9;
 
   // 客运站画成空心圆，底色得贴近地图底色才像"空"的。这里跟 #board-wrap 的底色一致。
   const HOLLOW_FILL = "#070c12";
@@ -126,6 +200,7 @@
     shapes: true,         // 是否画"真实占地轮廓"（跟着地图缩放走的那层）
     shapeLayer: null,     // 占地轮廓的父 <g>，挂在 mapLayer 下（**不是** svg 根）
     shapeViews: [],       // {type, group}，只用来跟着类型筛选显隐
+    buildingViews: [],    // {node, type, world}：站房带（固定宽度折线，挂 svg 根、每帧重算 d）
     shapeByRef: null,     // layer-stations 实体 id → 结构数据，详情浮层里补"占地"那行
   };
 
@@ -281,6 +356,7 @@
 
     let drawn = 0;
     list.forEach(function (item) {
+      try {
       const box = item.box;
       if (!box || !(box.w > 0) || !(box.h > 0)) return;
 
@@ -302,73 +378,108 @@
       const color = TYPE_COLOR[type];
       const group = map.S("g", { "data-station-shape": type }, "", layer);
 
-      // ⚠️ 属性名一律写 SVG 原生的连字符形式。S() 是 setAttribute(名字, 值) 原样写进 DOM，
-      //    写驼峰（fillOpacity）会**静默失效、不报错**，填充就变成全不透明 —— 今天刚踩过。
-      map.S("rect", {
-        x: left.toFixed(1),
-        y: top.toFixed(1),
-        width: width.toFixed(1),
-        height: height.toFixed(1),
-        fill: color,
-        "fill-opacity": 0.13,
-        stroke: color,
-        "stroke-width": 1.2,
-        "stroke-opacity": 0.9,
-        // 描边不随缩放变粗变细，不然缩远了边框会糊成一片
-        "vector-effect": "non-scaling-stroke",
-      }, "", group);
+      // 🔴 **不画占地包围框**（用户 2026-10-02：「把外面那个红色矩形去掉，很丑」）。
+      //    那个框是引擎给的轴对齐包围盒，只表示"站区范围"，跟站场实际轮廓没关系 ——
+      //    站点稍微斜一点，框就会比建筑大出一大圈，糊在图上很碍眼。
+      //    现在只画真正有信息量的东西：站房多边形 + 站台（原作者那层）。
+      //    （上面的 width/height 判断保留，作为"这个站有没有有效占地"的兜底。）
 
-      // 站台：只有火车站读得出来坐标（其余三类引擎不给，生成工具已经滤掉了空值）。
+      // ★ 模块格子 —— **只画站房**。
       //
-      // 🔴 半径必须用 T() 把**米**换算成底图尺寸再写进去。
-      //    这个元素挂在 mapLayer 里，数值的单位是"底图单位"，1 单位 ≈ 22.6 米
-      //    （baseScale≈0.0443）。直接写阿拉伯数字会被当成底图单位 ——
-      //    2026-09-30 就这么踩的：想给 12 米半径，实际画出 271 米，屏幕上是一坨
-      //    盖住半张地图的大圆。
-      // ★ 模块格子 = 真正的站场结构。
-      //   四类站都是"一个 .con 容器 + 若干 .module 格子"拼出来的（用户原话：模块化设计）：
-      //   站台、站房、轨道、楼梯、栈桥、出入口各占一格。生成工具按 slotId 反解出网格坐标 (i,j)，
-      //   乘上格尺寸、再套建筑的朝向矩阵，算出每格四角的**世界坐标** —— 所以这里拿到的是一串
-      //   多边形顶点，直接喂 P() 就行，不用在前端算角度（地图自己还有一层旋转，避开它）。
-      (item.cells || []).forEach(function (cell) {
-        if (!cell.poly || cell.poly.length < 3) return;
+      // 🔴 为什么只画站房（用户 2026-10-02 明确要求"沿用原作者的结构"）：
+      //    站台和轨道**原作者那层已经画了**，而且比这里细 ——
+      //      · 站台：network-app.js 的 platformLayer，用 platform.platform_centerline
+      //        （引擎给的站台真实中心线）配 6*widthUnits 的粗描边线
+      //        （outline #26343d / surface #96a2a8、stroke-linecap round）；
+      //      · 铁路：physical_overview_segments（灰线）。
+      //    我再拿模块格子画一遍站台/轨道，就是**两套东西叠在一起互相压**，而且方块轮廓
+      //    跟中心线的圆头粗线对不齐 —— 用户看到的就是"乱七八糟"。
+      //    站房是原作者那边**没有的**，正好补上：用同一套视觉语言（同样的描边色
+      //    #26343d + vector-effect non-scaling-stroke，缩放时线宽不变），底色取暖米黄，
+      //    把"房子"从灰站台里区分出来。
+      //
+      //    🔴 画法是"**真实位置 + 固定屏幕宽度**"的粗线，这是两轮试错后的结论：
+      //       · 用真实世界尺寸（20 m 方块）× 作者那 6 px 的站台线 → 缩小时方块消失、
+      //         放大时盖住整片站台，比例永远对不上（第一轮"一点都不好"）；
+      //       · 改成固定 13 px 的离散小方块 → 格子间距是真实的 40 米，方块却不跟着缩放，
+      //         放大后永远是几个孤零零的点，不像一栋站房；
+      //       · ⇒ 用折线带：位置忠实（跟随地图走），线宽固定（跟站台同一个量级），
+      //         本质上就是**作者画站台的那套写法**（stroke + non-scaling-stroke +
+      //         linecap round），只是换了颜色、按 j 排了下序。
+      //    🔴 尺寸用**模型文件里的真实占地**（生成端的 BUILDING_BOX_BY_MODULE，
+      //       来自 `.module` 的 `config.extend` 与 `.mdl` 的 `boundingInfo`，两处吻合）：
+      //       主楼 size2 = **23 m（横跨股道方向）× 22 m（沿站台方向）**，近正方形，
+      //       不是细长条 —— 用户 2026-10-02 指出"站房应该接近正方形"是对的。
+      //       所以这里老老实实按世界坐标画多边形，跟着地图缩放走。
+      //    🔴 火车站**只画站房**（站台/轨道归原作者那层）；另外三类站画**全部格子**
+      //       —— 他的 station-previews 只覆盖铁路，水路/公路/航空整座站场都得自己画。
+      //       生成端已经按"先铺底后盖顶"排好序（场坪→跑道→滑行道→顶棚→轨道→站台→
+      //       楼梯/出入口→建筑），所以这里照数组顺序画即可。
+      const full = !!FULL_CELL_KINDS[item.kind];
+      const buildCells = (item.cells || []).filter(function (cell) {
+        if (!cell.poly || cell.poly.length < 4) return false;
+        return full || cell.k === "building";
+      });
+      buildCells.forEach(function (cell) {
         const points = cell.poly.map(function (pt) {
           const q = map.P({ x: pt[0], y: pt[1] });
           return q.x.toFixed(1) + "," + q.y.toFixed(1);
         }).join(" ");
+        // 站房还有客/货之分（cell.cargo）；出入口按进/出/双向分色；其余格子按种类上色
+        let fill;
+        if (cell.k === "building") {
+          fill = cell.cargo ? BUILDING_CARGO_FILL : BUILDING_FILL;
+        } else if (cell.k === "entrance" && cell.dir) {
+          fill = ENTRANCE_FILL[cell.dir] || CELL_COLOR.entrance;
+        } else {
+          fill = CELL_COLOR[cell.k] || CELL_COLOR.other;
+        }
         map.S("polygon", {
           points: points,
-          fill: CELL_COLOR[cell.k] || CELL_COLOR.other,
-          "fill-opacity": 0.5,
-          stroke: "#04090e",
-          "stroke-width": 0.8,
+          fill: fill,
+          "fill-opacity": full ? 0.9 : 0.85,
+          stroke: BUILDING_STROKE,
+          "stroke-width": full && cell.k !== "building" ? 0.6 : 1.2,
           "vector-effect": "non-scaling-stroke",
+          "pointer-events": "none",
+          "data-station-building": type,
         }, "", group);
-      });
-
-      const platformRadius = map.T({ x: 8, y: 0 }).x;   // 8 米 ≈ 站台半宽
-      (item.terminals || []).forEach(function (term) {
-        const point = map.P({ x: term.x, y: term.y });
-        map.S("circle", {
-          cx: point.x.toFixed(1),
-          cy: point.y.toFixed(1),
-          r: platformRadius.toFixed(3),
-          fill: color,
-          "fill-opacity": 0.75,
-          stroke: "#04090e",
-          "stroke-width": 0.6,
-          "vector-effect": "non-scaling-stroke",
-        }, "", group);
+        // 出入口再叠一个方向箭头：进 / 出 单头，双向双头
+        if (cell.k === "entrance" && cell.arrow) {
+          const arrow = arrowPath(map, cell);
+          if (arrow) {
+            map.S("polygon", {
+              points: arrow,
+              fill: ENTRANCE_ARROW,
+              "fill-opacity": 0.9,
+              "pointer-events": "none",
+              "data-station-building": type,
+            }, "", group);
+          }
+        }
       });
 
       state.shapeViews.push({ type: type, group: group });
       drawn += 1;
+      } catch (error) {
+        // 🔴 **一个站画挂了不该把整层拖没。**
+        //    2026-10-02 被这个坑过一整轮：`arrowPath` 里裸用了不存在的 `map`，
+        //    第一个出入口格就抛 `ReferenceError`，异常一路穿透 `list.forEach`，
+        //    后面所有站全没画出来 —— 现象是「铁路有结构、码头/汽车站/机场完全没有」。
+        //    加这道兜底之后，坏站只坏它自己。
+        console.warn("[地图] 车站结构：站 " + item.id + " 绘制出错，只跳过这一个站", error);
+      }
     });
 
     applyVisibility();
 
+    // 把"带模块格子的站数 / 总格数"也打出来 —— 排查"看不到站房"时，先看这行：
+    // 若这里 >0 但地图上没有黄块，是画/显隐的问题；若这里是 0，是数据没生成。
+    const withCells = list.filter(function (s) { return (s.cells || []).length; });
+    const cellTotal = withCells.reduce(function (n, s) { return n + s.cells.length; }, 0);
     console.log("[地图] 车站占地：" + drawn + " 个框（数据 " + (data.generated_at || "?")
-      + "，其中带站台坐标的 " + list.filter(function (s) { return (s.terminals || []).length; }).length + " 个）");
+      + "，带站台坐标的 " + list.filter(function (s) { return (s.terminals || []).length; }).length + " 个"
+      + "，带模块格子的 " + withCells.length + " 个站 / " + cellTotal + " 格）");
   }
 
   // 每帧重算屏幕坐标 —— 唯一的重绘入口，由 TPF2Map.onViewport 驱动。
@@ -389,6 +500,15 @@
       const point = map.screenPoint(view.position);
       view.group.setAttribute("transform", "translate(" + point.x.toFixed(1) + " " + point.y.toFixed(1) + ")");
     });
+    // 站房带是折线，每个控制点都要现算屏幕坐标 —— 直接改 path 的 d。
+    // 这层挂在 svg 根上，不跟着地图 transform 走，所以必须每帧重写（同 state.views）。
+    state.buildingViews.forEach(function (view) {
+      if (view.node.style.display === "none") return;
+      view.node.setAttribute("d", view.world.map(function (point, index) {
+        const q = map.screenPoint({ x: point[0], y: point[1] });
+        return (index ? "L" : "M") + q.x.toFixed(1) + " " + q.y.toFixed(1);
+      }).join(" "));
+    });
   }
 
   function applyVisibility() {
@@ -402,6 +522,9 @@
     if (!master) return;   // 整层都藏了，逐个再写一遍显示属性没意义
     state.views.forEach(function (view) {
       view.group.style.display = state.types[view.type] ? "" : "none";
+    });
+    state.buildingViews.forEach(function (view) {
+      view.node.style.display = state.types[view.type] ? "" : "none";
     });
     if (state.shapeLayer && state.shapes) {
       state.shapeViews.forEach(function (view) {

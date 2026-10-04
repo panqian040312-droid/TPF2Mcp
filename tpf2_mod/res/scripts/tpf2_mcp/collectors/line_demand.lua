@@ -29,6 +29,7 @@ end
 
 local function classify(entities, line_id, current_time, maximum, kind)
     local result = { total_for_line = sequence_count(entities), waiting = 0, onboard = 0, other = 0, truncated = false, vehicles = {}, waiting_seconds_total = 0, waiting_seconds_samples = 0, journey_unknown = 0 }
+    local wait_values = {}   -- 收集每个候车实体的等待秒数，用于中位数/分位数（均值易被个别超长等待拉高）
     local cargo_totals, cargo_sources, cargo_unknown = {}, {}, 0
     local journey_totals = {}
     if entities == nil then result.status = "UNAVAILABLE"; return result end
@@ -68,8 +69,10 @@ local function classify(entities, line_id, current_time, maximum, kind)
                     if bucket ~= nil then bucket.waiting = bucket.waiting + 1 end
                     local arrival = common.field(at_terminal, "arrivalTime")
                     if type(arrival) == "number" and type(current_time) == "number" and current_time >= arrival then
-                        result.waiting_seconds_total = result.waiting_seconds_total + (current_time - arrival) / 1000
+                        local wait_seconds = (current_time - arrival) / 1000
+                        result.waiting_seconds_total = result.waiting_seconds_total + wait_seconds
                         result.waiting_seconds_samples = result.waiting_seconds_samples + 1
+                        if #wait_values < 20000 then wait_values[#wait_values + 1] = wait_seconds end
                     end
                 else
                     result.other = result.other + 1
@@ -101,6 +104,24 @@ local function classify(entities, line_id, current_time, maximum, kind)
         end
     end
     result.classified = visited
+    -- 等待时间的稳健统计：均值会被个别超长等待（例如 arrivalTime 缺失或长期无人接运）严重拉高，
+    -- 因此同时给出中位数、P90、最大值，以及超过 1 小时的样本数。
+    table.sort(wait_values)
+    local function wait_percentile(quantile)
+        if #wait_values == 0 then return nil end
+        local index = math.floor(#wait_values * quantile + 0.5)
+        if index < 1 then index = 1 end
+        if index > #wait_values then index = #wait_values end
+        return wait_values[index]
+    end
+    result.median_waiting_seconds = wait_percentile(0.5)
+    result.p90_waiting_seconds = wait_percentile(0.9)
+    result.max_waiting_seconds = wait_values[#wait_values]
+    local over_one_hour = 0
+    for _, value in ipairs(wait_values) do
+        if value > 3600 then over_one_hour = over_one_hour + 1 end
+    end
+    result.waiting_over_1h = over_one_hour
     result.average_waiting_seconds = result.waiting_seconds_samples > 0 and result.waiting_seconds_total / result.waiting_seconds_samples or nil
     result.waiting_seconds_total = nil
     result.journey_granularity = "LINE_STOP_OD"

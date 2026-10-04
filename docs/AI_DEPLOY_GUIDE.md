@@ -171,7 +171,7 @@ python "<Mod 根>\mcp_server\start_ui.py"
 
 ## 6. 换机器必须先改的两处路径
 
-仓库根这两个脚本里写死了开发机的路径（`E:\workbody\TPF2Mcp` 和某个 Steam 用户 ID）：
+仓库根这三个脚本里写死了**开发机的绝对路径**（项目目录 + Steam 用户目录各一处）：
 
 - `deploy_mod_layers.bat` —— 里面的 `PROJ` 与 `STAGE` 两个变量（**整目录同步**，`res\` + `mcp_server\` + 4 个 tools 文件）
 - `deploy-mod-probes.bat` —— 同样两个变量（**最小化部署**：只同步 6 个文件，带 `certutil` md5 双向比对）

@@ -2,30 +2,30 @@
 
 ## 本机游戏路径
 
-Transport Fever 2 的 Steam 安装目录：
-
-```text
-E:\SteamLibrary\steamapps\common\Transport Fever 2
-```
+Transport Fever 2 装在 **Steam 库**下的 `steamapps\common\Transport Fever 2`。
+具体盘符与库位置**因机而异，从实际安装中发现，不要写死**。
 
 TPF2 用户模组目录与 Bridge 目录仍须由实际游戏运行验证，不得把推测路径视为已确认能力。
 
 ## 路径归属与安装约束
 
 - 路径约束按文件归属划分，不按盘符一刀切：源码开发产生的所有项目文件必须放在项目目录内；作为 Mod 打包或测试时，Mod 运行所需的所有代码、资源、工具和运行数据必须放在该 Mod 的根目录内。不得散落到用户主目录、`AppData`、`Documents`、系统临时目录或其他无关位置。
-- 本机当前已知基础路径如下（**2026-10-04 实测核实**；本机**没有 D 盘**，早期版本的这份文件写的 `D:\tpf2mcp`、`D:\Steam\...` 是错的）。它们用于本机操作和核验，不得硬编码进面向其他用户发布的程序：
+- 本机的基础路径按下面的**相对关系**理解即可，一律用占位符描述，**不得把本机盘符、绝对路径或 Steam 用户 ID 写进代码、文档或发布包**：
 
 ```text
-项目目录：E:\workbody\TPF2Mcp
-  （AI 工作区在 E:\workbody\狂热运输2，记忆与日志写那里；源码与产物在 TPF2Mcp）
-游戏目录：E:\SteamLibrary\steamapps\common\Transport Fever 2
-手动 Mod 根目录：E:\SteamLibrary\steamapps\common\Transport Fever 2\mods\<mod_folder>
-Workshop 暂存 Mod 根目录：C:\Program Files (x86)\Steam\userdata\1070536217\1066780\local\staging_area\tpf2mcp_1
-Workshop 订阅 Mod 根目录：E:\SteamLibrary\steamapps\workshop\content\1066780\<workshop_item_id>
+项目目录           = 本仓库根（clone/解压到哪就是哪）
+游戏目录           = <Steam 库>\steamapps\common\Transport Fever 2
+手动 Mod 根目录    = <游戏目录>\mods\<mod_folder>
+Workshop 暂存 Mod 根 = <Steam 客户端目录>\userdata\<steam_user_id>\1066780\local\staging_area\<mod_folder>
+Workshop 订阅 Mod 根 = <Steam 库>\steamapps\workshop\content\1066780\<workshop_item_id>
 ```
 
-> ⚠️ 本机是**分库安装**：Steam 客户端与 `userdata`（含 `staging_area`）在 `C:\Program Files (x86)\Steam\`，
-> 而游戏本体与创意工坊内容在 `E:\SteamLibrary\steamapps\`。**不要假定两者同盘**，路径要从实际安装中推导。
+> ⚠️ 三条必须记住的**发现规则**（别问"本机路径是什么"，要问"怎么找"）：
+> 1. `1066780` 是 Transport Fever 2 的 Steam AppID，**固定值**，不用找。
+> 2. **Steam 客户端目录（`userdata` 所在）与 Steam 库（游戏本体、创意工坊内容所在）可以不在同一个盘。**
+>    两者都要从实际安装中动态发现，**不要假定同盘** —— 这是本机实际踩到过的坑。
+> 3. **AI 工作区（对话记忆、日志、报告）与源码目录不在一处**：工作区是独立目录，
+>    源码与产物在仓库根。写文件前先想清楚"这是项目文件还是工作记录"，两者别混。
 
 - 源码开发阶段，虚拟环境、缓存、诊断、临时构建和发布压缩包分别放在项目目录下的 `.venv/`、`.tmp-*/`、`diagnostics/` 和项目根目录，不得另选一个方便但无归属的目录。
 - Mod 打包或发布测试阶段，以实际待测试的 `<active_mod_root>` 为唯一运行根目录。Lua Mod、`mcp_server/`、`tools/`、`ui/`、图片和其他发布资源必须完整位于该目录下；Bridge 请求、响应与状态文件必须位于 `<active_mod_root>\bridge`。

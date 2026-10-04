@@ -150,7 +150,6 @@
 
 | 待办 | 卡在哪 |
 |---|---|
-| 车站**候车量**（超容报警的另一半依据） | v5 探针那条线：`getPersonNodeId2StationTerminalsMap` 的 key 要转 entity_id |
 | **原料数量分货种**（R11 的后半） | 现在只数总件数；官方接口 `simEntityAtStockSystem.getStockCount(stockEntity, stockId)` 可按货种读，要补采集 |
 | **进料侧缺料判定**（O1 的后半） | 进料 link 只有 58/215 家有记录；补「按货种库存 + 等待时长 + 来源厂」 |
 
@@ -168,10 +167,17 @@
 
 | 事项 | 现状 |
 |---|---|
-| **全部改动未提交** | `c266991` 之后（即 **10-02 的全部工作**）：**30 个已改 + 160 个未跟踪**，`fork` 远端停在 `c266991`（领先 0） |
-| **工坊发布包缺前端文件** | `0_core_shared/build/build-workshop-package.ps1:110` 的 `ui/rail-map/` 逐文件白名单**没有**我们后加的 9 个文件（`station-struct.js` / `road-congestion.js` / `industry-icons.js` / `industry-kinds.js` / `freight-flow.js` / `town-layer.js` / `ui-persist.js` / `rail-network-manifest.js` / `rail-network-data.js`）⇒ **打出来的包地图页会缺图层**（`index.html` 里引了它们）。要不要补进白名单？ |
-| `tpf2_control.dll` | 来源未知 ⇒ `docs/AI_DEPLOY_GUIDE.md` 里写通道那节还不完整 |
+| **`tpf2_control.dll`** | 来源未知 ⇒ `docs/AI_DEPLOY_GUIDE.md` 里写通道那节还不完整 |
 | `ust` / `mus` 站型结构 | 各 2 / 1 座，**保留待做**（用户 2026-10-02 定），属独立任务 |
+
+### 3.3.1 本轮（2026-10-04）已闭环的两条
+
+| 原待办 | 结论 |
+|---|---|
+| **车站候车量**（超容报警的另一半依据） | ✅ **数据侧打通**。不必解 `getPersonNodeId2StationTerminalsMap` 的 key：`layer-passenger.lua` 的 `by_journey[]` 带 `line_stop_0`（上车站序），按它聚合 `waiting`、再用 `layer-lines.json` 的 `stops[].index → group_id` 翻车站 id ⇒ **每站候车 + 每站候运**。实测停站→车站命中 321 / 落空 0 |
+| **站台容量**（超容判据的分母） | ✅ **口径定死**：引擎没有容量接口，但 `terminal.personEdges` 每条边有 `getNumFreePlaces(edgeId)`，**站台容量 = Σ 该站台每条候车边的剩余位置**。实测广州北站站台 1 的 Σ = **476**，与游戏 UI「0/476」精确吻合。⚠️ 车站 `pool.moreCapacity` 是**站房共享池**（另计），早先拿它当分母算出的"超容"**作废** |
+| **全部改动未提交** | ✅ 已提交并推送：`ac7f6a4`（322 文件 / +329,218 行）→ `fork/feature/multi-layer-map`，工作区干净 |
+| **工坊发布包缺前端文件** | ✅ **已解决**：`0_core_shared/build/build-workshop-package.ps1:110` 的白名单已含那 9 个 js ＋ 4 个 json ＋ `templates/vendor/icons/assets` 4 个目录 |
 
 ### 3.4 已结案（以前挂着的，现在有答案）
 
@@ -238,7 +244,9 @@
 | `mcp_server/**`（Python） | 跑 `deploy_mod_layers.bat` ＋ 重启对应服务 |
 | `3_dashboard_ui/server/serve-rail-map.py` | 跑 `deploy_mod_layers.bat`（**服务读的是 staging 那份**）＋ 重启地图服务 |
 | `ui/rail-map/**`（前端） | **不用部署**（读项目目录），提 `?v=` 后刷新即生效 |
-| `tools/build-*.py` / `extract-*.py` | 本地直接跑，产物落 `ui/rail-map/` 或 `reports/` |
+| **只改索引/文档**（`0_core_shared/index/**`、`docs/*.md`） | 本地重跑生成器即可，**不影响游戏** |
+| `1_data_collection/exporters/build-*.py` / `extract-*.py` | 本地直接跑，产物落 `ui/rail-map/` 或 `reports/`（**`tools/` 已空，见 `ARCHITECTURE.md` §二**） |
+| 加一个新的采集器/探针 | ① 先查 `docs/DATA_INVENTORY.md` ② 写 ③ 跑三条 `--check` ④ 部署+重启（细则见 `AGENTS.md`） |
 
 **引擎侧：确认知道的 / 还不知道的**
 
@@ -253,7 +261,7 @@
 |---|---|
 | `tpf2_control.dll` 从哪来、怎么装 | 写通道（L2 操作）用不了 ⇒ `AI_DEPLOY_GUIDE.md` 缺一节 |
 | 「传输网边下标 → 实体」那条链 | 已放弃，车辆定位改用坐标匹配 |
-| 车站候车量怎么读 | 超容报警缺一半依据 |
+| ~~车站候车量怎么读~~ | ✅ **2026-10-04 解决**：不用走引擎，`by_journey.line_stop_0` 聚合 + `stops[].index→group_id` 翻译即可 |
 | 账本里"哪条线" | 线路级盈亏只能靠维护费 + 运价侧路估算 |
 
 ---
@@ -263,8 +271,12 @@
 | 现行（可当依据） | 说明 |
 |---|---|
 | **本页** | 需求 + 进度 + 文档地图（入口） |
+| `0_core_shared/ARCHITECTURE.md` | 🔴 **架构规约（施工图纸）**：四层定义 + 归属口诀、**契约路径表**、层间契约、1 层「禁止计算」边界、字段纪律、搬迁进度。**写新代码前先在这里找归属** |
+| `AGENTS.md` | 🔴 **仓库硬规约**：本机路径、路径归属、提交禁止项、工坊打包规范、**变更前必跑的校验** |
 | `docs/DATA_INVENTORY.md` | **数据资产总账 + 交叉索引**（自动生成）：接口利用率／接口→使用者／产物→字段／字段→产物／代码→官方文档，**外加「我想要 → 现成接口」对照表**。查「这个数据有没有、从哪拿」先看它 |
-| `docs/CODE_WIKI_INDEX.md` | **代码 ↔ 官方文档索引**（自动生成）：179 个源码文件 / 1098 个函数逐条落到官方出处；映射表 `docs/code-wiki-map.json` |
+| `docs/CODE_WIKI_INDEX.md` | **代码 ↔ 官方文档索引**（自动生成）：**182 个源码文件 / 1125 个函数**逐条落到官方出处；映射表 `docs/code-wiki-map.json` |
+| `docs/REFACTOR_PLAN.md` ／ `docs/ARCHITECTURE_MERGE.md` | 四层怎么搬的、为什么要这么分 |
+| `docs/AI_DEPLOY_GUIDE.md` | **部署指南（给 AI 看的）**：三步安装 + 验证清单 + 坑清单 |
 | `reports/TPF2_交接_2_昨天存档_20260927.md` | **存档＝当前档**（数字一致）。京广标杆车、JY 客运扎堆等结论**仍适用**；余额/状态以本页为准 |
 | `reports/TPF2_交接_3_mod开发.md` | mod 代码·工具·部署链路 |
 | `reports/TPF2_交接_4_知识库与引擎API_20260930.md` | 知识库 + 引擎 API 实测 |

@@ -127,8 +127,24 @@ python "<Mod 根>\mcp_server\start_ui.py"
 | `<Mod 根>\bridge\` | **运行时通信目录**：Mod 写产物、Python 读；Python 写命令、Mod 取走。**别删** —— 删了要重启游戏才会重建 |
 | `<Mod 根>\mcp_server\` | MCP 服务 + 地图 UI 服务端 |
 | `<Mod 根>\ui\rail-map\` | 前端静态文件（地图页面），由 UI 服务提供 |
-| 仓库根 `analyze_*.py` / `check_*.py` / `*probe*.py` | **开发期的一次性分析脚本**，部署**不需要**。别被这一坨吓到 |
-| 仓库根 `tools\` | 生成数据用的工具（图标、配方、几何、拥堵数据）。只有 `export-layer-map.py`、`serve-rail-map.py` 是运行时需要的 |
+| `<Mod 根>\tools\` | 工坊包里只有 3 个运行时需要的脚本：`serve-rail-map.py`、`export-layer-map.py`、`export-rail-network-map.py` |
+
+**源码仓库里没有 `tools\` 这一层了**（2026-10-03 按四层归位后已空）—— 仓库按四层组织：
+
+| 仓库目录 | 层 | 里面是什么 |
+|---|---|---|
+| `0_core_shared/` | 0 契约 | 架构规约、schema、索引生成器、构建与校验脚本 |
+| `1_data_collection/` | 1 采集 | 导出器（图标/配方/几何/图层切块）、探针 |
+| `2_brain_analysis/` | 2 分析 | 纯计算：经济分析、产业诊断、死锁扫描、运行图 |
+| `3_dashboard_ui/` | 3 表现 | 地图服务端 |
+| `4_execution_control/` | 4 执行 | 写操作与验收测试 |
+| `tpf2_mod/` `mcp_server/` `ui/rail-map/` `protocol/` | — | **契约路径，不随四层移动** |
+
+> 🔴 **写新的采集器/探针/字段之前，先查 `docs/DATA_INVENTORY.md`**（数据资产总账：我想要 → 现成接口），
+> 再查 `0_core_shared/schema/fields.json`（产物字段）。新接口要先登记再更新基线，新源码文件要先登记映射表，
+> 否则 `--check` 会直接失败。详见 `AGENTS.md` 与 `0_core_shared/ARCHITECTURE.md`。
+>
+> 归层说不清时 → **先去 `ARCHITECTURE.md` 找它属于哪一层**，找不到就先改那份文件再写代码。
 
 ---
 
@@ -157,10 +173,11 @@ python "<Mod 根>\mcp_server\start_ui.py"
 
 仓库根这两个脚本里写死了开发机的路径（`E:\workbody\TPF2Mcp` 和某个 Steam 用户 ID）：
 
-- `deploy_mod_layers.bat` —— 里面的 `PROJ` 与 `STAGE` 两个变量
+- `deploy_mod_layers.bat` —— 里面的 `PROJ` 与 `STAGE` 两个变量（**整目录同步**，`res\` + `mcp_server\` + 4 个 tools 文件）
+- `deploy-mod-probes.bat` —— 同样两个变量（**最小化部署**：只同步 6 个文件，带 `certutil` md5 双向比对）
 - `start_rail_map.bat` —— 同理
 
-**换机器第一件事就是改这两个变量**，否则脚本会往不存在的目录复制、或者让 UI 服务读错地方。
+**换机器第一件事就是改这些变量**，否则脚本会往不存在的目录复制、或者让 UI 服务读错地方。
 
 ---
 

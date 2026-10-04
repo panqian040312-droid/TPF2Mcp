@@ -5,7 +5,7 @@
 Transport Fever 2 的 Steam 安装目录：
 
 ```text
-D:\Steam\steamapps\common\Transport Fever 2
+E:\SteamLibrary\steamapps\common\Transport Fever 2
 ```
 
 TPF2 用户模组目录与 Bridge 目录仍须由实际游戏运行验证，不得把推测路径视为已确认能力。
@@ -13,15 +13,19 @@ TPF2 用户模组目录与 Bridge 目录仍须由实际游戏运行验证，不�
 ## 路径归属与安装约束
 
 - 路径约束按文件归属划分，不按盘符一刀切：源码开发产生的所有项目文件必须放在项目目录内；作为 Mod 打包或测试时，Mod 运行所需的所有代码、资源、工具和运行数据必须放在该 Mod 的根目录内。不得散落到用户主目录、`AppData`、`Documents`、系统临时目录或其他无关位置。
-- 本机当前已知基础路径如下。它们用于本机操作和核验，不得硬编码进面向其他用户发布的程序：
+- 本机当前已知基础路径如下（**2026-10-04 实测核实**；本机**没有 D 盘**，早期版本的这份文件写的 `D:\tpf2mcp`、`D:\Steam\...` 是错的）。它们用于本机操作和核验，不得硬编码进面向其他用户发布的程序：
 
 ```text
-项目目录：D:\tpf2mcp
-游戏目录：D:\Steam\steamapps\common\Transport Fever 2
-手动 Mod 根目录：D:\Steam\steamapps\common\Transport Fever 2\mods\<mod_folder>
-Workshop 暂存 Mod 根目录：D:\Steam\userdata\<steam_user_id>\1066780\local\staging_area\<mod_folder>
-Workshop 订阅 Mod 根目录：D:\Steam\steamapps\workshop\content\1066780\<workshop_item_id>
+项目目录：E:\workbody\TPF2Mcp
+  （AI 工作区在 E:\workbody\狂热运输2，记忆与日志写那里；源码与产物在 TPF2Mcp）
+游戏目录：E:\SteamLibrary\steamapps\common\Transport Fever 2
+手动 Mod 根目录：E:\SteamLibrary\steamapps\common\Transport Fever 2\mods\<mod_folder>
+Workshop 暂存 Mod 根目录：C:\Program Files (x86)\Steam\userdata\1070536217\1066780\local\staging_area\tpf2mcp_1
+Workshop 订阅 Mod 根目录：E:\SteamLibrary\steamapps\workshop\content\1066780\<workshop_item_id>
 ```
+
+> ⚠️ 本机是**分库安装**：Steam 客户端与 `userdata`（含 `staging_area`）在 `C:\Program Files (x86)\Steam\`，
+> 而游戏本体与创意工坊内容在 `E:\SteamLibrary\steamapps\`。**不要假定两者同盘**，路径要从实际安装中推导。
 
 - 源码开发阶段，虚拟环境、缓存、诊断、临时构建和发布压缩包分别放在项目目录下的 `.venv/`、`.tmp-*/`、`diagnostics/` 和项目根目录，不得另选一个方便但无归属的目录。
 - Mod 打包或发布测试阶段，以实际待测试的 `<active_mod_root>` 为唯一运行根目录。Lua Mod、`mcp_server/`、`tools/`、`ui/`、图片和其他发布资源必须完整位于该目录下；Bridge 请求、响应与状态文件必须位于 `<active_mod_root>\bridge`。
@@ -116,6 +120,7 @@ powershell -ExecutionPolicy Bypass -File .\0_core_shared/build/build-workshop-pa
 
 - 构建目标已存在时，脚本应停止而不是覆盖。重新构建前必须先确认目标确为本项目生成的 `tpf2mcp_1` 暂存目录，再以可恢复方式备份或清理；不得递归删除未核实的 Steam 目录。
 - 发布包根目录应直接包含 `mod.lua`、`strings.lua`、`image_00.tga`、`workshop_preview.jpg` 和 `res/`，并包含运行所需的 `mcp_server/`、精选 `tools/` 与 `ui/rail-map/`；不得额外嵌套一层同名目录。
+  - ⚠️ **源码里已经没有 `tools/` 这一层了**（2026-10-03 按四层归位后 `tools/` 目录已空）。发布包里的 `tools/` 是**组装出来的**，白名单只有 3 个文件：`serve-rail-map.py`（源头 `3_dashboard_ui/server/`）、`export-layer-map.py` 与 `export-rail-network-map.py`（源头 `1_data_collection/exporters/`）。改这三个文件要改**四层里的源**，不能去 `tools/` 找。
 - 发布配置必须保持 `allow_write_operations = false`。任何写操作版本都需要单独的权限设计、dry-run、测试和用户明确授权。
 - Transport Fever 2 加载 Lua Mod 不等于可以自动启动外部 Python 进程。发布说明不得宣称 Bridge 会随 Mod 自动启动，必须保留实际启动方式：
 

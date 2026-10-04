@@ -38,12 +38,18 @@
 | `tpf2_mod/res/scripts/tpf2_mcp/**` | 引擎 `require` | ⚠️ 可加子目录（四层就在这下面分），**路径改一处、require 同步改** |
 | `mcp_server/start_server.py` | `~/.workbuddy/mcp.json`（MCP 注册点） | ❌ **不能动**（可改内部 `sys.path`） |
 | `mcp_server/start_ui.py` | `rail-map-service.pyw` 的 `SERVICE_ENTRY` | ❌ **不能动** |
-| `tools/serve-rail-map.py` | `start_ui.py:13` 的 `UI_SERVER` | ⚠️ 能移，但要同步改 `start_ui.py` |
-| `ui/rail-map/` | `rail-map-service.pyw` 的 `UI_DIRECTORY` | ⚠️ 能移，但要同步改 `.pyw` |
-| `tools/export-layer-map.py` | `deploy_mod_layers.bat` 的逐文件清单 | ⚠️ 能移，但要同步改 bat |
-| 工坊包结构（`mod.lua` + `res/` + `mcp_server/` + 精选 `tools/` + `ui/rail-map/` 平铺） | `tools/build-workshop-package.ps1` 白名单 | ❌ **结构不能变**（玩家装的就是它） |
+| **发布包里的** `tools/serve-rail-map.py` | `start_ui.py:13` 的 `UI_SERVER` | ❌ **包内位置不能动**（源码里它是 `3_dashboard_ui/server/serve-rail-map.py`） |
+| **发布包里的** `tools/export-layer-map.py` | `deploy_mod_layers.bat` 的逐文件清单 | ❌ 包内位置固定（源码里它是 `1_data_collection/exporters/export-layer-map.py`） |
+| `ui/rail-map/` | `rail-map-service.pyw` 的 `UI_DIRECTORY` | ⚠️ 能移，但要同步改 `.pyw`（**P4 待办**） |
+| 工坊包结构（`mod.lua` + `res/` + `mcp_server/` + 精选 `tools/` + `ui/rail-map/` 平铺） | `0_core_shared/build/build-workshop-package.ps1` 白名单 | ❌ **结构不能变**（玩家装的就是它） |
 | `bridge/` | mod（写）↔ Python（读） | ❌ 运行时目录，位置固定 |
 | `docs/code-wiki-map.json` | 索引生成器 | ⚠️ 任何搬迁都要同步改路径键 |
+
+> 🔴 **读懂这张表的关键：区分「源码位置」和「发布包位置」。**
+> 源码分成四层后，发布包**打平**成玩家要的平铺形状 —— 所以同一个文件在源码里叫
+> `3_dashboard_ui/server/serve-rail-map.py`，在包里叫 `tools/serve-rail-map.py`。
+> `start_ui.py` / `deploy_mod_layers.bat` 指的是**包里那一份**，所以它们**不用改**。
+> 改这三个文件要改**四层里的源**，然后重新打包。
 
 **原则**：`tpf2_mod/` `mcp_server/` `ui/rail-map/` 这三个是**发布/加载契约路径**，四层是**源码组织**。
 源码分层、构建打平 —— 由 `build-workshop-package.ps1` 负责把四层组装回平铺形状。
@@ -126,8 +132,8 @@
 
 | 层 | 现在管不管 | 机制 |
 |---|---|---|
-| **引擎接口**（Lua 调了哪些 system 方法） | ✅ 已管 | `docs/interface-baseline.json`（56 个）＋ `build-data-inventory.py --check` |
-| **产物字段**（JSON 里出现哪些路径） | 🔧 建中 | `0_core_shared/schema/fields.json`（从 `bridge/*.json` 自动抽） |
+| **引擎接口**（Lua 调了哪些 system 方法） | ✅ 已管 | `docs/interface-baseline.json`（**61 个批准，代码里用 59 个**）＋ `build-data-inventory.py --check` |
+| **产物字段**（JSON 里出现哪些路径） | ✅ 已管 | `0_core_shared/schema/fields.json`（从 `bridge/*.json` 自动抽，**23,405 个字段**）＋ `build-fields-index.py --check` |
 
 **写新采集器之前**：先查 `docs/DATA_INVENTORY.md` 第零节「我想要 → 现成接口」→ 再查 `fields.json`。
 确需新增 → 补进生成脚本的 `WISH_LIST` → `--update-baseline`（进 git diff = 留痕）。
@@ -155,6 +161,11 @@
 | 生成器 | `build-code-wiki-index.py` / `build-data-inventory.py`：`ROOT` 由 `parent.parent` 改为**向上找 `.git`**（搬目录后原写法会**静默**算错根目录）；`SCOPE` 由 `tools` 换成四层 |
 | 校验 | ✅ 180 文件 / 1102 函数全部登记 ｜ ✅ 56 接口无越界 |
 
+**P3 之后的增量**（2026-10-04）：新增 `collectors/layer_passenger.lua`（R30 客流）与重写
+`collectors/terminal_waiting_probe.lua`（R26 站台容量探针）⇒ 索引涨到 **182 文件 / 1125 函数**；
+探针新用到的 `stationSystem.getStationTerminalsForPersonEdge` 等接口走 `WISH_LIST` → `--update-baseline`
+留痕，基线 **59 → 61 条**（其中 2 条已不再调用，可清理）。
+
 🔴 **方案修正**：原计划要把 `mcp_server/src/tpf2_mcp/` 的内部包也搬进四层 —— **实测后取消**。
 理由：① 它是**契约路径**（MCP 注册点 + 工坊包结构）；② 它**内部本来就已经分层**
 （`analytics/planning/tasks` = 2 层、`operations/` = 4 层、`bridge/snapshot` = 1 层），且依赖单向无环。
@@ -175,3 +186,4 @@
 | 日期 | 改了什么 |
 |---|---|
 | 2026-10-03 | 建立本文件。四层定义、契约路径表、层间契约、1 层边界、字段纪律 |
+| 2026-10-04 | 契约路径表补「源码位置 vs 发布包位置」的区分（`tools/xxx.py` 在包里、在源码里是 `3_dashboard_ui/` `1_data_collection/`）；§五 两套索引都改成「已管」并补实测数字；§六 补 P3 之后的增量 |
